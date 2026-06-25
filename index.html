@@ -1,0 +1,983 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Contratação de Terceirizados · Seteg</title>
+  <link rel="icon" type="image/png" href="images/favicon.png" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<!-- ═══════════════════════ LOGIN ═══════════════════════ -->
+<div id="loginScreen" class="login-screen">
+  <div class="login-card">
+    <div class="login-logo">
+      <img src="images/LOGO.png" alt="Seteg" onerror="this.style.display='none'" />
+    </div>
+    <h1 class="login-title">Contratação de Terceirizados</h1>
+    <div class="login-form">
+      <label class="form-label">Código de acesso</label>
+      <div class="input-password-wrap">
+        <input id="inputCodigo" class="form-control" type="password"
+               placeholder="Digite seu código de acesso" autocomplete="off" />
+        <button type="button" class="btn-toggle-password" id="btnToggleSenha" aria-label="Mostrar/ocultar código" tabindex="-1">
+          <svg id="iconOlhoAberto" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+          </svg>
+          <svg id="iconOlhoFechado" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none">
+            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+            <line x1="1" y1="1" x2="23" y2="23"/>
+          </svg>
+        </button>
+      </div>
+      <p id="loginErro" class="login-erro hidden">Código inválido. Tente novamente.</p>
+      <p id="loginErroCon" class="login-erro hidden" style="color:#f39c12">Servidor demorou a responder. Verifique sua conexão e tente novamente.</p>
+      <button id="btnEntrar" class="btn btn-primary btn-full">Entrar</button>
+    </div>
+    <p class="login-footer-text">Seteg Soluções Geológicas e Ambientais · 2026</p>
+  </div>
+</div>
+
+<!-- ═══════════════════════ APP ═══════════════════════ -->
+<div id="appScreen" class="hidden">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar hidden" id="sidebar">
+    <div class="sidebar-logo">
+      <img src="images/LOGO.png" alt="Seteg" onerror="this.style.display='none'" />
+      <span class="sidebar-brand-sub">Contrata&#231;&#227;o de Terceirizados</span>
+    </div>
+
+    <nav class="sidebar-nav">
+      <button class="sidebar-btn active" data-secao="dashboard">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        Dashboard
+      </button>
+      <button class="sidebar-btn" data-secao="contratos">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        Contratos
+      </button>
+      <button class="sidebar-btn" data-secao="terceirizados">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Terceirizados
+      </button>
+      <button class="sidebar-btn" data-secao="avaliacoes">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        Avalia&#231;&#245;es
+      </button>
+      <button class="sidebar-btn" data-secao="alertas">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        Alertas
+        <span id="badgeAlertas" class="nav-badge hidden">0</span>
+      </button>
+      <div class="sidebar-divider"></div>
+      <button class="sidebar-btn hidden" data-secao="auditoria" id="tabAuditoria">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        Auditoria
+      </button>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="sidebar-user">
+        <div class="sidebar-avatar" id="sidebarAvatar">?</div>
+        <div class="sidebar-user-info">
+          <strong id="perfilBadge">—</strong>
+        </div>
+      </div>
+      <div class="sidebar-actions">
+        <button class="btn-sair" id="btnSair" title="Sair">&#9211;</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="app-main">
+
+    <!-- ══════════ DASHBOARD ══════════ -->
+    <section id="secao-dashboard" class="secao active">
+      <div class="sec-header">
+        <h2>Dashboard</h2>
+        <div class="sec-header-right">
+          <span class="sec-sub" id="dashData"></span>
+          <button class="theme-toggle" id="themeToggle" title="Alternar tema claro/escuro">
+            <div class="theme-toggle-slider" id="themeSlider">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+            </div>
+          </button>
+        </div>
+      </div>
+      <div class="kpi-row">
+        <div class="kpi-card kpi-blue"><div class="kpi-icon-wrap kpi-bg-blue">📋</div><div><div class="kpi-label">Contratos Ativos</div><strong id="kpiAtivos" class="kpi-value">0</strong></div></div>
+        <div class="kpi-card kpi-green"><div class="kpi-icon-wrap kpi-bg-green">✅</div><div><div class="kpi-label">Aprovados</div><strong id="kpiAprovados" class="kpi-value">0</strong></div></div>
+        <div class="kpi-card kpi-yellow"><div class="kpi-icon-wrap kpi-bg-yellow">⏳</div><div><div class="kpi-label">Vencendo em 30d</div><strong id="kpiVencendo" class="kpi-value">0</strong></div></div>
+        <div class="kpi-card kpi-orange"><div class="kpi-icon-wrap kpi-bg-orange">⚠️</div><div><div class="kpi-label">Pendências</div><strong id="kpiPendencias" class="kpi-value">0</strong></div></div>
+        <div class="kpi-card kpi-purple"><div class="kpi-icon-wrap kpi-bg-purple">👤</div><div><div class="kpi-label">Terceirizados</div><strong id="kpiTercs" class="kpi-value">0</strong></div></div>
+        <div class="kpi-card kpi-teal"><div class="kpi-icon-wrap kpi-bg-teal">⭐</div><div><div class="kpi-label">Aval. Pendentes</div><strong id="kpiAvalPendentes" class="kpi-value">0</strong></div></div>
+      </div>
+
+      <div class="dash-recent-card">
+        <div class="dash-recent-header">
+          <h4 class="dash-recent-title">Solicitações Recentes</h4>
+        </div>
+        <div class="table-scroll">
+          <table class="art-table">
+            <thead>
+              <tr>
+                <th>Nº</th><th>Tipo</th><th>Solicitante</th><th>Empresa</th><th>Prestador</th>
+                <th>Status</th><th>Criado em</th><th>Atualizado em</th><th class="col-acoes">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="dashTabelaRecentes"></tbody>
+          </table>
+          <div id="emptyDashRecentes" class="table-empty"><div class="empty-state"><div class="empty-icon">📋</div><strong>Nenhuma solicitação ainda</strong></div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════ CONTRATOS ══════════ -->
+    <section id="secao-contratos" class="secao">
+      <div class="sec-header">
+        <h2>Contratos</h2>
+        <button id="btnNovoContrato" class="btn btn-primary" style="display:none">+ Novo Contrato</button>
+      </div>
+
+      <!-- FORMULÁRIO CONTRATO -->
+      <div id="formContrato" class="form-panel hidden">
+        <div class="form-panel-header">
+          <h3 id="formContratoTitulo">Novo Contrato</h3>
+          <button class="btn-voltar" id="btnFecharContrato">← Voltar</button>
+        </div>
+        <form id="contratoForm" class="form-body" novalidate>
+          <input type="hidden" id="cId" />
+          <input type="hidden" id="cStatus" value="Rascunho" />
+
+          <input type="hidden" id="cTipoContratacao" />
+
+          <!-- DADOS DO TERCEIRIZADO — campos variam por tipo -->
+          <div class="form-section-block">
+
+            <!-- Formulário específico para Despachante -->
+            <div id="secaoCTercDespachante" class="hidden">
+              <div class="avaliacao-pergunta">
+                <div class="avaliacao-num">1</div>
+                <div class="avaliacao-corpo">
+                  <label class="avaliacao-label required">Nome completo</label>
+                  <input id="depNome" class="form-control" placeholder="Nome do despachante" />
+                </div>
+              </div>
+              <div class="avaliacao-pergunta">
+                <div class="avaliacao-num">2</div>
+                <div class="avaliacao-corpo">
+                  <label class="avaliacao-label required">E-mail</label>
+                  <input id="depEmail" type="email" class="form-control" placeholder="e-mail@exemplo.com" />
+                </div>
+              </div>
+              <div class="avaliacao-pergunta">
+                <div class="avaliacao-num">3</div>
+                <div class="avaliacao-corpo">
+                  <label class="avaliacao-label required">O comprovante de pagamento será em nome de</label>
+                  <div class="radio-group">
+                    <label class="radio-pill"><input type="radio" name="depComprovante" value="Pessoa jurídica (CNPJ/MEI)"><span class="radio-pill-label">Pessoa jurídica (CNPJ/MEI)</span></label>
+                    <label class="radio-pill"><input type="radio" name="depComprovante" value="Pessoa física (CPF)"><span class="radio-pill-label">Pessoa física (CPF)</span></label>
+                  </div>
+                </div>
+              </div>
+              <div class="avaliacao-pergunta">
+                <div class="avaliacao-num">4</div>
+                <div class="avaliacao-corpo">
+                  <label class="avaliacao-label required">Telefone</label>
+                  <input id="depTelefone" class="form-control" placeholder="(00) 00000-0000" maxlength="15" />
+                </div>
+              </div>
+              <div class="avaliacao-pergunta">
+                <div class="avaliacao-num">5</div>
+                <div class="avaliacao-corpo">
+                  <label class="avaliacao-label">Município / Estado</label>
+                  <input id="depMunicipioEstado" class="form-control" placeholder="Cidade – UF" />
+                </div>
+              </div>
+              <div class="avaliacao-pergunta">
+                <div class="avaliacao-num">6</div>
+                <div class="avaliacao-corpo">
+                  <label class="avaliacao-label required">Haverá emissão de</label>
+                  <div class="radio-group">
+                    <label class="radio-pill"><input type="radio" name="depEmissao" value="Nota fiscal"><span class="radio-pill-label">Nota fiscal</span></label>
+                    <label class="radio-pill"><input type="radio" name="depEmissao" value="Recibo"><span class="radio-pill-label">Recibo</span></label>
+                  </div>
+                </div>
+              </div>
+              <div class="avaliacao-pergunta">
+                <div class="avaliacao-num">7</div>
+                <div class="avaliacao-corpo">
+                  <label class="avaliacao-label required">Dados bancários</label>
+                  <textarea id="depDadosBancarios" class="form-control" rows="3" placeholder="Banco, agência, conta / Chave Pix"></textarea>
+                </div>
+              </div>
+              <div class="avaliacao-pergunta">
+                <div class="avaliacao-num">8</div>
+                <div class="avaliacao-corpo">
+                  <label class="avaliacao-label required">Forma de pagamento</label>
+                  <div class="radio-group">
+                    <label class="radio-pill"><input type="radio" name="depFormaPgto" value="Pix"><span class="radio-pill-label">Pix</span></label>
+                    <label class="radio-pill"><input type="radio" name="depFormaPgto" value="Transferência bancária"><span class="radio-pill-label">Transferência bancária</span></label>
+                  </div>
+                </div>
+              </div>
+              <div class="avaliacao-pergunta">
+                <div class="avaliacao-num">9</div>
+                <div class="avaliacao-corpo">
+                  <label class="avaliacao-label required">Disponibilidade de horário</label>
+                  <input id="depDisponibilidade" class="form-control" placeholder="Ex: Segunda a sexta, horário comercial" />
+                </div>
+              </div>
+              <div class="avaliacao-pergunta">
+                <div class="avaliacao-num">10</div>
+                <div class="avaliacao-corpo">
+                  <label class="avaliacao-label required">Nome do contato de emergência 01</label>
+                  <input id="depEmerg1Nome" class="form-control" />
+                </div>
+              </div>
+              <div class="avaliacao-pergunta">
+                <div class="avaliacao-num">11</div>
+                <div class="avaliacao-corpo">
+                  <label class="avaliacao-label required">Telefone do contato de emergência 01</label>
+                  <input id="depEmerg1Tel" class="form-control" placeholder="(00) 00000-0000" maxlength="15" />
+                </div>
+              </div>
+              <div class="avaliacao-pergunta">
+                <div class="avaliacao-num">12</div>
+                <div class="avaliacao-corpo">
+                  <label class="avaliacao-label required">Nome do contato de emergência 02</label>
+                  <input id="depEmerg2Nome" class="form-control" />
+                </div>
+              </div>
+              <div class="avaliacao-pergunta" style="border-bottom:none;margin-bottom:0;padding-bottom:0">
+                <div class="avaliacao-num">13</div>
+                <div class="avaliacao-corpo">
+                  <label class="avaliacao-label required">Telefone do contato de emergência 02</label>
+                  <input id="depEmerg2Tel" class="form-control" placeholder="(00) 00000-0000" maxlength="15" />
+                </div>
+              </div>
+            </div><!-- #secaoCTercDespachante -->
+
+            <!-- Formulário específico para Auxiliar de Campo -->
+            <div id="secaoCTercAuxiliar" class="hidden">
+              <div class="avaliacao-pergunta">
+                <div class="avaliacao-num">1</div>
+                <div class="avaliacao-corpo">
+                  <label class="avaliacao-label required">Nome completo</label>
+                  <input id="auxNome" class="form-control" placeholder="Nome do auxiliar" />
+                </div>
+              </div>
+              <div class="avaliacao-pergunta">
+                <div class="avaliacao-num">2</div>
+                <div class="avaliacao-corpo">
+                  <label class="avaliacao-label required">Graduação <span style="font-weight:400;font-size:.72rem;color:var(--text-secondary)">(Se não tiver, responder com "N.A.")</span></label>
+                  <input id="auxGraduacao" class="form-control" placeholder="Ex: Biologia, Eng. Ambiental... ou N.A." />
+                </div>
+              </div>
+              <div class="avaliacao-pergunta">
+                <div class="avaliacao-num">3</div>
+                <div class="avaliacao-corpo">
+                  <label class="avaliacao-label required">Área de afinidade</label>
+                  <div class="radio-group">
+                    <label class="radio-pill"><input type="radio" name="auxAreaAfinidade" value="Avifauna"><span class="radio-pill-label">Avifauna</span></label>
+                    <label class="radio-pill"><input type="radio" name="auxAreaAfinidade" value="Mastofauna"><span class="radio-pill-label">Mastofauna</span></label>
+                    <label class="radio-pill"><input type="radio" name="auxAreaAfinidade" value="Entomofauna"><span class="radio-pill-label">Entomofauna</span></label>
+                    <label class="radio-pill"><input type="radio" name="auxAreaAfinidade" value="Herpetofauna"><span class="radio-pill-label">Herpetofauna</span></label>
+                    <label class="radio-pill"><input type="radio" name="auxAreaAfinidade" value="Ictiofauna"><span class="radio-pill-label">Ictiofauna</span></label>
+                    <label class="radio-pill"><input type="radio" name="auxAreaAfinidade" value="Quirópteros"><span class="radio-pill-label">Quirópteros</span></label>
+                    <label class="radio-pill"><input type="radio" name="auxAreaAfinidade" value="Geotecnologias"><span class="radio-pill-label">Geotecnologias</span></label>
+                    <label class="radio-pill"><input type="radio" name="auxAreaAfinidade" value="Vetores"><span class="radio-pill-label">Vetores</span></label>
+                    <label class="radio-pill"><input type="radio" name="auxAreaAfinidade" value="Geoprocessamento"><span class="radio-pill-label">Geoprocessamento</span></label>
+                    <label class="radio-pill"><input type="radio" name="auxAreaAfinidade" value="Outra"><span class="radio-pill-label">Outra</span></label>
+                  </div>
+                </div>
+              </div>
+              <div class="avaliacao-pergunta">
+                <div class="avaliacao-num">4</div>
+                <div class="avaliacao-corpo">
+                  <label class="avaliacao-label required">E-mail</label>
+                  <input id="auxEmail" type="email" class="form-control" placeholder="e-mail@exemplo.com" />
+                </div>
+              </div>
+              <div class="avaliacao-pergunta">
+                <div class="avaliacao-num">5</div>
+                <div class="avaliacao-corpo">
+                  <label class="avaliacao-label required">Telefone</label>
+                  <input id="auxTelefone" class="form-control" placeholder="(00) 00000-0000" maxlength="15" />
+                </div>
+              </div>
+              <div class="avaliacao-pergunta">
+                <div class="avaliacao-num">6</div>
+                <div class="avaliacao-corpo">
+                  <label class="avaliacao-label required">O comprovante de pagamento será em nome de</label>
+                  <div class="radio-group">
+                    <label class="radio-pill"><input type="radio" name="auxComprovante" value="Pessoa jurídica (CNPJ/MEI)"><span class="radio-pill-label">Pessoa jurídica (CNPJ/MEI)</span></label>
+                    <label class="radio-pill"><input type="radio" name="auxComprovante" value="Pessoa física (CPF)"><span class="radio-pill-label">Pessoa física (CPF)</span></label>
+                  </div>
+                </div>
+              </div>
+              <div class="avaliacao-pergunta">
+                <div class="avaliacao-num">7</div>
+                <div class="avaliacao-corpo">
+                  <label class="avaliacao-label required">Haverá emissão de</label>
+                  <div class="radio-group">
+                    <label class="radio-pill"><input type="radio" name="auxEmissao" value="Nota fiscal"><span class="radio-pill-label">Nota fiscal</span></label>
+                    <label class="radio-pill"><input type="radio" name="auxEmissao" value="Recibo"><span class="radio-pill-label">Recibo</span></label>
+                  </div>
+                </div>
+              </div>
+              <div class="avaliacao-pergunta">
+                <div class="avaliacao-num">8</div>
+                <div class="avaliacao-corpo">
+                  <label class="avaliacao-label required">Dados bancários / Chave Pix</label>
+                  <textarea id="auxDadosBancarios" class="form-control" rows="3" placeholder="Banco, agência, conta / Chave Pix"></textarea>
+                </div>
+              </div>
+              <div class="avaliacao-pergunta">
+                <div class="avaliacao-num">9</div>
+                <div class="avaliacao-corpo">
+                  <label class="avaliacao-label required">Nome do contato de emergência 01</label>
+                  <input id="auxEmerg1Nome" class="form-control" />
+                </div>
+              </div>
+              <div class="avaliacao-pergunta">
+                <div class="avaliacao-num">10</div>
+                <div class="avaliacao-corpo">
+                  <label class="avaliacao-label required">Telefone do contato de emergência 01</label>
+                  <input id="auxEmerg1Tel" class="form-control" placeholder="(00) 00000-0000" maxlength="15" />
+                </div>
+              </div>
+              <div class="avaliacao-pergunta">
+                <div class="avaliacao-num">11</div>
+                <div class="avaliacao-corpo">
+                  <label class="avaliacao-label required">Nome do contato de emergência 02</label>
+                  <input id="auxEmerg2Nome" class="form-control" />
+                </div>
+              </div>
+              <div class="avaliacao-pergunta">
+                <div class="avaliacao-num">12</div>
+                <div class="avaliacao-corpo">
+                  <label class="avaliacao-label required">Telefone do contato de emergência 02</label>
+                  <input id="auxEmerg2Tel" class="form-control" placeholder="(00) 00000-0000" maxlength="15" />
+                </div>
+              </div>
+              <div class="avaliacao-pergunta">
+                <div class="avaliacao-num">13</div>
+                <div class="avaliacao-corpo">
+                  <label class="avaliacao-label required">Data de nascimento</label>
+                  <input id="auxNascimento" type="date" class="form-control" />
+                </div>
+              </div>
+              <div class="avaliacao-pergunta">
+                <div class="avaliacao-num">14</div>
+                <div class="avaliacao-corpo">
+                  <label class="avaliacao-label required">Endereço</label>
+                  <input id="auxEndereco" class="form-control" />
+                </div>
+              </div>
+              <div class="avaliacao-pergunta">
+                <div class="avaliacao-num">15</div>
+                <div class="avaliacao-corpo">
+                  <label class="avaliacao-label required">Cidade</label>
+                  <input id="auxCidade" class="form-control" />
+                </div>
+              </div>
+              <div class="avaliacao-pergunta">
+                <div class="avaliacao-num">16</div>
+                <div class="avaliacao-corpo">
+                  <label class="avaliacao-label required">Possui CNH?</label>
+                  <div class="radio-group">
+                    <label class="radio-pill"><input type="radio" name="auxPossuiCnh" value="Sim"><span class="radio-pill-label">Sim</span></label>
+                    <label class="radio-pill"><input type="radio" name="auxPossuiCnh" value="Não"><span class="radio-pill-label">Não</span></label>
+                  </div>
+                </div>
+              </div>
+              <div class="avaliacao-pergunta" id="grpAuxExpDirecao" style="display:none">
+                <div class="avaliacao-num">17</div>
+                <div class="avaliacao-corpo">
+                  <label class="avaliacao-label">Descrever a experiência com direção</label>
+                  <input id="auxExpDirecao" class="form-control" placeholder="Ex: 5 anos com habilitação B, experiência em estradas vicinais" />
+                </div>
+              </div>
+              <div class="avaliacao-pergunta" style="border-bottom:none;margin-bottom:0;padding-bottom:0">
+                <div class="avaliacao-num">18</div>
+                <div class="avaliacao-corpo">
+                  <label class="avaliacao-label required">Já atuou e/ou vai atuar em algum projeto pela Seteg? Se sim, qual?</label>
+                  <input id="auxProjetosSeteg" class="form-control" />
+                </div>
+              </div>
+            </div><!-- #secaoCTercAuxiliar -->
+          </div>
+
+          <!-- RESPOSTA À PENDÊNCIA — visível apenas quando líder edita contrato Pendente -->
+          <div class="form-section-block secao-pendencia hidden" id="secaoRespostaPendencia">
+            <div class="pendencia-aviso">⚠ Este contrato está <strong>Pendente</strong>. Faça os ajustes necessários e informe sua resposta antes de reenviar.</div>
+            <h4 class="form-subtitle" style="color:#c8a800">Resposta à Pendência</h4>
+            <div class="form-grid">
+              <div class="form-group full-width">
+                <label class="form-label required">Explique os ajustes realizados</label>
+                <textarea id="cRespostaPendencia" class="form-control" rows="3" placeholder="Descreva as correções feitas em resposta à pendência apontada..."></textarea>
+              </div>
+            </div>
+          </div>
+        </form>
+        <div class="form-panel-footer">
+          <button class="btn btn-ghost" id="btnLimparContrato">Limpar</button>
+          <button class="btn btn-ghost" id="btnImprimirContrato">🖨️ Imprimir</button>
+          <button class="btn btn-primary" id="btnSalvarContrato">Salvar</button>
+        </div>
+      </div>
+
+      <!-- LISTA CONTRATOS -->
+      <div id="listaContratos" class="lista-wrapper">
+
+        <!-- Seletor de tipo: blocos inline -->
+        <div class="sol-block nova-block" style="margin-bottom:.75rem">
+          <div class="sol-block-header">
+            <span class="sol-block-title">Novo Contrato</span>
+            <span class="sol-block-sub">Selecione o tipo de contratação para abrir o formulário</span>
+          </div>
+          <div class="tipo-cards-compact">
+            <button class="tipo-card-compact" onclick="selecionarTipoContrato('Auxiliar de campo')">
+              <span class="tipo-icon-sm">⛏️</span>
+              <div class="tipo-card-compact-text">
+                <strong>Auxiliar de Campo</strong>
+                <span>Trabalhador técnico de campo · 18 campos</span>
+              </div>
+              <svg class="tipo-card-compact-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="9 18 15 12 9 6"/></svg>
+            </button>
+            <button class="tipo-card-compact" onclick="selecionarTipoContrato('Despachante')">
+              <span class="tipo-icon-sm">📋</span>
+              <div class="tipo-card-compact-text">
+                <strong>Despachante</strong>
+                <span>Prestador administrativo e documental · 13 campos</span>
+              </div>
+              <svg class="tipo-card-compact-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="9 18 15 12 9 6"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="table-controls">
+          <div class="filter-pills" id="pillsStatusC">
+            <button class="filter-pill active" data-status="">Todos</button>
+            <button class="filter-pill" data-status="Em Fila">Em Fila</button>
+            <button class="filter-pill" data-status="Aprovado">Aprovado</button>
+            <button class="filter-pill" data-status="Reprovado">Reprovado</button>
+            <button class="filter-pill" data-status="Pendente">Pendente</button>
+            <button class="filter-pill" data-status="Finalizado">Finalizado</button>
+          </div>
+          <div class="filter-row">
+            <select id="filtroEmpresaC" class="form-control filter-select"><option value="">Contratante</option><option>Seteg</option><option>Licenza</option></select>
+            <select id="filtroTipoC" class="form-control filter-select"><option value="">Tipo</option><option>Consultor terceirizado</option><option>Auxiliar de campo</option><option>Despachante</option><option>Serviço pontual</option><option>Campanha periódica</option></select>
+            <input id="buscaC" class="form-control search-input" placeholder="Buscar contrato, empresa, terceirizado, líder..." />
+          </div>
+        </div>
+        <div class="table-wrapper">
+          <div class="table-scroll">
+            <table class="art-table">
+              <thead>
+                <tr>
+                  <th>Nº</th><th>Empresa</th><th>Prestador</th><th>Tipo</th><th>Contratante</th>
+                  <th>Início</th><th>Término</th><th>Valor Total</th><th>Status</th><th class="col-acoes">Ações</th>
+                </tr>
+              </thead>
+              <tbody id="tabelaContratos"></tbody>
+            </table>
+            <div id="emptyContratos" class="table-empty">
+              <div class="empty-state">
+                <div class="empty-icon">📋</div>
+                <strong>Nenhum contrato encontrado</strong>
+                <span>Selecione o tipo acima para criar um novo contrato.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="pagination-container">
+          <div id="infoC" class="pagination-info">0 registros</div>
+          <div class="pagination-controls">
+            <button id="prevC" class="btn-pagination">‹</button>
+            <span id="pageC" class="page-number active">1</span>
+            <button id="nextC" class="btn-pagination">›</button>
+          </div>
+          <div class="pagination-per-page">
+            <span>Por página:</span>
+            <select id="perPageC"><option>10</option><option selected>20</option><option>50</option></select>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════ TERCEIRIZADOS ══════════ -->
+    <section id="secao-terceirizados" class="secao">
+      <div class="sec-header">
+        <h2>Terceirizados</h2>
+      </div>
+
+      <div id="formTerc" class="form-panel hidden">
+        <div class="form-panel-header">
+          <h3 id="formTercTitulo">Cadastrar Terceirizado</h3>
+          <button class="btn-voltar" id="btnFecharTerc">← Voltar</button>
+        </div>
+        <form id="tercForm" class="form-body" novalidate>
+          <input type="hidden" id="tId" />
+          <div class="form-section-block">
+            <h4 class="form-subtitle">1 · Identificação</h4>
+            <div class="form-grid">
+              <div class="form-group"><label class="form-label required">Nome completo</label><input id="tNome" class="form-control" /></div>
+              <div class="form-group"><label class="form-label required">Tipo</label>
+                <select id="tTipo" class="form-control">
+                  <option value="">Selecione</option>
+                  <option>Consultor terceirizado</option>
+                  <option>Auxiliar de campo</option>
+                  <option>Despachante</option>
+                  <option>Outro</option>
+                </select>
+              </div>
+              <div class="form-group"><label class="form-label required">E-mail</label><input id="tEmail" type="email" class="form-control" /></div>
+              <div class="form-group"><label class="form-label required">CPF</label><input id="tCpf" class="form-control" placeholder="000.000.000-00" maxlength="14" /></div>
+              <div class="form-group"><label class="form-label">RG</label><input id="tRg" class="form-control" /></div>
+              <div class="form-group"><label class="form-label">Data de nascimento</label><input id="tNascimento" type="date" class="form-control" /></div>
+              <div class="form-group"><label class="form-label required">Telefone</label><input id="tTelefone" class="form-control" placeholder="(00) 00000-0000" maxlength="15" /></div>
+              <div class="form-group"><label class="form-label">Estado</label><input id="tEstado" class="form-control" /></div>
+              <div class="form-group"><label class="form-label">Município</label><input id="tCidade" class="form-control" /></div>
+              <div class="form-group full-width"><label class="form-label">Endereço completo</label><input id="tEndereco" class="form-control" /></div>
+            </div>
+          </div>
+          <div class="form-section-block">
+            <h4 class="form-subtitle">2 · Formação e Expertise</h4>
+            <div class="form-grid">
+              <div class="form-group"><label class="form-label">Graduação</label><input id="tGraduacao" class="form-control" placeholder="N.A. se não tiver" /></div>
+              <div class="form-group"><label class="form-label">Nível de formação</label>
+                <select id="tNivelFormacao" class="form-control">
+                  <option value="">Selecione</option>
+                  <option>Técnico</option><option>Graduação</option><option>Especialização</option>
+                  <option>MBA</option><option>Mestrado</option><option>Doutorado</option>
+                  <option>Pós-doutorado</option><option>Outra</option>
+                </select>
+              </div>
+              <div class="form-group"><label class="form-label">Área de expertise / afinidade</label>
+                <select id="tAreaExpertise" class="form-control">
+                  <option value="">Selecione</option>
+                  <option>Avifauna</option><option>Mastofauna</option><option>Entomofauna</option>
+                  <option>Herpetofauna</option><option>Ictiofauna</option><option>Quirópteros</option>
+                  <option>Geotecnologias</option><option>Vetores</option><option>Geoprocessamento</option><option>Outra</option>
+                </select>
+              </div>
+              <div class="form-group"><label class="form-label">Cursos extras</label><input id="tCursosExtras" class="form-control" /></div>
+              <div class="form-group"><label class="form-label">Link Currículo Lattes</label><input id="tLattes" class="form-control" placeholder="URL ou 'Não possuo'" /></div>
+              <div class="form-group"><label class="form-label">Registro Profissional / Conselho</label><input id="tRegistro" class="form-control" placeholder="Ex: CRBio 12345-6" /></div>
+              <div class="form-group"><label class="form-label">CRBio Secundário</label><input id="tCrbio2" class="form-control" /></div>
+              <div class="form-group"><label class="form-label">Número do CTF</label><input id="tCtf" class="form-control" /></div>
+              <div class="form-group"><label class="form-label">CNH (categoria/número)</label><input id="tCnh" class="form-control" placeholder="Não possuo" /></div>
+              <div class="form-group full-width"><label class="form-label">Experiência com direção</label><textarea id="tExpDirecao" class="form-control" rows="2"></textarea></div>
+            </div>
+          </div>
+          <div class="form-section-block">
+            <h4 class="form-subtitle">3 · Dados Financeiros</h4>
+            <div class="form-grid">
+              <div class="form-group"><label class="form-label">Possui MEI/CNPJ?</label>
+                <select id="tPossuiCnpj" class="form-control"><option value="">Selecione</option><option>Não</option><option>Sim</option></select>
+              </div>
+              <div class="form-group hidden" id="grpCnpjTerc"><label class="form-label">Número MEI/CNPJ</label><input id="tCnpj" class="form-control" /></div>
+              <div class="form-group"><label class="form-label">Tipo comprovante</label>
+                <select id="tComprovante" class="form-control"><option value="">Selecione</option><option>Pessoa jurídica</option><option>Pessoa física</option></select>
+              </div>
+              <div class="form-group"><label class="form-label">Haverá emissão de</label>
+                <select id="tEmissao" class="form-control"><option value="">Selecione</option><option>Nota fiscal</option><option>Recibo</option></select>
+              </div>
+              <div class="form-group"><label class="form-label">Forma de pagamento</label>
+                <select id="tFormaPgto" class="form-control"><option value="">Selecione</option><option>Pix</option><option>Transferência bancária</option></select>
+              </div>
+              <div class="form-group full-width"><label class="form-label">Dados bancários</label><textarea id="tDadosBancarios" class="form-control" rows="2" placeholder="Banco, agência, conta, chave Pix..."></textarea></div>
+              <div class="form-group"><label class="form-label">Disponibilidade de horário</label><input id="tDisponibilidade" class="form-control" /></div>
+            </div>
+          </div>
+          <div class="form-section-block">
+            <h4 class="form-subtitle">4 · Contatos de Emergência</h4>
+            <div class="form-grid">
+              <div class="form-group"><label class="form-label">Emergência 01 – Nome</label><input id="tEmerg1Nome" class="form-control" /></div>
+              <div class="form-group"><label class="form-label">Emergência 01 – Telefone</label><input id="tEmerg1Tel" class="form-control" placeholder="(00) 00000-0000" maxlength="15" /></div>
+              <div class="form-group"><label class="form-label">Emergência 02 – Nome</label><input id="tEmerg2Nome" class="form-control" /></div>
+              <div class="form-group"><label class="form-label">Emergência 02 – Telefone</label><input id="tEmerg2Tel" class="form-control" placeholder="(00) 00000-0000" maxlength="15" /></div>
+            </div>
+          </div>
+          <div class="form-section-block">
+            <h4 class="form-subtitle">5 · Projetos e Informações</h4>
+            <div class="form-grid">
+              <div class="form-group full-width"><label class="form-label">Já atuou / vai atuar em projeto pela Seteg?</label><input id="tProjetosSeteg" class="form-control" placeholder="Se sim, qual?" /></div>
+              <div class="form-group full-width"><label class="form-label">Outras informações</label><textarea id="tOutrasInfo" class="form-control" rows="3"></textarea></div>
+            </div>
+          </div>
+        </form>
+        <div class="form-panel-footer">
+          <button class="btn btn-ghost" id="btnLimparTerc">Limpar</button>
+          <button class="btn btn-primary" id="btnSalvarTerc">Salvar</button>
+        </div>
+      </div>
+
+      <div id="listaTerceirizados" class="lista-wrapper">
+        <div class="table-controls">
+          <div class="filter-row">
+            <select id="filtroTipoT" class="form-control filter-select"><option value="">Tipo</option><option>Consultor terceirizado</option><option>Auxiliar de campo</option><option>Despachante</option><option>Outro</option></select>
+            <input id="buscaT" class="form-control search-input" placeholder="Buscar por nome, CPF, área..." />
+            <button id="btnNovoTerc" class="btn btn-primary perm-gp-gestao hidden">+ Cadastrar Terceirizado</button>
+          </div>
+        </div>
+        <div class="table-wrapper">
+          <div class="table-scroll">
+            <table class="art-table">
+              <thead><tr><th>Nome</th><th>Tipo</th><th>Área</th><th>CPF</th><th>E-mail</th><th>Telefone</th><th>CNPJ/MEI</th><th class="col-acoes">Ações</th></tr></thead>
+              <tbody id="tabelaTerceirizados"></tbody>
+            </table>
+            <div id="emptyTerc" class="table-empty"><div class="empty-state"><div class="empty-icon">👤</div><strong>Nenhum terceirizado cadastrado</strong></div></div>
+          </div>
+        </div>
+        <div class="pagination-container">
+          <div id="infoT" class="pagination-info">0 registros</div>
+          <div class="pagination-controls">
+            <button id="prevT" class="btn-pagination">‹</button>
+            <span id="pageT" class="page-number active">1</span>
+            <button id="nextT" class="btn-pagination">›</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════ AVALIAÇÕES ══════════ -->
+    <section id="secao-avaliacoes" class="secao">
+      <div class="sec-header">
+        <h2>Avaliações de Prestadores</h2>
+      </div>
+
+      <!-- Formulário de Avaliação -->
+      <div id="formAval" class="form-panel hidden">
+        <div class="form-panel-header">
+          <h3 id="formAvalTitulo">Avaliação do Prestador de Serviço</h3>
+          <button class="btn-voltar" id="btnFecharAval">← Voltar</button>
+        </div>
+        <div class="form-body">
+          <input type="hidden" id="aContrato" />
+
+          <!-- Q1 — Avaliador -->
+          <div class="avaliacao-pergunta">
+            <div class="avaliacao-num">1</div>
+            <div class="avaliacao-corpo">
+              <label class="avaliacao-label required">Nome completo do avaliador(a)</label>
+              <input id="aAvaliador" class="form-control" placeholder="Seu nome completo" />
+            </div>
+          </div>
+
+          <!-- Q2 — Avaliado -->
+          <div class="avaliacao-pergunta">
+            <div class="avaliacao-num">2</div>
+            <div class="avaliacao-corpo">
+              <label class="avaliacao-label required">Nome completo do avaliado(a)</label>
+              <select id="aAvaliado" class="form-control"><option value="">Selecione o prestador</option></select>
+            </div>
+          </div>
+
+          <!-- Q3 — Nível técnico em campo -->
+          <div class="avaliacao-pergunta">
+            <div class="avaliacao-num">3</div>
+            <div class="avaliacao-corpo">
+              <label class="avaliacao-label required">Nível técnico em campo</label>
+              <div class="radio-group">
+                <label class="radio-pill" data-val="Excelente"><input type="radio" name="aNivelCampo" value="Excelente"><span class="radio-pill-label">Excelente</span></label>
+                <label class="radio-pill" data-val="Bom"><input type="radio" name="aNivelCampo" value="Bom"><span class="radio-pill-label">Bom</span></label>
+                <label class="radio-pill" data-val="Intermediário"><input type="radio" name="aNivelCampo" value="Intermediário"><span class="radio-pill-label">Intermediário</span></label>
+                <label class="radio-pill" data-val="Ruim"><input type="radio" name="aNivelCampo" value="Ruim"><span class="radio-pill-label">Ruim</span></label>
+                <label class="radio-pill" data-val="Péssimo"><input type="radio" name="aNivelCampo" value="Péssimo"><span class="radio-pill-label">Péssimo</span></label>
+                <label class="radio-pill" data-val="Não se aplica"><input type="radio" name="aNivelCampo" value="Não se aplica"><span class="radio-pill-label">Não se aplica</span></label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Q4 — Nível técnico do relatório -->
+          <div class="avaliacao-pergunta">
+            <div class="avaliacao-num">4</div>
+            <div class="avaliacao-corpo">
+              <label class="avaliacao-label required">Nível técnico do relatório</label>
+              <div class="radio-group">
+                <label class="radio-pill" data-val="Excelente"><input type="radio" name="aNivelRelatorio" value="Excelente"><span class="radio-pill-label">Excelente</span></label>
+                <label class="radio-pill" data-val="Bom"><input type="radio" name="aNivelRelatorio" value="Bom"><span class="radio-pill-label">Bom</span></label>
+                <label class="radio-pill" data-val="Intermediário"><input type="radio" name="aNivelRelatorio" value="Intermediário"><span class="radio-pill-label">Intermediário</span></label>
+                <label class="radio-pill" data-val="Ruim"><input type="radio" name="aNivelRelatorio" value="Ruim"><span class="radio-pill-label">Ruim</span></label>
+                <label class="radio-pill" data-val="Péssimo"><input type="radio" name="aNivelRelatorio" value="Péssimo"><span class="radio-pill-label">Péssimo</span></label>
+                <label class="radio-pill" data-val="Não se aplica"><input type="radio" name="aNivelRelatorio" value="Não se aplica"><span class="radio-pill-label">Não se aplica</span></label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Q5 — Cumprimento do prazo -->
+          <div class="avaliacao-pergunta">
+            <div class="avaliacao-num">5</div>
+            <div class="avaliacao-corpo">
+              <label class="avaliacao-label required">O prazo para entrega do serviço foi cumprido?</label>
+              <div class="radio-group">
+                <label class="radio-pill" data-val="Totalmente"><input type="radio" name="aPrazo" value="Totalmente"><span class="radio-pill-label">Totalmente</span></label>
+                <label class="radio-pill" data-val="Parcialmente"><input type="radio" name="aPrazo" value="Parcialmente"><span class="radio-pill-label">Parcialmente</span></label>
+                <label class="radio-pill" data-val="Não cumprido"><input type="radio" name="aPrazo" value="Não cumprido"><span class="radio-pill-label">Não cumprido</span></label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Q6 — Atrasos -->
+          <div class="avaliacao-pergunta">
+            <div class="avaliacao-num">6</div>
+            <div class="avaliacao-corpo">
+              <label class="avaliacao-label">Se houve atrasos na entrega, descreva os motivos e/ou a situação</label>
+              <textarea id="aMotivo" class="form-control" rows="3" placeholder="Deixe em branco se o prazo foi totalmente cumprido..."></textarea>
+            </div>
+          </div>
+
+          <!-- Q7 — Relacionamento -->
+          <div class="avaliacao-pergunta">
+            <div class="avaliacao-num">7</div>
+            <div class="avaliacao-corpo">
+              <label class="avaliacao-label required">Como você avalia o relacionamento do terceirizado com a Seteg?</label>
+              <span class="avaliacao-sublabel">Considere: clareza na comunicação, disponibilidade para suporte, agilidade na resolução de problemas, cumprimento de acordos e postura profissional.</span>
+              <div class="radio-group">
+                <label class="radio-pill" data-val="Excelente"><input type="radio" name="aRelacionamento" value="Excelente"><span class="radio-pill-label">Excelente</span></label>
+                <label class="radio-pill" data-val="Bom"><input type="radio" name="aRelacionamento" value="Bom"><span class="radio-pill-label">Bom</span></label>
+                <label class="radio-pill" data-val="Intermediário"><input type="radio" name="aRelacionamento" value="Intermediário"><span class="radio-pill-label">Intermediário</span></label>
+                <label class="radio-pill" data-val="Ruim"><input type="radio" name="aRelacionamento" value="Ruim"><span class="radio-pill-label">Ruim</span></label>
+                <label class="radio-pill" data-val="Péssimo"><input type="radio" name="aRelacionamento" value="Péssimo"><span class="radio-pill-label">Péssimo</span></label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Q8 — Cliente -->
+          <div class="avaliacao-pergunta">
+            <div class="avaliacao-num">8</div>
+            <div class="avaliacao-corpo">
+              <label class="avaliacao-label required">Nome do cliente</label>
+              <input id="aCliente" class="form-control" placeholder="Nome do cliente / tomador do serviço" />
+            </div>
+          </div>
+
+          <!-- Q9 — Projeto -->
+          <div class="avaliacao-pergunta">
+            <div class="avaliacao-num">9</div>
+            <div class="avaliacao-corpo">
+              <label class="avaliacao-label required">Nome do projeto</label>
+              <input id="aProjeto" class="form-control" placeholder="Nome ou código do projeto" />
+            </div>
+          </div>
+
+          <!-- Q10 — Observações gerais -->
+          <div class="avaliacao-pergunta">
+            <div class="avaliacao-num">10</div>
+            <div class="avaliacao-corpo">
+              <label class="avaliacao-label">Observações</label>
+              <textarea id="aObs" class="form-control" rows="4" placeholder="Considerações adicionais, recomendações para projetos futuros..."></textarea>
+            </div>
+          </div>
+
+        </div>
+        <div class="form-panel-footer">
+          <button class="btn btn-ghost" id="btnCancelarAval">Cancelar</button>
+          <button class="btn btn-primary" id="btnSalvarAval">Enviar Avaliação</button>
+        </div>
+      </div>
+
+      <!-- Vista Gestão / GP: tabela completa com respostas -->
+      <div id="listaAvaliacoes" class="lista-wrapper">
+        <!-- Controles da lista -->
+        <div class="table-controls" style="display:flex;justify-content:flex-end;align-items:center">
+          <!-- Gestão / GP podem criar manualmente; Solicitante avalia pelo botão no contrato -->
+          <button id="btnNovaAval" class="btn btn-primary perm-gp-gestao hidden">+ Nova Avaliação</button>
+        </div>
+        <!-- Visão para Gestão e Gestão de Pessoas -->
+        <div id="avalViewGestao" class="lista-wrapper">
+          <div class="table-wrapper">
+            <div class="table-scroll">
+              <table class="art-table">
+                <thead><tr><th>Data</th><th>Avaliador</th><th>Prestador</th><th>Cliente</th><th>Projeto</th><th>Campo</th><th>Relatório</th><th>Prazo</th><th>Relac.</th><th class="col-acoes">Ações</th></tr></thead>
+                <tbody id="tabelaAvaliacoes"></tbody>
+              </table>
+              <div id="emptyAval" class="table-empty"><div class="empty-state"><div class="empty-icon">⭐</div><strong>Nenhuma avaliação registrada</strong></div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Visão para Solicitante: apenas confirmação de avaliado, sem respostas -->
+        <div id="avalViewSolicitante" class="lista-wrapper hidden">
+          <div class="aval-info-banner">
+            Suas avaliações foram registradas. Os detalhes são visíveis apenas para Gestão e DP/RH.
+          </div>
+          <div class="table-wrapper">
+            <div class="table-scroll">
+              <table class="art-table">
+                <thead><tr><th>Data</th><th>Contrato</th><th>Prestador avaliado</th><th>Situação</th></tr></thead>
+                <tbody id="tabelaAvalSolicitante"></tbody>
+              </table>
+              <div id="emptyAvalSolicitante" class="table-empty"><div class="empty-state"><div class="empty-icon">⭐</div><strong>Nenhuma avaliação enviada ainda</strong></div></div>
+            </div>
+          </div>
+        </div>
+        <div class="pagination-container">
+          <div id="infoAval" class="pagination-info">0 registros</div>
+          <div class="pagination-controls">
+            <button id="prevAval" class="btn-pagination">&#8249;</button>
+            <span id="pageAval" class="page-number">1</span>
+            <button id="nextAval" class="btn-pagination">&#8250;</button>
+          </div>
+          <div class="pagination-per-page">
+            <span>Por página:</span>
+            <select id="perPageAval"><option>10</option><option selected>20</option><option>50</option></select>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════ ALERTAS ══════════ -->
+    <section id="secao-alertas" class="secao">
+      <div class="sec-header"><h2>Alertas de Vencimento</h2></div>
+      <div class="alertas-scroll">
+        <div id="listaAlertas" class="alertas-grid"></div>
+      </div>
+    </section>
+
+    <!-- ══════════ AUDITORIA ══════════ -->
+    <section id="secao-auditoria" class="secao">
+      <div class="sec-header">
+        <h2>Auditoria</h2>
+        <span class="sec-sub" id="auditoriaTotal"></span>
+      </div>
+      <div class="table-controls">
+        <div class="filter-row">
+          <input id="buscaAudit" class="form-control search-input" placeholder="Buscar na auditoria..." />
+        </div>
+      </div>
+      <div class="table-wrapper">
+        <div class="table-scroll">
+          <table class="art-table">
+            <thead><tr><th>Data / Hora</th><th>Usuário</th><th>Perfil</th><th>Ação</th><th>Módulo</th><th>Registro</th><th>Status Anterior</th><th>Novo Status</th><th>Detalhe</th></tr></thead>
+            <tbody id="tabelaAuditoria"></tbody>
+          </table>
+          <div id="emptyAudit" class="table-empty"><div class="empty-state"><div class="empty-icon">📊</div><strong>Nenhum registro de auditoria</strong></div></div>
+        </div>
+      </div>
+      <div class="pagination-container">
+        <div id="infoAudit" class="pagination-info">0 registros</div>
+        <div class="pagination-controls">
+          <button id="prevAudit" class="btn-pagination">&#8249;</button>
+          <span id="pageAudit" class="page-number">1</span>
+          <button id="nextAudit" class="btn-pagination">&#8250;</button>
+        </div>
+        <div class="pagination-per-page">
+          <span>Por página:</span>
+          <select id="perPageAudit"><option>10</option><option selected>20</option><option>50</option></select>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="app-footer">
+    Seteg – Soluções Geológicas e Ambientais · 2026 · Contratação de Terceirizados
+  </footer>
+</div><!-- /appScreen -->
+
+<div id="toast" class="toast"></div>
+
+<!-- Modal Detalhes -->
+<div id="modalDetalhes" class="modal-overlay">
+  <div class="modal modal-lg">
+    <div class="modal-header"><h2 id="modalDetalhesTitulo">Detalhes</h2><button class="modal-close" id="btnFecharDetalhes">×</button></div>
+    <div id="modalDetalhesBody" class="modal-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="btnImprimirDetalhes">🖨️ Imprimir</button>
+      <button class="btn btn-ghost hidden" id="btnAddObs">+ Observação</button>
+      <button class="btn btn-ghost" id="btnFecharDetalhesOk">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Análise / Aprovação -->
+<div id="modalAnalise" class="modal-overlay">
+  <div class="modal modal-sm">
+    <div class="modal-header"><h2>Análise e Aprovação</h2><button class="modal-close" id="btnFecharAnalise">×</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="analiseId" />
+      <input type="hidden" id="analiseStatusVal" value="" />
+      <label class="form-label" style="margin-bottom:.5rem;display:block">Decisão</label>
+      <div class="status-btn-group" id="statusBtnGroup"></div>
+      <label class="form-label label-spacing" style="display:block">Observação <span style="color:var(--text-muted);font-weight:400">(opcional — se preenchida sem decisão, vai para Pendente)</span></label>
+      <textarea id="analiseObs" class="form-control" rows="4" placeholder="Registre a análise, pendência ou decisão..."></textarea>
+      <p class="modal-hint">Esta ação será registrada no histórico e na auditoria.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="btnCancelarAnalise">Cancelar</button>
+      <button class="btn btn-primary" id="btnSalvarAnalise">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Confirmar Exclusão -->
+<div id="modalExcluir" class="modal-overlay">
+  <div class="modal modal-sm">
+    <div class="modal-header"><h2>Confirmar Exclusão</h2><button class="modal-close" id="btnFecharExcluir">×</button></div>
+    <div class="modal-body">
+      <p style="color:var(--text-primary);margin-bottom:.5rem">Tem certeza que deseja excluir este registro?</p>
+      <p class="modal-hint">Esta ação não pode ser desfeita.</p>
+      <input type="hidden" id="excluirId" />
+      <input type="hidden" id="excluirTipo" />
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="btnCancelarExcluir">Cancelar</button>
+      <button class="btn btn-primary" id="btnConfirmarExcluir" style="background:var(--red)">Excluir</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Observação -->
+<div id="modalObs" class="modal-overlay">
+  <div class="modal modal-sm">
+    <div class="modal-header"><h2>Adicionar Observação</h2><button class="modal-close" id="btnFecharObs">×</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="obsContratoId" />
+      <label class="form-label required">Observação</label>
+      <textarea id="obsTexto" class="form-control" rows="5" placeholder="Registre um comentário, pendência ou informação relevante..."></textarea>
+      <p class="modal-hint">A observação será registrada no histórico e na auditoria.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="btnCancelarObs">Cancelar</button>
+      <button class="btn btn-primary" id="btnSalvarObs">Salvar Observação</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Seletor de Tipo de Contrato -->
+<div id="modalSelecionarTipo" class="modal-overlay">
+  <div class="modal modal-tipo-sel">
+    <div class="modal-header">
+      <h2>Qual tipo de contrato?</h2>
+      <button class="modal-close" id="btnFecharSelecionarTipo">×</button>
+    </div>
+    <div class="modal-body">
+      <p class="modal-hint" style="margin-bottom:1rem">Selecione o tipo para abrir o formulário correspondente.</p>
+      <div class="tipo-sel-grid tipo-sel-grid-2">
+        <button class="tipo-sel-card" data-tipo="Auxiliar de campo">
+          <span class="tipo-sel-nome">Auxiliar de Campo</span>
+          <span class="tipo-sel-desc">Formulário especializado · 18 campos</span>
+          <span class="tipo-sel-badge">Formulário próprio</span>
+        </button>
+        <button class="tipo-sel-card" data-tipo="Despachante">
+          <span class="tipo-sel-nome">Despachante</span>
+          <span class="tipo-sel-desc">Formulário especializado · 13 campos</span>
+          <span class="tipo-sel-badge">Formulário próprio</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="printArea" class="print-area"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="script.js"></script>
+</body>
+</html>
