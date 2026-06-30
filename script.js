@@ -85,6 +85,18 @@ const CAMPOS_TERC = [
   "tComprovante","tEmissao","tFormaPgto","tDadosBancarios","tEmerg1Nome","tEmerg1Tel",
   "tEmerg2Nome","tEmerg2Tel","tProjetosSeteg","tDisponibilidade","tOutrasInfo"
 ];
+const TERC_LABELS = {
+  tNome:"Nome",tTipo:"Tipo",tEmail:"E-mail",tCpf:"CPF",tRg:"RG",tNascimento:"Nascimento",
+  tTelefone:"Telefone",tEstado:"Estado",tCidade:"Cidade",tEndereco:"Endereço",
+  tGraduacao:"Graduação",tNivelFormacao:"Nível Formação",tAreaExpertise:"Área",
+  tCursosExtras:"Cursos",tLattes:"Lattes",tRegistro:"Registro",tCrbio2:"CRBio2",
+  tCtf:"CTF",tCnh:"CNH",tExpDirecao:"Exp. Direção",tPossuiCnpj:"Possui CNPJ",
+  tCnpj:"CNPJ",tComprovante:"Comprovante",tEmissao:"Emissão",tFormaPgto:"Forma Pgto",
+  tDadosBancarios:"Dados Bancários",tDisponibilidade:"Disponibilidade",
+  tEmerg1Nome:"Emerg 1 Nome",tEmerg1Tel:"Emerg 1 Tel",
+  tEmerg2Nome:"Emerg 2 Nome",tEmerg2Tel:"Emerg 2 Tel",
+  tProjetosSeteg:"Projetos Seteg",tOutrasInfo:"Outras Informações"
+};
 
 // ══════════════════════════════════════════════════════
 //  TEMA CLARO / ESCURO
@@ -425,10 +437,6 @@ function registrarListeners() {
   document.getElementById("btnFecharExcluir").addEventListener("click", () => fecharModal("modalExcluir"));
   document.getElementById("btnCancelarExcluir").addEventListener("click", () => fecharModal("modalExcluir"));
   document.getElementById("btnConfirmarExcluir").addEventListener("click", confirmarExcluir);
-  document.getElementById("buscaAudit").addEventListener("input", () => { STATE.filtros.auditoria.busca=document.getElementById("buscaAudit").value.toLowerCase(); STATE.filtros.auditoria.pagina=1; renderAuditoria(); });
-  document.getElementById("prevAudit").addEventListener("click", () => { STATE.filtros.auditoria.pagina--; renderAuditoria(); });
-  document.getElementById("nextAudit").addEventListener("click", () => { STATE.filtros.auditoria.pagina++; renderAuditoria(); });
-  document.getElementById("perPageAudit").addEventListener("change", () => { STATE.filtros.auditoria.pagina=1; renderAuditoria(); });
   document.getElementById("prevAval").addEventListener("click", () => { STATE.filtros.avaliacoes.pagina--; renderAvaliacoes(); });
   document.getElementById("nextAval").addEventListener("click", () => { STATE.filtros.avaliacoes.pagina++; renderAvaliacoes(); });
   document.getElementById("perPageAval").addEventListener("change", () => { STATE.filtros.avaliacoes.pagina=1; renderAvaliacoes(); });
@@ -436,8 +444,14 @@ function registrarListeners() {
   document.querySelectorAll(".modal-overlay").forEach(m => {
     m.addEventListener("click", e => { if (e.target===m) m.classList.remove("active"); });
   });
+  document.getElementById("btnFecharVerTerc").addEventListener("click", () => fecharModal("modalVerTerc"));
+  document.getElementById("btnFecharVerTercOk").addEventListener("click", () => fecharModal("modalVerTerc"));
+
   document.addEventListener("keydown", e => {
-    if (e.key==="Escape") document.querySelectorAll(".modal-overlay").forEach(m=>m.classList.remove("active"));
+    if (e.key !== "Escape") return;
+    document.querySelectorAll(".modal-overlay").forEach(m => m.classList.remove("active"));
+    const formTerc = document.getElementById("formTerc");
+    if (formTerc && !formTerc.classList.contains("hidden")) fecharFormTerc();
   });
 }
 
@@ -452,7 +466,6 @@ function aplicarPermissoes() {
     : STATE.nomeUsuario.split(" ").filter(Boolean).map(w=>w[0]).join("").substring(0,2).toUpperCase();
   const av = document.getElementById("sidebarAvatar");
   if (av) av.textContent = initials;
-  document.getElementById("tabAuditoria").classList.toggle("hidden", p !== "gestao");
   document.querySelectorAll(".perm-gp-gestao").forEach(el => el.classList.toggle("hidden", p==="solicitante"));
   document.querySelectorAll(".campo-interno").forEach(el => el.classList.toggle("hidden", p==="solicitante"));
   document.querySelectorAll(".campo-gestao").forEach(el => el.classList.toggle("hidden", p!=="gestao"));
@@ -497,7 +510,6 @@ function irParaSecao(secao) {
     case "terceirizados": renderTerceirizados(); break;
     case "avaliacoes":    renderAvaliacoes();    break;
     case "alertas":       renderAlertas();       break;
-    case "auditoria":     renderAuditoria();     break;
   }
 }
 
@@ -1148,7 +1160,14 @@ function salvarTerceirizado(){
   if(!item.tCpf){mostrarToast("Informe o CPF.","err");return;}
   if(!item.tTelefone){mostrarToast("Informe o telefone.","err");return;}
   const idx=DB.terceirizados.findIndex(t=>t.tId===item.tId);
-  if(idx>=0){DB.terceirizados[idx]={...DB.terceirizados[idx],...item,atualizadoEm:new Date().toISOString()};registrarAuditoria("Edição","Terceirizados",item.tId,"","",item.tNome);syncTerceirizado(DB.terceirizados[idx]);mostrarToast("Atualizado.","ok");}
+  if(idx>=0){
+    const antigo=DB.terceirizados[idx];
+    const diffs=Object.entries(TERC_LABELS).filter(([k])=>String(antigo[k]||"")!==String(item[k]||"")).map(([k,l])=>`${l}: "${antigo[k]||"-"}" → "${item[k]||"-"}"`);
+    const detalheEdit=diffs.length?diffs.join(" | "):"Sem alterações detectadas";
+    DB.terceirizados[idx]={...antigo,...item,atualizadoEm:new Date().toISOString()};
+    registrarAuditoria("Edição","Terceirizados",item.tId,"","",detalheEdit);
+    syncTerceirizado(DB.terceirizados[idx]);mostrarToast("Atualizado.","ok");
+  }
   else{item.criadoEm=new Date().toISOString();item.criadoPor=STATE.nomeUsuario;DB.terceirizados.unshift(item);registrarAuditoria("Criação","Terceirizados",item.tId,"","",item.tNome);syncTerceirizado(item);mostrarToast("Cadastrado.","ok");}
   fecharFormTerc();
 }
@@ -1158,6 +1177,40 @@ function editarTerceirizado(id){
   CAMPOS_TERC.forEach(campo=>{const el=document.getElementById(campo);if(el)el.value=item[campo]||"";});
   toggleCondicional("tPossuiCnpj","Sim","grpCnpjTerc");
   document.getElementById("listaTerceirizados").classList.add("hidden");document.getElementById("formTerc").classList.remove("hidden");
+}
+function verTerceirizado(id) {
+  const t = DB.terceirizados.find(x => x.tId === id);
+  if (!t) return;
+  const hist = DB.auditoria.filter(a => a.registroId === id && a.modulo === "Terceirizados");
+  document.getElementById("modalVerTercTitulo").textContent = t.tNome + (t.tTipo ? " · " + t.tTipo : "");
+  document.getElementById("modalVerTercBody").innerHTML = gerarHTMLDetalhesTerceirizado(t, hist);
+  const btnEditar = document.getElementById("btnEditarVerTerc");
+  if (ehGestaoOuGP()) {
+    btnEditar.classList.remove("hidden");
+    btnEditar.onclick = () => { fecharModal("modalVerTerc"); editarTerceirizado(id); };
+  } else {
+    btnEditar.classList.add("hidden");
+  }
+  abrirModal("modalVerTerc");
+}
+function gerarHTMLDetalhesTerceirizado(t, hist) {
+  const di  = (l,v) => v ? `<div class="detail-item"><span>${l}</span><strong>${esc(String(v))}</strong></div>` : "";
+  const diF = (l,v) => v ? `<div class="detail-item full"><span>${l}</span><strong>${esc(String(v))}</strong></div>` : "";
+  const histHTML = hist.length
+    ? hist.map(h=>`<div class="historico-item"><small>${formatarDataHora(h.data)} · ${esc(h.usuario||"-")} · ${esc(h.perfil||"-")}</small><strong>${esc(h.acao)}</strong><p style="font-size:.75rem;color:var(--text-secondary);margin:.2rem 0 0;white-space:pre-wrap;word-break:break-word">${esc(h.detalhe||"-").replace(/ \| /g,"\n")}</p></div>`).join("")
+    : `<p style="color:var(--text-muted);font-size:.8rem;padding:.5rem 0">Nenhum histórico de edição registrado.</p>`;
+  return `<div class="detail-grid">
+    <div class="detail-section-title">1 · Identificação</div>
+    ${di("Nome",t.tNome)}${di("Tipo",t.tTipo)}${di("E-mail",t.tEmail)}${di("CPF",t.tCpf)}${di("RG",t.tRg)}${di("Nascimento",formatarData(t.tNascimento))}${di("Telefone",t.tTelefone)}${di("Estado",t.tEstado)}${di("Cidade",t.tCidade)}${diF("Endereço",t.tEndereco)}
+    <div class="detail-section-title">2 · Formação e Expertise</div>
+    ${di("Graduação",t.tGraduacao)}${di("Nível Formação",t.tNivelFormacao)}${di("Área",t.tAreaExpertise)}${di("Cursos extras",t.tCursosExtras)}${di("Lattes",t.tLattes)}${di("Registro",t.tRegistro)}${di("CRBio2",t.tCrbio2)}${di("CTF",t.tCtf)}${di("CNH",t.tCnh)}${diF("Exp. Direção",t.tExpDirecao)}
+    <div class="detail-section-title">3 · Dados Financeiros</div>
+    ${di("Possui CNPJ",t.tPossuiCnpj)}${di("CNPJ",t.tCnpj)}${di("Comprovante",t.tComprovante)}${di("Emissão",t.tEmissao)}${di("Forma Pgto",t.tFormaPgto)}${diF("Dados Bancários",t.tDadosBancarios)}${di("Disponibilidade",t.tDisponibilidade)}
+    <div class="detail-section-title">4 · Emergência</div>
+    ${di("Emergência 1",t.tEmerg1Nome?(t.tEmerg1Nome+(t.tEmerg1Tel?" · "+t.tEmerg1Tel:"")):"")}${di("Emergência 2",t.tEmerg2Nome?(t.tEmerg2Nome+(t.tEmerg2Tel?" · "+t.tEmerg2Tel:"")):"")}</div>
+    ${t.tProjetosSeteg||t.tOutrasInfo?`<div class="detail-grid"><div class="detail-section-title">5 · Projetos e Informações</div>${diF("Projetos Seteg",t.tProjetosSeteg)}${diF("Outras Informações",t.tOutrasInfo)}</div>`:""}
+    <div class="detail-section-title" style="padding:.75rem 0 .5rem;font-size:.72rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.07em;border-top:1px solid var(--border-color);margin-top:.5rem">Histórico de Edições</div>
+    <div class="historico-lista">${histHTML}</div>`;
 }
 function excluirTerceirizado(id){
   if(!podeExcluir()){mostrarToast("Apenas Gestão pode excluir.","err");return;}
@@ -1169,7 +1222,7 @@ function renderTerceirizados(){
   const porPagina=20;const totalPag=Math.max(1,Math.ceil(lista.length/porPagina));if(f.pagina>totalPag)f.pagina=totalPag;
   const ini=(f.pagina-1)*porPagina;const fatia=lista.slice(ini,ini+porPagina);
   const tbody=document.getElementById("tabelaTerceirizados");const empty=document.getElementById("emptyTerc");tbody.innerHTML="";
-  fatia.forEach(t=>{tbody.innerHTML+=`<tr><td>${esc(t.tNome)}</td><td>${esc(t.tTipo||"-")}</td><td>${esc(t.tAreaExpertise||"-")}</td><td>${esc(t.tCpf||"-")}</td><td>${esc(t.tEmail||"-")}</td><td>${esc(t.tTelefone||"-")}</td><td>${esc(t.tCnpj||"-")}</td><td class="col-acoes"><div class="table-actions"><button class="btn-icon btn-icon-orange" onclick="editarTerceirizado('${t.tId}')">✎</button>${podeExcluir()?`<button class="btn-icon btn-icon-danger" onclick="excluirTerceirizado('${t.tId}')">✕</button>`:""}</div></td></tr>`;});
+  fatia.forEach(t=>{tbody.innerHTML+=`<tr><td>${esc(t.tNome)}</td><td>${esc(t.tTipo||"-")}</td><td>${esc(t.tAreaExpertise||"-")}</td><td>${esc(t.tCpf||"-")}</td><td>${esc(t.tEmail||"-")}</td><td>${esc(t.tTelefone||"-")}</td><td>${esc(t.tCnpj||"-")}</td><td class="col-acoes"><div class="table-actions"><button class="btn-icon" title="Visualizar" onclick="verTerceirizado('${t.tId}')">👁</button>${ehGestaoOuGP()?`<button class="btn-icon btn-icon-orange" title="Editar" onclick="editarTerceirizado('${t.tId}')">✎</button>`:""} ${podeExcluir()?`<button class="btn-icon btn-icon-danger" title="Excluir" onclick="excluirTerceirizado('${t.tId}')">✕</button>`:""}</div></td></tr>`;});
   empty.classList.toggle("visible",lista.length===0);
   document.getElementById("infoT").textContent=`${lista.length} registros`;
   document.getElementById("pageT").textContent=f.pagina;
@@ -1389,31 +1442,6 @@ function registrarAuditoria(acao,modulo,registroId,statusAnt,statusNovo,detalhe)
   DB.auditoria.unshift(entry);
   if(DB.auditoria.length>500)DB.auditoria=DB.auditoria.slice(0,500);
   syncAuditoria(entry);
-}
-function renderAuditoria(){
-  const fu=STATE.filtros.auditoria;
-  const busca=fu.busca;
-  let lista=DB.auditoria.filter(a=>!busca||`${a.acao} ${a.modulo} ${a.usuario} ${a.registroId} ${a.detalhe}`.toLowerCase().includes(busca));
-  const ppU  = Number(document.getElementById("perPageAudit")?.value || 20);
-  const totU = lista.length;
-  const totPag=Math.max(1,Math.ceil(totU/ppU));
-  if(fu.pagina>totPag)fu.pagina=totPag;
-  const iniU=(fu.pagina-1)*ppU;
-  const fatia=lista.slice(iniU,iniU+ppU);
-  document.getElementById("auditoriaTotal").textContent=`${totU} registros`;
-  const tbody=document.getElementById("tabelaAuditoria");
-  const empty=document.getElementById("emptyAudit");
-  tbody.innerHTML="";
-  fatia.forEach(a=>{tbody.innerHTML+=`<tr><td style="white-space:nowrap">${formatarDataHora(a.data)}</td><td>${esc(a.usuario)}</td><td><span class="status-badge ${a.perfil==="gestao"?"st-aprovado":a.perfil==="gestao-pessoas"?"st-elaboracao":"st-rascunho"}">${esc(a.perfil)}</span></td><td>${esc(a.acao)}</td><td>${esc(a.modulo)}</td><td style="color:var(--blue-light)">${esc(a.registroId)}</td><td>${a.statusAnt?statusBadge(a.statusAnt):"-"}</td><td>${a.statusNovo?statusBadge(a.statusNovo):"-"}</td><td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(a.detalhe)}">${esc(a.detalhe||"-")}</td></tr>`;});
-  empty.classList.toggle("visible",lista.length===0);
-  const infoU=document.getElementById("infoAudit");
-  const pgU  =document.getElementById("pageAudit");
-  const prvU =document.getElementById("prevAudit");
-  const nxtU =document.getElementById("nextAudit");
-  if(infoU)infoU.textContent=totU?`${iniU+1}–${Math.min(iniU+ppU,totU)} de ${totU}`:"0 registros";
-  if(pgU)  pgU.textContent  =fu.pagina;
-  if(prvU) prvU.disabled    =fu.pagina<=1;
-  if(nxtU) nxtU.disabled    =fu.pagina>=totPag;
 }
 
 // ══════════════════════════════════════════════════════

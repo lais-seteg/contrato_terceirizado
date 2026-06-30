@@ -71,11 +71,6 @@
         Alertas
         <span id="badgeAlertas" class="nav-badge hidden">0</span>
       </button>
-      <div class="sidebar-divider"></div>
-      <button class="sidebar-btn hidden" data-secao="auditoria" id="tabAuditoria">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-        Auditoria
-      </button>
     </nav>
 
     <div class="sidebar-footer">
@@ -108,12 +103,12 @@
         </div>
       </div>
       <div class="kpi-row">
-        <div class="kpi-card kpi-blue"><div class="kpi-icon-wrap kpi-bg-blue">📋</div><div><div class="kpi-label">Contratos Ativos</div><strong id="kpiAtivos" class="kpi-value">0</strong></div></div>
-        <div class="kpi-card kpi-green"><div class="kpi-icon-wrap kpi-bg-green">✅</div><div><div class="kpi-label">Aprovados</div><strong id="kpiAprovados" class="kpi-value">0</strong></div></div>
-        <div class="kpi-card kpi-yellow"><div class="kpi-icon-wrap kpi-bg-yellow">⏳</div><div><div class="kpi-label">Vencendo em 30d</div><strong id="kpiVencendo" class="kpi-value">0</strong></div></div>
-        <div class="kpi-card kpi-orange"><div class="kpi-icon-wrap kpi-bg-orange">⚠️</div><div><div class="kpi-label">Pendências</div><strong id="kpiPendencias" class="kpi-value">0</strong></div></div>
-        <div class="kpi-card kpi-purple"><div class="kpi-icon-wrap kpi-bg-purple">👤</div><div><div class="kpi-label">Terceirizados</div><strong id="kpiTercs" class="kpi-value">0</strong></div></div>
-        <div class="kpi-card kpi-teal"><div class="kpi-icon-wrap kpi-bg-teal">⭐</div><div><div class="kpi-label">Aval. Pendentes</div><strong id="kpiAvalPendentes" class="kpi-value">0</strong></div></div>
+        <div class="kpi-card kpi-blue"><div class="kpi-icon-wrap kpi-bg-blue">📋</div><div><div class="kpi-label">Contratos Ativos</div><strong id="kpiAtivos" class="kpi-value">0</strong><div class="kpi-sub">Em andamento no momento</div></div></div>
+        <div class="kpi-card kpi-green"><div class="kpi-icon-wrap kpi-bg-green">✅</div><div><div class="kpi-label">Aprovados</div><strong id="kpiAprovados" class="kpi-value">0</strong><div class="kpi-sub">Contratos com status Aprovado</div></div></div>
+        <div class="kpi-card kpi-yellow"><div class="kpi-icon-wrap kpi-bg-yellow">⏳</div><div><div class="kpi-label">Vencendo em 30d</div><strong id="kpiVencendo" class="kpi-value">0</strong><div class="kpi-sub">Vigência expira em até 30 dias</div></div></div>
+        <div class="kpi-card kpi-orange"><div class="kpi-icon-wrap kpi-bg-orange">⚠️</div><div><div class="kpi-label">Pendências</div><strong id="kpiPendencias" class="kpi-value">0</strong><div class="kpi-sub">Aguardando ajuste ou em fila</div></div></div>
+        <div class="kpi-card kpi-purple"><div class="kpi-icon-wrap kpi-bg-purple">👤</div><div><div class="kpi-label">Terceirizados</div><strong id="kpiTercs" class="kpi-value">0</strong><div class="kpi-sub">Total cadastrado no sistema</div></div></div>
+        <div class="kpi-card kpi-teal"><div class="kpi-icon-wrap kpi-bg-teal">⭐</div><div><div class="kpi-label">Aval. Pendentes</div><strong id="kpiAvalPendentes" class="kpi-value">0</strong><div class="kpi-sub">Contratos aguardando avaliação</div></div></div>
       </div>
 
       <div class="dash-recent-card">
@@ -842,39 +837,6 @@
       </div>
     </section>
 
-    <!-- ══════════ AUDITORIA ══════════ -->
-    <section id="secao-auditoria" class="secao">
-      <div class="sec-header">
-        <h2>Auditoria</h2>
-        <span class="sec-sub" id="auditoriaTotal"></span>
-      </div>
-      <div class="table-controls">
-        <div class="filter-row">
-          <input id="buscaAudit" class="form-control search-input" placeholder="Buscar na auditoria..." />
-        </div>
-      </div>
-      <div class="table-wrapper">
-        <div class="table-scroll">
-          <table class="art-table">
-            <thead><tr><th>Data / Hora</th><th>Usuário</th><th>Perfil</th><th>Ação</th><th>Módulo</th><th>Registro</th><th>Status Anterior</th><th>Novo Status</th><th>Detalhe</th></tr></thead>
-            <tbody id="tabelaAuditoria"></tbody>
-          </table>
-          <div id="emptyAudit" class="table-empty"><div class="empty-state"><div class="empty-icon">📊</div><strong>Nenhum registro de auditoria</strong></div></div>
-        </div>
-      </div>
-      <div class="pagination-container">
-        <div id="infoAudit" class="pagination-info">0 registros</div>
-        <div class="pagination-controls">
-          <button id="prevAudit" class="btn-pagination">&#8249;</button>
-          <span id="pageAudit" class="page-number">1</span>
-          <button id="nextAudit" class="btn-pagination">&#8250;</button>
-        </div>
-        <div class="pagination-per-page">
-          <span>Por página:</span>
-          <select id="perPageAudit"><option>10</option><option selected>20</option><option>50</option></select>
-        </div>
-      </div>
-    </section>
 
   </main>
 
@@ -914,6 +876,21 @@
     <div class="modal-footer">
       <button class="btn btn-ghost" id="btnCancelarAnalise">Cancelar</button>
       <button class="btn btn-primary" id="btnSalvarAnalise">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Visualizar Terceirizado -->
+<div id="modalVerTerc" class="modal-overlay">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <h2 id="modalVerTercTitulo">Terceirizado</h2>
+      <button class="modal-close" id="btnFecharVerTerc">×</button>
+    </div>
+    <div id="modalVerTercBody" class="modal-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost perm-gp-gestao hidden" id="btnEditarVerTerc">✎ Editar</button>
+      <button class="btn btn-ghost" id="btnFecharVerTercOk">Fechar</button>
     </div>
   </div>
 </div>

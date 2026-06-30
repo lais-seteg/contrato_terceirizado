@@ -172,6 +172,7 @@ body::before{content:'';position:fixed;inset:0;background:rgba(6,13,31,.92);z-in
 .kpi-bg-teal{background:rgba(26,188,156,.14);border:1px solid rgba(26,188,156,.3)}
 .kpi-label{font-size:.67rem;color:var(--text-secondary);font-weight:500;margin-bottom:.12rem;white-space:nowrap}
 .kpi-value{font-size:1.55rem;font-weight:800;line-height:1}
+.kpi-sub{font-size:.6rem;color:var(--text-muted);margin-top:.18rem;white-space:nowrap;opacity:.8}
 .kpi-blue .kpi-value{color:var(--blue-light)}
 .kpi-green .kpi-value{color:var(--green)}
 .kpi-yellow .kpi-value{color:var(--yellow)}
