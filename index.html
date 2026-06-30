@@ -267,7 +267,7 @@
                 <div class="avaliacao-num">1</div>
                 <div class="avaliacao-corpo">
                   <label class="avaliacao-label required">Nome completo</label>
-                  <input id="auxNome" class="form-control" placeholder="Nome do auxiliar" />
+                  <input id="auxNome" class="form-control" placeholder="Nome do prestador de serviço" />
                 </div>
               </div>
               <div class="avaliacao-pergunta">
@@ -441,11 +441,11 @@
             <span class="sol-block-sub">Selecione o tipo de contratação para abrir o formulário</span>
           </div>
           <div class="tipo-cards-compact">
-            <button class="tipo-card-compact" onclick="selecionarTipoContrato('Auxiliar de campo')">
-              <span class="tipo-icon-sm">⛏️</span>
+            <button class="tipo-card-compact" onclick="selecionarTipoContrato('Prestador de serviço')">
+              <span class="tipo-icon-sm">👤</span>
               <div class="tipo-card-compact-text">
-                <strong>Auxiliar de Campo</strong>
-                <span>Trabalhador técnico de campo · 18 campos</span>
+                <strong>Prestador de Serviço</strong>
+                <span>Auxiliar / Consultor terceirizado · 18 campos</span>
               </div>
               <svg class="tipo-card-compact-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="9 18 15 12 9 6"/></svg>
             </button>
@@ -471,7 +471,7 @@
           </div>
           <div class="filter-row">
             <select id="filtroEmpresaC" class="form-control filter-select"><option value="">Contratante</option><option>Seteg</option><option>Licenza</option></select>
-            <select id="filtroTipoC" class="form-control filter-select"><option value="">Tipo</option><option>Consultor terceirizado</option><option>Auxiliar de campo</option><option>Despachante</option><option>Serviço pontual</option><option>Campanha periódica</option></select>
+            <select id="filtroTipoC" class="form-control filter-select"><option value="">Tipo</option><option>Consultor terceirizado</option><option>Prestador de serviço</option><option>Despachante</option><option>Serviço pontual</option><option>Campanha periódica</option></select>
             <input id="buscaC" class="form-control search-input" placeholder="Buscar contrato, empresa, terceirizado, líder..." />
           </div>
         </div>
@@ -514,6 +514,7 @@
     <section id="secao-terceirizados" class="secao">
       <div class="sec-header">
         <h2>Terceirizados</h2>
+        <button class="btn btn-ghost perm-gp-gestao hidden" onclick="copiarLinkCadastro()" title="Copiar link para o terceirizado preencher seus dados">🔗 Copiar link de cadastro</button>
       </div>
 
       <div id="formTerc" class="form-panel hidden">
@@ -531,7 +532,7 @@
                 <select id="tTipo" class="form-control">
                   <option value="">Selecione</option>
                   <option>Consultor terceirizado</option>
-                  <option>Auxiliar de campo</option>
+                  <option>Prestador de serviço</option>
                   <option>Despachante</option>
                   <option>Outro</option>
                 </select>
@@ -621,7 +622,7 @@
       <div id="listaTerceirizados" class="lista-wrapper">
         <div class="table-controls">
           <div class="filter-row">
-            <select id="filtroTipoT" class="form-control filter-select"><option value="">Tipo</option><option>Consultor terceirizado</option><option>Auxiliar de campo</option><option>Despachante</option><option>Outro</option></select>
+            <select id="filtroTipoT" class="form-control filter-select"><option value="">Tipo</option><option>Consultor terceirizado</option><option>Prestador de serviço</option><option>Despachante</option><option>Outro</option></select>
             <input id="buscaT" class="form-control search-input" placeholder="Buscar por nome, CPF, área..." />
             <button id="btnNovoTerc" class="btn btn-primary perm-gp-gestao hidden">+ Cadastrar Terceirizado</button>
           </div>
@@ -961,9 +962,9 @@
     <div class="modal-body">
       <p class="modal-hint" style="margin-bottom:1rem">Selecione o tipo para abrir o formulário correspondente.</p>
       <div class="tipo-sel-grid tipo-sel-grid-2">
-        <button class="tipo-sel-card" data-tipo="Auxiliar de campo">
-          <span class="tipo-sel-nome">Auxiliar de Campo</span>
-          <span class="tipo-sel-desc">Formulário especializado · 18 campos</span>
+        <button class="tipo-sel-card" data-tipo="Prestador de serviço">
+          <span class="tipo-sel-nome">Prestador de Serviço</span>
+          <span class="tipo-sel-desc">Auxiliar / Consultor · 18 campos</span>
           <span class="tipo-sel-badge">Formulário próprio</span>
         </button>
         <button class="tipo-sel-card" data-tipo="Despachante">

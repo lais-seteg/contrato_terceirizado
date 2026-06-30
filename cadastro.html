@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cadastro de Prestador de Serviço · Seteg</title>
+  <link rel="icon" type="image/png" href="images/favicon.png" />
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    /* ─── Correção de scroll e fundo ─── */
+    html, body {
+      overflow: auto !important;
+      min-height: 100vh;
+      background-image: none !important;
+    }
+    body::before { display: none !important; }
+
+    /* ─── Layout da página ─── */
+    body {
+      background: #EEF2F8;
+      padding: 0;
+    }
+
+    /* ─── Topo laranja ─── */
+    .cad-topbar {
+      height: 4px;
+      background: linear-gradient(90deg, #FF8200, #FFB347);
+      width: 100%;
+    }
+
+    /* ─── Header ─── */
+    .cad-header {
+      background: #fff;
+      border-bottom: 1px solid #B0C4DC;
+      padding: .75rem 2rem;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 58px;
+    }
+    .cad-logo {
+      height: 34px;
+      width: auto;
+      object-fit: contain;
+      filter: brightness(0) saturate(0);
+      position: absolute;
+      left: 2rem;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+    .cad-header-divider { display: none; }
+    .cad-header-text {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: .1rem;
+      text-align: center;
+    }
+    .cad-header h1 {
+      font-size: .95rem;
+      font-weight: 800;
+      color: #0F1F3D;
+      margin: 0;
+      letter-spacing: .01em;
+    }
+    .cad-header p {
+      font-size: .74rem;
+      color: #4E6080;
+      margin: 0;
+      line-height: 1.45;
+    }
+
+    /* ─── Wrapper ─── */
+    .cad-wrap {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 1.5rem 2rem 3rem;
+    }
+
+    /* ─── Cartões de seção ─── */
+    .cad-section {
+      background: #fff;
+      border: 1px solid #B0C4DC;
+      border-top: 3px solid #FF8200;
+      border-radius: 0 0 10px 10px;
+      padding: 1.35rem 1.5rem;
+      margin-bottom: 1rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,.05);
+    }
+
+    .cad-section-head {
+      display: flex;
+      align-items: center;
+      gap: .55rem;
+      margin-bottom: 1.15rem;
+      padding-bottom: .75rem;
+      border-bottom: 1px solid #D8E4F0;
+    }
+    .cad-section-num {
+      width: 26px;
+      height: 26px;
+      background: #FF8200;
+      color: #fff;
+      border-radius: 50%;
+      font-size: .72rem;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .cad-section-title {
+      font-size: .82rem;
+      font-weight: 700;
+      color: #0F1F3D;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+    }
+
+    /* ─── Form overrides para tema claro ─── */
+    .form-control {
+      background: #F5F7FA !important;
+      color: #0F1F3D !important;
+      border-color: #B0C4DC !important;
+      font-size: .84rem !important;
+    }
+    .form-control:focus {
+      border-color: #FF8200 !important;
+      box-shadow: 0 0 0 3px rgba(255,130,0,.12) !important;
+      background: #fff !important;
+    }
+    .form-label { color: #2E4268 !important; }
+    .form-label.required::after { color: #FF8200; }
+
+    select.form-control { cursor: pointer; }
+
+    /* ─── Nota obrigatórios ─── */
+    .cad-required-note {
+      font-size: .74rem;
+      color: #4E6080;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: .3rem;
+    }
+    .cad-required-note span { color: #FF8200; font-weight: 700; }
+
+    /* ─── Botão de envio ─── */
+    .cad-submit-wrap {
+      background: #fff;
+      border: 1px solid #B0C4DC;
+      border-radius: 10px;
+      padding: 1.35rem 1.5rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,.05);
+    }
+    #btnEnviar {
+      width: 100%;
+      padding: .75rem 1rem;
+      font-size: .92rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #FF8200, #e57400);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: var(--font);
+      letter-spacing: .02em;
+      transition: all .22s ease;
+      box-shadow: 0 3px 12px rgba(255,130,0,.35);
+    }
+    #btnEnviar:hover:not([disabled]) {
+      background: linear-gradient(135deg, #e57400, #cc6600);
+      transform: translateY(-1px);
+      box-shadow: 0 5px 16px rgba(255,130,0,.45);
+    }
+    #btnEnviar[disabled] { opacity: .55; cursor: not-allowed; transform: none; }
+    .cad-hint {
+      font-size: .74rem;
+      color: #4E6080;
+      text-align: center;
+      margin-top: .8rem;
+      line-height: 1.5;
+    }
+
+    /* ─── Estado de sucesso ─── */
+    .success-box {
+      background: #fff;
+      border: 1px solid #B0C4DC;
+      border-top: 3px solid #6CC24A;
+      border-radius: 0 0 10px 10px;
+      padding: 3rem 2rem;
+      text-align: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,.05);
+    }
+    .success-circle {
+      width: 70px;
+      height: 70px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #6CC24A, #50a035);
+      color: #fff;
+      font-size: 2.1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 1.25rem;
+      box-shadow: 0 4px 14px rgba(108,194,74,.35);
+    }
+    .success-box h2 {
+      font-size: 1.2rem;
+      color: #0F1F3D;
+      font-weight: 800;
+      margin: 0 0 .6rem;
+    }
+    .success-box p {
+      font-size: .84rem;
+      color: #4E6080;
+      margin: 0;
+      line-height: 1.6;
+    }
+    .success-id {
+      display: inline-block;
+      margin-top: .85rem;
+      padding: .35rem .9rem;
+      background: #EEF2F8;
+      border: 1px solid #B0C4DC;
+      border-radius: 20px;
+      font-size: .78rem;
+      color: #2E4268;
+      font-weight: 600;
+    }
+
+    /* ─── Footer ─── */
+    .cad-footer-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: #fff;
+      border-top: 1px solid #B0C4DC;
+      text-align: center;
+      padding: .55rem 1rem;
+      font-size: .7rem;
+      color: #4E6080;
+      z-index: 100;
+    }
+    /* espaço para o rodapé fixo não cobrir o último campo */
+    .cad-wrap { padding-bottom: 4rem; }
+
+    /* ─── Radio group (CNH, etc.) ─── */
+    .cad-radio-inline {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: .75rem 1.25rem;
+      margin-top: .3rem;
+    }
+    .cad-radio-label {
+      display: flex;
+      align-items: center;
+      gap: .4rem;
+      font-size: .84rem;
+      color: #2E4268;
+      cursor: pointer;
+    }
+    .cad-radio-label input[type="radio"] {
+      accent-color: #FF8200;
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+    }
+    .cad-cnh-select {
+      width: auto !important;
+      min-width: 110px;
+      padding: .3rem .55rem !important;
+      height: auto !important;
+      min-height: unset !important;
+      font-size: .82rem !important;
+    }
+
+    /* ─── Toast ─── */
+    .toast { color: #0F1F3D !important; }
+
+    /* ─── Responsivo ─── */
+
+    /* Tablet (≤1024px) */
+    @media (max-width: 1024px) {
+      .cad-wrap { max-width: 100%; padding: 1.25rem 1.5rem 4rem; }
+      .cad-header { padding: .7rem 1.5rem; }
+      .cad-logo { left: 1.5rem; height: 30px; }
+      .form-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    /* Mobile (≤768px) */
+    @media (max-width: 768px) {
+      .cad-header {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: .75rem 1rem .65rem;
+        min-height: auto;
+        gap: .45rem;
+      }
+      .cad-logo {
+        position: static;
+        transform: none;
+        height: 26px;
+      }
+      .cad-header-text { align-items: flex-start; text-align: left; }
+      .cad-header h1 { font-size: .88rem; }
+      .cad-header p { font-size: .72rem; }
+      .cad-wrap { padding: 1rem .875rem 4.5rem; }
+      .cad-section { padding: 1rem .875rem; }
+      .cad-submit-wrap { padding: 1rem .875rem; }
+      .form-grid { grid-template-columns: 1fr !important; }
+      .form-control {
+        min-height: 44px;
+        font-size: .86rem !important;
+        padding: .55rem .75rem !important;
+      }
+      select.form-control { min-height: 44px; }
+      #btnEnviar {
+        padding: .85rem 1rem;
+        font-size: .95rem;
+        min-height: 48px;
+      }
+      .cad-section-head { margin-bottom: .9rem; }
+      .cad-footer-bar { font-size: .68rem; padding: .5rem 1rem; }
+    }
+
+    /* Small mobile (≤480px) */
+    @media (max-width: 480px) {
+      .cad-header { padding: .65rem .875rem .55rem; }
+      .cad-logo { height: 22px; }
+      .cad-header h1 { font-size: .82rem; }
+      .cad-header p { font-size: .69rem; }
+      .cad-wrap { padding: .875rem .625rem 4.5rem; }
+      .cad-section { padding: .875rem .75rem; margin-bottom: .75rem; }
+      .cad-section-title { font-size: .76rem; }
+      .cad-submit-wrap { padding: .875rem .75rem; }
+      .form-label { font-size: .78rem !important; }
+      .form-control { font-size: .84rem !important; }
+      .success-box { padding: 2rem 1.25rem; }
+      .success-circle { width: 58px; height: 58px; font-size: 1.7rem; }
+      .success-box h2 { font-size: 1.05rem; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="cad-topbar"></div>
+
+<div class="cad-header">
+  <img src="images/LOGO.png" alt="Seteg" class="cad-logo" onerror="this.style.display='none'" />
+  <div class="cad-header-divider"></div>
+  <div class="cad-header-text">
+    <h1>Cadastro de Prestador de Serviço</h1>
+    <p>Preencha seus dados abaixo. A equipe de Gestão de Pessoas da Seteg entrará em contato.</p>
+  </div>
+</div>
+
+<div class="cad-wrap">
+
+  <!-- Estado de sucesso (oculto inicialmente) -->
+  <div id="successBox" class="success-box hidden">
+    <div class="success-circle">✓</div>
+    <h2>Cadastro enviado com sucesso!</h2>
+    <p>Seus dados foram registrados no sistema da Seteg.<br>Nossa equipe de Gestão de Pessoas entrará em contato em breve.</p>
+    <div id="successId" class="success-id"></div>
+  </div>
+
+  <form id="cadForm" novalidate>
+
+    <p class="cad-required-note">Campos marcados com <span>*</span> são obrigatórios.</p>
+
+    <!-- ── 1 · Identificação ── -->
+    <div class="cad-section">
+      <div class="cad-section-head">
+        <div class="cad-section-num">1</div>
+        <span class="cad-section-title">Identificação</span>
+      </div>
+      <div class="form-grid">
+        <div class="form-group full-width">
+          <label class="form-label required">Nome completo</label>
+          <input id="tNome" class="form-control" placeholder="Conforme documento de identidade" autocomplete="name" />
+        </div>
+        <div class="form-group">
+          <label class="form-label required">CPF</label>
+          <input id="tCpf" class="form-control" placeholder="000.000.000-00" maxlength="14" inputmode="numeric" autocomplete="off" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">RG</label>
+          <input id="tRg" class="form-control" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Data de nascimento</label>
+          <input id="tNascimento" type="date" class="form-control" />
+        </div>
+        <div class="form-group">
+          <label class="form-label required">E-mail</label>
+          <input id="tEmail" type="email" class="form-control" placeholder="seu@email.com" autocomplete="email" />
+        </div>
+        <div class="form-group">
+          <label class="form-label required">Telefone / WhatsApp</label>
+          <input id="tTelefone" class="form-control" placeholder="(00) 00000-0000" maxlength="15" inputmode="numeric" autocomplete="tel" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Estado (UF)</label>
+          <select id="tEstado" class="form-control">
+            <option value="">Selecione</option>
+            <option value="AC">AC – Acre</option>
+            <option value="AL">AL – Alagoas</option>
+            <option value="AP">AP – Amapá</option>
+            <option value="AM">AM – Amazonas</option>
+            <option value="BA">BA – Bahia</option>
+            <option value="CE">CE – Ceará</option>
+            <option value="DF">DF – Distrito Federal</option>
+            <option value="ES">ES – Espírito Santo</option>
+            <option value="GO">GO – Goiás</option>
+            <option value="MA">MA – Maranhão</option>
+            <option value="MT">MT – Mato Grosso</option>
+            <option value="MS">MS – Mato Grosso do Sul</option>
+            <option value="MG">MG – Minas Gerais</option>
+            <option value="PA">PA – Pará</option>
+            <option value="PB">PB – Paraíba</option>
+            <option value="PR">PR – Paraná</option>
+            <option value="PE">PE – Pernambuco</option>
+            <option value="PI">PI – Piauí</option>
+            <option value="RJ">RJ – Rio de Janeiro</option>
+            <option value="RN">RN – Rio Grande do Norte</option>
+            <option value="RS">RS – Rio Grande do Sul</option>
+            <option value="RO">RO – Rondônia</option>
+            <option value="RR">RR – Roraima</option>
+            <option value="SC">SC – Santa Catarina</option>
+            <option value="SP">SP – São Paulo</option>
+            <option value="SE">SE – Sergipe</option>
+            <option value="TO">TO – Tocantins</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Município</label>
+          <input id="tCidade" class="form-control" />
+        </div>
+        <div class="form-group full-width">
+          <label class="form-label">Endereço completo</label>
+          <input id="tEndereco" class="form-control" placeholder="Rua, número, bairro, CEP" autocomplete="street-address" />
+        </div>
+      </div>
+    </div>
+
+    <!-- ── 2 · Tipo e Formação ── -->
+    <div class="cad-section">
+      <div class="cad-section-head">
+        <div class="cad-section-num">2</div>
+        <span class="cad-section-title">Tipo e Formação</span>
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label required">Tipo de prestação de serviço</label>
+          <select id="tTipo" class="form-control">
+            <option value="">Selecione</option>
+            <option value="Prestador de serviço">Prestador de Serviço (Auxiliar/Consultor)</option>
+            <option value="Despachante">Despachante</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Graduação <span style="font-weight:400;font-size:.7rem;color:#4E6080">(N.A. se não tiver)</span></label>
+          <input id="tGraduacao" class="form-control" placeholder="Ex: Biologia, Eng. Ambiental, N.A." />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Nível de formação</label>
+          <select id="tNivelFormacao" class="form-control">
+            <option value="">Selecione</option>
+            <option>Técnico</option>
+            <option>Graduação</option>
+            <option>Especialização</option>
+            <option>MBA</option>
+            <option>Mestrado</option>
+            <option>Doutorado</option>
+            <option>Pós-doutorado</option>
+            <option>Outra</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Área de expertise / afinidade</label>
+          <select id="tAreaExpertise" class="form-control">
+            <option value="">Selecione</option>
+            <option>Avifauna</option>
+            <option>Mastofauna</option>
+            <option>Entomofauna</option>
+            <option>Herpetofauna</option>
+            <option>Ictiofauna</option>
+            <option>Quirópteros</option>
+            <option>Geotecnologias</option>
+            <option>Vetores</option>
+            <option>Geoprocessamento</option>
+            <option>Outra</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Cursos extras / especializações</label>
+          <input id="tCursosExtras" class="form-control" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Link Currículo Lattes</label>
+          <input id="tLattes" class="form-control" placeholder="URL ou 'Não possuo'" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Registro Profissional / Conselho</label>
+          <input id="tRegistro" class="form-control" placeholder="Ex: CRBio 12345-6" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">CRBio Secundário</label>
+          <input id="tCrbio2" class="form-control" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Número do CTF</label>
+          <input id="tCtf" class="form-control" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Possui CNH?</label>
+          <div class="cad-radio-inline">
+            <label class="cad-radio-label">
+              <input type="radio" name="possuiCnh" value="sim" onchange="toggleCnhCategoria(this.value)" /> Sim
+            </label>
+            <label class="cad-radio-label">
+              <input type="radio" name="possuiCnh" value="nao" onchange="toggleCnhCategoria(this.value)" checked /> Não
+            </label>
+            <div id="cnhCategoriaWrap" style="display:none;">
+              <select id="tCnh" class="form-control cad-cnh-select">
+                <option value="">Categoria</option>
+                <option value="A">A</option>
+                <option value="B">B</option>
+                <option value="AB">AB</option>
+                <option value="C">C</option>
+                <option value="D">D</option>
+                <option value="E">E</option>
+                <option value="ACC">ACC</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="form-group full-width">
+          <label class="form-label">Experiência com direção</label>
+          <textarea id="tExpDirecao" class="form-control" rows="2" placeholder="Ex: 5 anos com habilitação B, estradas vicinais"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── 3 · Dados Financeiros ── -->
+    <div class="cad-section">
+      <div class="cad-section-head">
+        <div class="cad-section-num">3</div>
+        <span class="cad-section-title">Dados Financeiros</span>
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label">Possui MEI / CNPJ?</label>
+          <select id="tPossuiCnpj" class="form-control">
+            <option value="">Selecione</option>
+            <option>Não</option>
+            <option>Sim</option>
+          </select>
+        </div>
+        <div class="form-group hidden" id="grpCnpj">
+          <label class="form-label">Número MEI / CNPJ</label>
+          <input id="tCnpj" class="form-control" />
+        </div>
+        <div class="form-group">
+          <label class="form-label required">Comprovante em nome de</label>
+          <select id="tComprovante" class="form-control">
+            <option value="">Selecione</option>
+            <option value="Pessoa jurídica (CNPJ/MEI)">Pessoa jurídica (CNPJ/MEI)</option>
+            <option value="Pessoa física (CPF)">Pessoa física (CPF)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label required">Emissão de</label>
+          <select id="tEmissao" class="form-control">
+            <option value="">Selecione</option>
+            <option>Nota fiscal</option>
+            <option>Recibo</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label required">Forma de pagamento</label>
+          <select id="tFormaPgto" class="form-control">
+            <option value="">Selecione</option>
+            <option>Pix</option>
+            <option>Transferência bancária</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Disponibilidade de horário</label>
+          <input id="tDisponibilidade" class="form-control" placeholder="Ex: Seg–Sex, horário comercial" />
+        </div>
+        <div class="form-group full-width">
+          <label class="form-label required">Dados bancários / Chave Pix</label>
+          <textarea id="tDadosBancarios" class="form-control" rows="3" placeholder="Banco, agência, conta e/ou chave Pix"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── 4 · Contatos de Emergência ── -->
+    <div class="cad-section">
+      <div class="cad-section-head">
+        <div class="cad-section-num">4</div>
+        <span class="cad-section-title">Contatos de Emergência</span>
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label required">Emergência 01 – Nome</label>
+          <input id="tEmerg1Nome" class="form-control" />
+        </div>
+        <div class="form-group">
+          <label class="form-label required">Emergência 01 – Telefone</label>
+          <input id="tEmerg1Tel" class="form-control" placeholder="(00) 00000-0000" maxlength="15" inputmode="numeric" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Emergência 02 – Nome</label>
+          <input id="tEmerg2Nome" class="form-control" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Emergência 02 – Telefone</label>
+          <input id="tEmerg2Tel" class="form-control" placeholder="(00) 00000-0000" maxlength="15" inputmode="numeric" />
+        </div>
+      </div>
+    </div>
+
+    <!-- ── 5 · Projetos e Informações ── -->
+    <div class="cad-section">
+      <div class="cad-section-head">
+        <div class="cad-section-num">5</div>
+        <span class="cad-section-title">Projetos e Informações Adicionais</span>
+      </div>
+      <div class="form-grid">
+        <div class="form-group full-width">
+          <label class="form-label">Já atuou ou vai atuar em algum projeto pela Seteg?</label>
+          <input id="tProjetosSeteg" class="form-control" placeholder="Se sim, informe o nome do projeto" />
+        </div>
+        <div class="form-group full-width">
+          <label class="form-label">Outras informações relevantes</label>
+          <textarea id="tOutrasInfo" class="form-control" rows="3" placeholder="Habilidades, disponibilidade para viagens, observações..."></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Enviar ── -->
+    <div class="cad-submit-wrap">
+      <button type="button" id="btnEnviar">Enviar Cadastro</button>
+      <p class="cad-hint">Seus dados são transmitidos com segurança. Dúvidas? Entre em contato com a Gestão de Pessoas da Seteg.</p>
+    </div>
+
+  </form>
+
+
+</div><!-- /cad-wrap -->
+
+<footer class="cad-footer-bar">
+  Seteg Soluções Ambientais Ltda &nbsp;·&nbsp; 2026
+</footer>
+
+<div id="toast" class="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  const SUPA_URL = 'https://hqyoszdilauarrhxpgjg.supabase.co';
+  const SUPA_KEY = 'sb_publishable_4gHAO6N33CaLCKgVzPa6Dw_YMP5LXo4';
+  const supa = supabase.createClient(SUPA_URL, SUPA_KEY);
+
+  // ── Utilitários ──────────────────────────────────────
+  function v(id) { return (document.getElementById(id)?.value || '').trim(); }
+
+  function toggleCnhCategoria(val) {
+    document.getElementById('cnhCategoriaWrap').style.display = val === 'sim' ? 'inline-flex' : 'none';
+    if (val !== 'sim') document.getElementById('tCnh').value = '';
+  }
+
+  function mostrarToast(msg, tipo) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'toast show' + (tipo === 'ok' ? ' toast-ok' : tipo === 'err' ? ' toast-err' : '');
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => t.classList.remove('show'), 4500);
+  }
+
+  function mascaraCpf(el) {
+    let s = el.value.replace(/\D/g, '').slice(0, 11);
+    s = s.replace(/(\d{3})(\d)/, '$1.$2')
+         .replace(/(\d{3})(\d)/, '$1.$2')
+         .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+    el.value = s;
+  }
+
+  function mascaraTel(el) {
+    let s = el.value.replace(/\D/g, '').slice(0, 11);
+    if (s.length <= 10) s = s.replace(/(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3');
+    else                s = s.replace(/(\d{2})(\d{5})(\d{0,4})/, '($1) $2-$3');
+    el.value = s;
+  }
+
+  // ── Gerar próximo ID ──────────────────────────────────
+  async function gerarProximoId() {
+    const { data } = await supa.from('terceirizados').select('id');
+    if (!data || !data.length) return 'TER-0001';
+    const max = Math.max(...data.map(r => parseInt(r.id.replace(/\D/g, '')) || 0));
+    return 'TER-' + String(max + 1).padStart(4, '0');
+  }
+
+  // ── Enviar formulário ─────────────────────────────────
+  async function enviarCadastro() {
+    const nome      = v('tNome');
+    const cpf       = v('tCpf');
+    const email     = v('tEmail');
+    const telefone  = v('tTelefone');
+    const tipo      = v('tTipo');
+    const comprov   = v('tComprovante');
+    const emissao   = v('tEmissao');
+    const formaPgto = v('tFormaPgto');
+    const dados     = v('tDadosBancarios');
+    const emerg1N   = v('tEmerg1Nome');
+    const emerg1T   = v('tEmerg1Tel');
+
+    if (!nome)      { mostrarToast('Informe seu nome completo.', 'err'); document.getElementById('tNome').focus(); return; }
+    if (!cpf)       { mostrarToast('Informe seu CPF.', 'err'); document.getElementById('tCpf').focus(); return; }
+    if (!email)     { mostrarToast('Informe seu e-mail.', 'err'); document.getElementById('tEmail').focus(); return; }
+    if (!telefone)  { mostrarToast('Informe seu telefone.', 'err'); document.getElementById('tTelefone').focus(); return; }
+    if (!tipo)      { mostrarToast('Selecione o tipo de prestação de serviço.', 'err'); document.getElementById('tTipo').focus(); return; }
+    if (!comprov)   { mostrarToast('Informe em nome de quem será o comprovante.', 'err'); document.getElementById('tComprovante').focus(); return; }
+    if (!emissao)   { mostrarToast('Informe se haverá nota fiscal ou recibo.', 'err'); document.getElementById('tEmissao').focus(); return; }
+    if (!formaPgto) { mostrarToast('Informe a forma de pagamento.', 'err'); document.getElementById('tFormaPgto').focus(); return; }
+    if (!dados)     { mostrarToast('Informe os dados bancários ou chave Pix.', 'err'); document.getElementById('tDadosBancarios').focus(); return; }
+    if (!emerg1N)   { mostrarToast('Informe o contato de emergência 01.', 'err'); document.getElementById('tEmerg1Nome').focus(); return; }
+    if (!emerg1T)   { mostrarToast('Informe o telefone do contato de emergência 01.', 'err'); document.getElementById('tEmerg1Tel').focus(); return; }
+
+    const btn = document.getElementById('btnEnviar');
+    btn.disabled = true;
+    btn.textContent = 'Enviando…';
+
+    try {
+      const id = await gerarProximoId();
+
+      const row = {
+        id,
+        t_nome:            nome,
+        t_tipo:            tipo,
+        t_email:           email,
+        t_cpf:             cpf,
+        t_rg:              v('tRg')              || null,
+        t_nascimento:      v('tNascimento')      || null,
+        t_telefone:        telefone,
+        t_estado:          v('tEstado') || null,
+        t_cidade:          v('tCidade')          || null,
+        t_endereco:        v('tEndereco')        || null,
+        t_graduacao:       v('tGraduacao')       || null,
+        t_nivel_formacao:  v('tNivelFormacao')   || null,
+        t_area_expertise:  v('tAreaExpertise')   || null,
+        t_cursos_extras:   v('tCursosExtras')    || null,
+        t_lattes:          v('tLattes')          || null,
+        t_registro:        v('tRegistro')        || null,
+        t_crbio2:          v('tCrbio2')          || null,
+        t_ctf:             v('tCtf')             || null,
+        t_cnh:             (document.querySelector('input[name="possuiCnh"]:checked')?.value === 'sim' ? v('tCnh') : null) || null,
+        t_exp_direcao:     v('tExpDirecao')      || null,
+        t_possui_cnpj:     v('tPossuiCnpj')      || null,
+        t_cnpj:            v('tCnpj')            || null,
+        t_comprovante:     comprov,
+        t_emissao:         emissao,
+        t_forma_pgto:      formaPgto,
+        t_dados_bancarios: dados,
+        t_disponibilidade: v('tDisponibilidade') || null,
+        t_emerg1_nome:     emerg1N,
+        t_emerg1_tel:      emerg1T,
+        t_emerg2_nome:     v('tEmerg2Nome')      || null,
+        t_emerg2_tel:      v('tEmerg2Tel')       || null,
+        t_projetos_seteg:  v('tProjetosSeteg')   || null,
+        t_outras_info:     v('tOutrasInfo')      || null,
+        criado_em:         new Date().toISOString(),
+        criado_por:        'Cadastro Externo'
+      };
+
+      const { error } = await supa.from('terceirizados').insert(row);
+
+      if (error) {
+        console.error(error);
+        mostrarToast('Erro ao enviar. Verifique sua conexão e tente novamente.', 'err');
+        btn.disabled = false;
+        btn.textContent = 'Enviar Cadastro';
+        return;
+      }
+
+      document.getElementById('cadForm').classList.add('hidden');
+      document.getElementById('successId').textContent = 'Protocolo: ' + id;
+      document.getElementById('successBox').classList.remove('hidden');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    } catch (e) {
+      console.error(e);
+      mostrarToast('Erro inesperado. Tente novamente.', 'err');
+      btn.disabled = false;
+      btn.textContent = 'Enviar Cadastro';
+    }
+  }
+
+  // ── Event listeners ──────────────────────────────────
+  document.getElementById('btnEnviar').addEventListener('click', enviarCadastro);
+  document.getElementById('tCpf').addEventListener('input', e => mascaraCpf(e.target));
+  document.getElementById('tTelefone').addEventListener('input', e => mascaraTel(e.target));
+  document.getElementById('tEmerg1Tel').addEventListener('input', e => mascaraTel(e.target));
+  document.getElementById('tEmerg2Tel').addEventListener('input', e => mascaraTel(e.target));
+  document.getElementById('tPossuiCnpj').addEventListener('change', function () {
+    document.getElementById('grpCnpj').classList.toggle('hidden', this.value !== 'Sim');
+  });
+</script>
+</body>
+</html>

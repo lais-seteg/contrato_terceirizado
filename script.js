@@ -630,7 +630,7 @@ function preencherTerceirizadoDoSelect() {
 function atualizarSecaoTerceirizado() {
   const tipo = document.getElementById("cTipoContratacao").value;
   document.getElementById("secaoCTercDespachante").classList.toggle("hidden", tipo !== "Despachante");
-  document.getElementById("secaoCTercAuxiliar").classList.toggle("hidden", tipo !== "Auxiliar de campo");
+  document.getElementById("secaoCTercAuxiliar").classList.toggle("hidden", tipo !== "Prestador de serviço");
 }
 
 function lerCamposDespachante(item) {
@@ -684,7 +684,7 @@ function lerCamposAuxiliar(item) {
   item.cTercEndereco      = v("auxEndereco");
   item.cTercMunicipio     = v("auxCidade");
   item.cTercEstado        = "";
-  item.cTercFuncao        = "Auxiliar de campo";
+  item.cTercFuncao        = "Prestador de serviço";
   item.cDadosPagamento    = v("auxDadosBancarios");
   item.cTercEmerg1Nome    = v("auxEmerg1Nome");
   item.cTercEmerg1Tel     = v("auxEmerg1Tel");
@@ -736,7 +736,7 @@ function preencherCamposAuxiliar(item) {
 function salvarContrato() {
   const item = coletarCampos(CAMPOS_CONTRATO);
   if      (item.cTipoContratacao === "Despachante")     lerCamposDespachante(item);
-  else if (item.cTipoContratacao === "Auxiliar de campo") lerCamposAuxiliar(item);
+  else if (item.cTipoContratacao === "Prestador de serviço") lerCamposAuxiliar(item);
   item.id = item.cId || gerarId("CTR");
   // Solicitante sempre submete como "Em Fila" (aguarda aprovação da Gestão)
   item.status = STATE.perfil === "solicitante" ? "Em Fila" : (item.cStatus || "Em Fila");
@@ -802,7 +802,7 @@ function editarContrato(id) {
   document.getElementById("cStatus").value = item.status;
   atualizarSecaoTerceirizado();
   if      (item.cTipoContratacao === "Despachante")       preencherCamposDespachante(item);
-  else if (item.cTipoContratacao === "Auxiliar de campo") preencherCamposAuxiliar(item);
+  else if (item.cTipoContratacao === "Prestador de serviço") preencherCamposAuxiliar(item);
   // Mostra seção de resposta à pendência para líder que está respondendo
   const mostraPendencia = item.status === "Pendente" && STATE.perfil === "solicitante";
   document.getElementById("secaoRespostaPendencia").classList.toggle("hidden", !mostraPendencia);
@@ -1053,7 +1053,7 @@ function imprimirContrato() {
   const item = coletarCampos(CAMPOS_CONTRATO);
   item.id = item.cId||"Novo";
   if      (item.cTipoContratacao === "Despachante")       lerCamposDespachante(item);
-  else if (item.cTipoContratacao === "Auxiliar de campo") lerCamposAuxiliar(item);
+  else if (item.cTipoContratacao === "Prestador de serviço") lerCamposAuxiliar(item);
   gerarPrintArea(item); window.print();
 }
 function imprimirDetalhes() {
@@ -1174,6 +1174,13 @@ function renderTerceirizados(){
   document.getElementById("infoT").textContent=`${lista.length} registros`;
   document.getElementById("pageT").textContent=f.pagina;
   document.getElementById("prevT").disabled=f.pagina<=1;document.getElementById("nextT").disabled=f.pagina>=totalPag;
+}
+
+function copiarLinkCadastro() {
+  const url = new URL('cadastro.html', window.location.href).href;
+  navigator.clipboard.writeText(url)
+    .then(() => mostrarToast('Link de cadastro copiado! Envie para o terceirizado.', 'ok'))
+    .catch(() => mostrarToast('Copie o link manualmente: ' + url, 'err'));
 }
 
 // ══════════════════════════════════════════════════════
