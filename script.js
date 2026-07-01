@@ -982,6 +982,32 @@ function det(label, valor, extra) {
   return `<div class="detail-item ${extra||""}"><span>${label}</span><strong>${valor||"-"}</strong></div>`;
 }
 
+function verDetalhesAvaliacao(id) {
+  const item = DB.avaliacoes.find(a=>a.id===id);
+  if (!item) return;
+  document.getElementById("modalDetalhesTitulo").textContent = "Avaliação · " + item.id;
+  document.getElementById("modalDetalhesBody").innerHTML = gerarHTMLDetalhesAvaliacao(item);
+  document.getElementById("modalDetalhes").dataset.currentId = id;
+  const btnObs = document.getElementById("btnAddObs");
+  if (btnObs) btnObs.classList.add("hidden");
+  abrirModal("modalDetalhes");
+}
+
+function gerarHTMLDetalhesAvaliacao(item) {
+  return `<div class="detail-grid">
+    <div class="detail-section-title">Identificação</div>
+    ${det("Nº",item.id)}${det("Criado em",formatarDataHora(item.criadoEm))}${det("Avaliador",item.avaliador)}${det("Avaliado",item.avaliado)}
+    ${item.contratoId?det("Contrato",item.contratoId):""}
+    <div class="detail-section-title">Cliente / Projeto</div>
+    ${det("Cliente",item.cliente)}${det("Projeto",item.projeto)}
+    <div class="detail-section-title">Avaliação Técnica</div>
+    ${det("Nível técnico em campo",item.nivelCampo)}${det("Nível técnico do relatório",item.nivelRelatorio)}
+    ${det("Prazo cumprido",item.prazo)}${det("Relacionamento com a Seteg",item.relacionamento)}
+    ${item.motivo?`<div class="detail-section-title">Atrasos</div>${det("Motivo/Situação",item.motivo,"full")}`:""}
+    ${item.obs?`<div class="detail-section-title">Observações</div>${det("",item.obs,"full")}`:""}
+  </div>`;
+}
+
 function excluirContrato(id) {
   if (!podeExcluir()) { mostrarToast("Apenas Gestão pode excluir contratos.","err"); return; }
   document.getElementById("excluirId").value  = id;
@@ -1377,7 +1403,7 @@ function renderAvaliacoes(){
         <td>${nb(a.nivelRelatorio)}</td>
         <td><span class="status-badge ${a.prazo==="Totalmente"?"st-aprovado":a.prazo==="Não cumprido"?"st-reprovado":"st-aguar-gp"}">${esc(a.prazo||"-")}</span></td>
         <td>${nb(a.relacionamento)}</td>
-        <td class="col-acoes"><div class="table-actions">${podeExcluir()?`<button class="btn-icon btn-icon-danger" onclick="excluirAvaliacao('${a.id}')">✕</button>`:""}</div></td>
+        <td class="col-acoes"><div class="table-actions"><button class="btn-icon" title="Visualizar" onclick="verDetalhesAvaliacao('${a.id}')">◉</button>${podeExcluir()?`<button class="btn-icon btn-icon-danger" title="Excluir" onclick="excluirAvaliacao('${a.id}')">✕</button>`:""}</div></td>
       </tr>`;
     });
     empty.classList.toggle("visible", total===0);
