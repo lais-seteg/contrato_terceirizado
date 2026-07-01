@@ -552,7 +552,7 @@ function renderSolicitacoesRecentes(lista) {
   }
   empty.classList.remove("visible");
   tbody.innerHTML = sorted.map(c=>{
-    const acoes = [`<button class="btn-icon" title="Visualizar" onclick="verDetalhesContrato('${c.id}')">◉</button>`];
+    const acoes = [`<button class="btn-icon" title="Visualizar" onclick="verDetalhesContrato('${c.id}')">👁</button>`];
     if (podeEditar(c)) acoes.push(`<button class="btn-icon btn-icon-orange" title="Editar" onclick="editarContrato('${c.id}')">✎</button>`);
     if (podeAnalisar()) acoes.push(`<button class="btn-icon btn-icon-green" title="Atualizar Status" onclick="abrirAnalise('${c.id}')">⚙</button>`);
     return `<tr>
@@ -1071,7 +1071,7 @@ function renderContratos() {
       <td style="color:var(--green)">${c.cValorTotal?"R$ "+c.cValorTotal:"-"}</td>
       <td>${statusBadge(c.status)}</td>
       <td class="col-acoes"><div class="table-actions">
-        <button class="btn-icon" title="Visualizar" onclick="verDetalhesContrato('${c.id}')">◉</button>
+        <button class="btn-icon" title="Visualizar" onclick="verDetalhesContrato('${c.id}')">👁</button>
         ${podeEditar(c)?`<button class="btn-icon btn-icon-orange" title="Editar" onclick="editarContrato('${c.id}')">✎</button>`:""}
         ${podeAnalisar()?`<button class="btn-icon btn-icon-green" title="Atualizar Status" onclick="abrirAnalise('${c.id}')">⚙</button>`:""}
         ${ehGestaoOuGP()?`<button class="btn-icon" title="Adicionar Observação" onclick="abrirModalObs('${c.id}')" style="font-size:.7rem">💬</button>`:""}
@@ -1403,7 +1403,7 @@ function renderAvaliacoes(){
         <td>${nb(a.nivelRelatorio)}</td>
         <td><span class="status-badge ${a.prazo==="Totalmente"?"st-aprovado":a.prazo==="Não cumprido"?"st-reprovado":"st-aguar-gp"}">${esc(a.prazo||"-")}</span></td>
         <td>${nb(a.relacionamento)}</td>
-        <td class="col-acoes"><div class="table-actions"><button class="btn-icon" title="Visualizar" onclick="verDetalhesAvaliacao('${a.id}')">◉</button>${podeExcluir()?`<button class="btn-icon btn-icon-danger" title="Excluir" onclick="excluirAvaliacao('${a.id}')">✕</button>`:""}</div></td>
+        <td class="col-acoes"><div class="table-actions"><button class="btn-icon" title="Visualizar" onclick="verDetalhesAvaliacao('${a.id}')">👁</button>${podeExcluir()?`<button class="btn-icon btn-icon-danger" title="Excluir" onclick="excluirAvaliacao('${a.id}')">✕</button>`:""}</div></td>
       </tr>`;
     });
     empty.classList.toggle("visible", total===0);
