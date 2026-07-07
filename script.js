@@ -69,7 +69,7 @@ const CAMPOS_CONTRATO = [
   "cEscopo","cCronograma",
   "cTerceirizadoId","cTercNome","cTercEmail","cTercCpf","cTercRg","cTercNascimento",
   "cTercFuncao","cTercTelefone","cTercEstado","cTercMunicipio","cTercEndereco",
-  "cTercGraduacao","cTercNivelFormacao","cTercAreaExpertise","cTercRegistro",
+  "cTercEstadoCivil","cTercGraduacao","cTercNivelFormacao","cTercAreaExpertise","cTercRegistro",
   "cTercCrbio2","cTercCtf","cTercLattes","cTercCnh","cTercCursosExtras",
   "cTercComprovante","cTercCnpj","cTercEmissao","cTercFormaPgto","cDadosPagamento",
   "cTercDisponibilidade","cTercEmerg1Nome","cTercEmerg1Tel","cTercEmerg2Nome","cTercEmerg2Tel",
@@ -437,6 +437,10 @@ function registrarListeners() {
   document.getElementById("btnFecharExcluir").addEventListener("click", () => fecharModal("modalExcluir"));
   document.getElementById("btnCancelarExcluir").addEventListener("click", () => fecharModal("modalExcluir"));
   document.getElementById("btnConfirmarExcluir").addEventListener("click", confirmarExcluir);
+  document.getElementById("btnFecharContratoDoc").addEventListener("click", fecharModalContratoDoc);
+  document.getElementById("btnFecharContratoDocOk").addEventListener("click", fecharModalContratoDoc);
+  document.getElementById("btnRegerarContratoDoc").addEventListener("click", regenerarContratoDoc);
+  document.getElementById("btnExportarContratoPDF").addEventListener("click", exportarContratoPDF);
   document.getElementById("prevAval").addEventListener("click", () => { STATE.filtros.avaliacoes.pagina--; renderAvaliacoes(); });
   document.getElementById("nextAval").addEventListener("click", () => { STATE.filtros.avaliacoes.pagina++; renderAvaliacoes(); });
   document.getElementById("perPageAval").addEventListener("change", () => { STATE.filtros.avaliacoes.pagina=1; renderAvaliacoes(); });
@@ -625,18 +629,32 @@ function preencherTerceirizadoDoSelect() {
   if (!id) return;
   const t = DB.terceirizados.find(x=>x.tId===id);
   if (!t) return;
-  const map = {
-    tNome:"cTercNome",tEmail:"cTercEmail",tCpf:"cTercCpf",tRg:"cTercRg",tNascimento:"cTercNascimento",
-    tTipo:"cTercFuncao",tTelefone:"cTercTelefone",tEstado:"cTercEstado",tCidade:"cTercMunicipio",
-    tEndereco:"cTercEndereco",tGraduacao:"cTercGraduacao",tNivelFormacao:"cTercNivelFormacao",
-    tAreaExpertise:"cTercAreaExpertise",tRegistro:"cTercRegistro",tCrbio2:"cTercCrbio2",
-    tCtf:"cTercCtf",tLattes:"cTercLattes",tCnh:"cTercCnh",tCursosExtras:"cTercCursosExtras",
-    tComprovante:"cTercComprovante",tCnpj:"cTercCnpj",tEmissao:"cTercEmissao",
-    tFormaPgto:"cTercFormaPgto",tDadosBancarios:"cDadosPagamento",tDisponibilidade:"cTercDisponibilidade",
-    tEmerg1Nome:"cTercEmerg1Nome",tEmerg1Tel:"cTercEmerg1Tel",
-    tEmerg2Nome:"cTercEmerg2Nome",tEmerg2Tel:"cTercEmerg2Tel",tProjetosSeteg:"cTercProjetosSeteg"
-  };
-  Object.entries(map).forEach(([src,dst]) => { const el=document.getElementById(dst); if(el&&t[src]) el.value=t[src]; });
+  const tipo = document.getElementById("cTipoContratacao").value;
+  const set = (elId, val) => { const el = document.getElementById(elId); if (el && val) el.value = val; };
+
+  // Campos de identificação: sempre puxados para o bloco "Dados do Contrato"
+  set("cTercCpf", t.tCpf);
+  set("cTercRg", t.tRg);
+  set("cTercEndereco", t.tEndereco);
+
+  // Campos específicos do formulário do tipo selecionado
+  if (tipo === "Despachante") {
+    set("depNome", t.tNome);
+    set("depEmail", t.tEmail);
+    set("depTelefone", t.tTelefone);
+    set("depMunicipioEstado", [t.tCidade, t.tEstado].filter(Boolean).join(" - "));
+    set("depDadosBancarios", t.tDadosBancarios);
+  } else if (tipo === "Prestador de serviço") {
+    set("auxNome", t.tNome);
+    set("auxGraduacao", t.tGraduacao);
+    set("auxEmail", t.tEmail);
+    set("auxTelefone", t.tTelefone);
+    set("auxNascimento", t.tNascimento);
+    set("auxEndereco", t.tEndereco);
+    set("auxCidade", t.tCidade);
+    set("auxDadosBancarios", t.tDadosBancarios);
+  }
+  mostrarToast("Dados de " + t.tNome + " preenchidos automaticamente.", "ok");
 }
 
 function atualizarSecaoTerceirizado() {
@@ -693,7 +711,7 @@ function lerCamposAuxiliar(item) {
   item.cTercEmail         = v("auxEmail");
   item.cTercTelefone      = v("auxTelefone");
   item.cTercNascimento    = v("auxNascimento");
-  item.cTercEndereco      = v("auxEndereco");
+  item.cTercEndereco      = v("auxEndereco") || v("cTercEndereco");
   item.cTercMunicipio     = v("auxCidade");
   item.cTercEstado        = "";
   item.cTercFuncao        = "Prestador de serviço";
@@ -804,6 +822,7 @@ function editarContrato(id) {
   if (!podeEditar(item)) { mostrarToast("Sem permissão para editar.","err"); return; }
   limparFormContrato();
   document.getElementById("formContratoTitulo").textContent = "Editar Contrato · " + item.id;
+  popularSelectTerceirizados();
   CAMPOS_CONTRATO.forEach(campo => {
     const el = document.getElementById(campo);
     if (!el) return;
@@ -960,10 +979,10 @@ function gerarHTMLDetalhes(item) {
     <div class="detail-section-title">A · Empresa</div>
     ${det("Razão Social",item.cRazaoSocial)}${det("CNPJ",item.cCnpjEmpresa)}${det("Contratante",item.cEmpresaContratante)}${det("Tipo",item.cTipoContratacao)}
     <div class="detail-section-title">B · Contrato</div>
-    ${det("Objeto",item.cObjeto)}${det("Início",formatarData(item.cDataInicio))}${det("Término",formatarData(item.cDataFim))}${det("Valor Total",item.cValorTotal?"R$ "+item.cValorTotal:"-")}
+    ${det("Nº Contrato",item.cNumeroContrato)}${det("Projeto",item.cProjeto)}${det("Objeto",item.cObjeto)}${det("Início",formatarData(item.cDataInicio))}${det("Término",formatarData(item.cDataFim))}${det("Valor Total",item.cValorTotal?formatarMoeda(item.cValorTotal):"-")}
     ${det("Escopo",item.cEscopo,"full")}
     <div class="detail-section-title">C · Terceirizado / Prestador</div>
-    ${det("Nome",item.cTercNome)}${det("E-mail",item.cTercEmail)}${det("CPF",item.cTercCpf)}${det("Função",item.cTercFuncao)}
+    ${det("Nome",item.cTercNome)}${det("E-mail",item.cTercEmail)}${det("CPF",item.cTercCpf)}${det("Estado Civil",item.cTercEstadoCivil)}${det("Endereço",item.cTercEndereco)}${det("Função",item.cTercFuncao)}
     ${det("Telefone",item.cTercTelefone)}${det("Área",item.cTercAreaExpertise)}${det("Emissão",item.cTercEmissao)}${det("Forma Pgto",item.cTercFormaPgto)}
     ${det("Dados Bancários / Pix",item.cDadosPagamento,"full")}
     <div class="detail-section-title">D · Entregas</div>
@@ -1068,10 +1087,13 @@ function renderContratos() {
       <td>${esc(c.cEmpresaContratante||"-")}</td>
       <td>${formatarData(c.cDataInicio)}</td>
       <td>${formatarData(c.cDataFim)}${alerta}</td>
-      <td style="color:var(--green)">${c.cValorTotal?"R$ "+c.cValorTotal:"-"}</td>
+      <td style="color:var(--green)">${c.cValorTotal?formatarMoeda(c.cValorTotal):"-"}</td>
       <td>${statusBadge(c.status)}</td>
       <td class="col-acoes"><div class="table-actions">
         <button class="btn-icon" title="Visualizar" onclick="verDetalhesContrato('${c.id}')">👁</button>
+        ${c.cContratoHtml
+          ? `<button class="btn-icon btn-icon-green" title="Ver / Baixar Contrato Gerado" onclick="abrirGerarContrato('${c.id}')">📄</button>`
+          : `<button class="btn-icon btn-icon-teal" title="Gerar Contrato" onclick="abrirGerarContrato('${c.id}')">📄</button>`}
         ${podeEditar(c)?`<button class="btn-icon btn-icon-orange" title="Editar" onclick="editarContrato('${c.id}')">✎</button>`:""}
         ${podeAnalisar()?`<button class="btn-icon btn-icon-green" title="Atualizar Status" onclick="abrirAnalise('${c.id}')">⚙</button>`:""}
         ${ehGestaoOuGP()?`<button class="btn-icon" title="Adicionar Observação" onclick="abrirModalObs('${c.id}')" style="font-size:.7rem">💬</button>`:""}
@@ -1115,7 +1137,7 @@ function gerarPrintArea(item) {
         <div class="pf"><div class="pfl">Objeto</div><div class="pfv">${esc(item.cObjeto||"-")}</div></div>
         <div class="pf"><div class="pfl">Início</div><div class="pfv">${formatarData(item.cDataInicio)}</div></div>
         <div class="pf"><div class="pfl">Término</div><div class="pfv">${formatarData(item.cDataFim)}</div></div>
-        <div class="pf"><div class="pfl">Valor Total</div><div class="pfv">${item.cValorTotal?"R$ "+item.cValorTotal:"-"}</div></div>
+        <div class="pf"><div class="pfl">Valor Total</div><div class="pfv">${item.cValorTotal?formatarMoeda(item.cValorTotal):"-"}</div></div>
         <div class="pf pfw"><div class="pfl">Escopo</div><div class="pfv">${esc(item.cEscopo||"-")}</div></div>
       </div></div>
       <div class="ps"><div class="psh">C · Terceirizado / Prestador</div><div class="pg">
@@ -1136,6 +1158,344 @@ function gerarPrintArea(item) {
         <div class="passina"><div class="passina-linha"></div><div>Gestão</div><div class="passina-cargo">Aprovação</div></div>
       </div>
     </div>`;
+}
+
+// ══════════════════════════════════════════════════════
+//  GERAÇÃO DO CONTRATO DE PRESTAÇÃO DE SERVIÇOS (modelo Seteg)
+// ══════════════════════════════════════════════════════
+const MESES_EXT = ["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
+
+function formatarDataExtenso(dataStr) {
+  if (!dataStr) return "";
+  const d = dataStr.length > 10 ? new Date(dataStr) : new Date(dataStr + "T00:00:00");
+  if (isNaN(d)) return "";
+  return `${d.getDate()} de ${MESES_EXT[d.getMonth()]} de ${d.getFullYear()}`;
+}
+
+function calcularPrazoDias(inicio, fim) {
+  if (!inicio || !fim) return null;
+  const di = new Date(inicio + "T00:00:00"), df = new Date(fim + "T00:00:00");
+  if (isNaN(di) || isNaN(df)) return null;
+  const dias = Math.round((df - di) / 86400000);
+  return dias >= 0 ? dias : null;
+}
+
+function cgFill(valor, placeholder) {
+  const v = (valor || "").toString().trim();
+  return v ? esc(v) : `<span class="cg-yellow">[${esc(placeholder || "completar")}]</span>`;
+}
+
+function abrirGerarContrato(id) {
+  const item = DB.contratos.find(c => c.id === id);
+  if (!item) return;
+  document.getElementById("modalContratoDoc").dataset.currentId = id;
+  abrirModal("modalContratoDoc");
+  const jaGerado = !!item.cContratoHtml;
+  document.getElementById("modalContratoDocTitulo").textContent = jaGerado
+    ? "📄 Contrato de Prestação de Serviços · gerado em " + formatarDataHora(item.cContratoGeradoEm)
+    : "📄 Contrato de Prestação de Serviços";
+  document.getElementById("contratoDocHint").style.display = jaGerado ? "none" : "";
+  if (jaGerado) {
+    // Reabre a versão já salva (preserva edições manuais) em vez de regenerar do zero.
+    document.getElementById("contratoDocArea").innerHTML = item.cContratoHtml;
+  } else {
+    // Paginação depende de medir altura real — só funciona com o modal já visível.
+    paginarContrato(document.getElementById("contratoDocArea"), montarContratoHTML(item));
+  }
+}
+
+function regenerarContratoDoc() {
+  const id = document.getElementById("modalContratoDoc").dataset.currentId;
+  const item = DB.contratos.find(c => c.id === id);
+  if (!item) return;
+  if (item.cContratoHtml && !confirm("Isso descarta as edições feitas no documento salvo e gera um novo a partir dos dados atuais do contrato. Deseja continuar?")) return;
+  document.getElementById("contratoDocHint").style.display = "";
+  document.getElementById("modalContratoDocTitulo").textContent = "📄 Contrato de Prestação de Serviços";
+  paginarContrato(document.getElementById("contratoDocArea"), montarContratoHTML(item));
+}
+
+function salvarContratoDoc(sufixo) {
+  const id = document.getElementById("modalContratoDoc").dataset.currentId;
+  const idx = DB.contratos.findIndex(c => c.id === id);
+  if (idx < 0) return;
+  const html = document.getElementById("contratoDocArea").innerHTML;
+  if (!html.trim()) return;
+  const jaExistia = !!DB.contratos[idx].cContratoHtml;
+  const mudou = html !== DB.contratos[idx].cContratoHtml;
+  if (!mudou && !sufixo) return; // nada mudou e não foi um download explícito: evita poluir o histórico
+
+  // A 1ª vez que o documento é salvo conta como "gerado"; da 2ª em diante, "atualizado".
+  let acao;
+  if (mudou) {
+    acao = jaExistia ? "Documento do contrato atualizado" : "Documento do contrato gerado";
+    if (sufixo) acao += " e " + sufixo;
+  } else {
+    acao = "Documento do contrato " + sufixo;
+  }
+
+  DB.contratos[idx].cContratoHtml = html;
+  DB.contratos[idx].cContratoGeradoEm = new Date().toISOString();
+  DB.contratos[idx].historico = [...(DB.contratos[idx].historico || []), {
+    data: new Date().toISOString(), usuario: STATE.nomeUsuario, perfil: STATE.perfil,
+    status: DB.contratos[idx].status, obs: acao + "."
+  }];
+  registrarAuditoria(acao, "Contratos", id, "", "", acao);
+  syncContrato(DB.contratos[idx]);
+  renderContratos();
+}
+
+function fecharModalContratoDoc() {
+  salvarContratoDoc();
+  fecharModal("modalContratoDoc");
+}
+
+function exportarContratoPDF() {
+  salvarContratoDoc("baixado em PDF");
+  document.getElementById("printArea").innerHTML = document.getElementById("contratoDocArea").innerHTML;
+  window.print();
+}
+
+// Divide o HTML gerado em páginas A4 físicas (297mm), respeitando a margem
+// de segurança do timbrado em toda página — não só na primeira.
+function novaPaginaContrato(container) {
+  const pagina = document.createElement("div");
+  pagina.className = "contrato-page";
+  pagina.innerHTML = `<div class="contrato-page-bg"></div><div class="contrato-page-content"></div>`;
+  container.appendChild(pagina);
+  return pagina.querySelector(".contrato-page-content");
+}
+
+function paginarContrato(container, rawHtml) {
+  // scrollHeight de .contrato-page-content já inclui seu próprio padding (38mm + 36mm),
+  // então o limite de comparação é a altura física total da página (297mm), não a área útil.
+  const MM_TO_PX = 96 / 25.4;
+  const ALTURA_UTIL = 297 * MM_TO_PX;
+
+  const buffer = document.createElement("div");
+  buffer.innerHTML = rawHtml;
+  const blocos = Array.from(buffer.children);
+
+  container.innerHTML = "";
+  let conteudo = novaPaginaContrato(container);
+  const transbordou = () => conteudo.scrollHeight > ALTURA_UTIL;
+
+  const colocar = node => {
+    conteudo.appendChild(node);
+    if (transbordou() && conteudo.childNodes.length > 1) {
+      conteudo.removeChild(node);
+      conteudo = novaPaginaContrato(container);
+      conteudo.appendChild(node);
+    }
+  };
+
+  blocos.forEach(bloco => {
+    if (bloco.tagName === "OL" && bloco.classList.contains("cg-lista")) {
+      const itens = Array.from(bloco.children);
+      let total = 0;
+      let ol = document.createElement("ol");
+      ol.className = "cg-lista";
+      conteudo.appendChild(ol);
+      itens.forEach(li => {
+        ol.appendChild(li);
+        total++;
+        if (transbordou() && (ol.children.length > 1 || conteudo.childNodes.length > 1)) {
+          ol.removeChild(li);
+          total--;
+          conteudo = novaPaginaContrato(container);
+          ol = document.createElement("ol");
+          ol.className = "cg-lista";
+          ol.style.counterReset = "cg-item " + total;
+          conteudo.appendChild(ol);
+          ol.appendChild(li);
+          total++;
+        }
+      });
+    } else {
+      colocar(bloco);
+    }
+  });
+}
+
+function montarContratoHTML(item) {
+  const nomeContratada     = cgFill(item.cTercNome, "nome completo");
+  const estadoCivil        = cgFill(item.cTercEstadoCivil, "estado civil");
+  const profissao          = cgFill(item.cTercFuncao, "profissão / função");
+  const rg                 = cgFill(item.cTercRg, "RG");
+  const cpf                = cgFill(item.cTercCpf, "CPF");
+  const enderecoCompleto   = cgFill(
+    [item.cTercEndereco, item.cTercMunicipio].filter(Boolean).join(", "),
+    "endereço completo"
+  );
+  const objeto             = cgFill(item.cObjeto, "descrever o objeto do contrato");
+  const projeto            = cgFill(item.cProjeto, "nome do projeto");
+  const valorTotal         = item.cValorTotal ? esc(formatarMoeda(item.cValorTotal)) : `<span class="cg-yellow">[valor total]</span>`;
+  const dadosBancarios     = item.cDadosPagamento
+    ? `<div class="cg-bank">${esc(item.cDadosPagamento)}</div>`
+    : `<div class="cg-bank cg-yellow">[conta / agência / banco / chave PIX]</div>`;
+  const dias               = calcularPrazoDias(item.cDataInicio, item.cDataFim);
+  const prazoTexto         = dias !== null ? `${dias} ${dias === 1 ? "dia" : "dias"}` : `<span class="cg-yellow">[nº de dias]</span>`;
+  const dataInicioExt      = item.cDataInicio ? formatarDataExtenso(item.cDataInicio) : `<span class="cg-yellow">[data de início]</span>`;
+  const numeroContrato     = item.cNumeroContrato ? esc(item.cNumeroContrato) : `<span class="cg-yellow">[nº/ano]</span>`;
+  const dataAssinaturaExt  = formatarDataExtenso(new Date().toISOString().slice(0, 10));
+
+  const clausula = (n, texto) => `<p class="cg-p"><strong>Cláusula ${n}ª.</strong> ${texto}</p>`;
+  const paragrafoUnico = texto => `<p class="cg-p cg-paragrafo">Parágrafo único. ${texto}</p>`;
+  const paragrafoSimbolo = (n, texto) => `<p class="cg-p cg-paragrafo">§${n}º. ${texto}</p>`;
+  const secao = (num, titulo) => `<p class="cg-secao">${num} – ${titulo}</p>`;
+  const listaLetras = itens => `<ol class="cg-lista">${itens.map(i => `<li>${i}</li>`).join("")}</ol>`;
+
+  return `
+    <p class="cg-title">CONTRATO DE PRESTAÇÃO DE SERVIÇOS</p>
+    <p class="cg-sub">Contrato ${numeroContrato}</p>
+
+    <p class="cg-p">Pelo presente instrumento particular, de um lado, como “CONTRATANTE”:</p>
+    <p class="cg-p">SETEG - SOLUÇÕES GEOLÓGICAS E AMBIENTAIS LTDA, pessoa jurídica de direito privado, inscrita no CNPJ sob o nº 35.237.262/0001-59, com contrato social arquivado com registro na Junta Comercial do Estado do Ceará sob o NIRE 23200470522, com sede na Rua Zezito Gomes, nº 410, Timbu, Eusébio/CE, CEP: 61.777-270 (“SETEG”), neste ato representada por seu administrador MATHEUS FONTENELLE XIMENES DE FARIAS, brasileiro, casado sob o regime de comunhão parcial de bens, biólogo, inscrito no CPF sob o nº 630.555.383-15, portador do documento de identidade de nº 00913923006 DETRAN/CE, com endereço profissional retro informado. (“CONTRATANTE”);</p>
+
+    <p class="cg-p">E de outro lado, na qualidade de “CONTRATADA”:</p>
+    <p class="cg-p">${nomeContratada}, brasileiro(a), ${estadoCivil}, ${profissao}, portador(a) da carteira de identidade de n° ${rg}, inscrito(a) no CPF sob o n° ${cpf}, com endereço residencial em ${enderecoCompleto}. (“CONTRATADA”)</p>
+
+    <p class="cg-p">Tratados por “Parte” quando tratados individualmente e, quando em conjunto, por “Partes”, firmam o presente Contrato de Prestação de Serviços (“Contrato”) pela melhor forma em direito admitida, dando tudo por bom, firme e valioso, considerando as cláusulas e condições que se seguem:</p>
+
+    ${secao("I", "DO OBJETO DO CONTRATO")}
+    ${clausula(1, `Por meio do presente Contrato, a CONTRATADA se compromete a realizar serviços específicos de ${objeto}, conforme estratégia elaborada e previamente alinhada junto à CONTRATANTE.`)}
+
+    ${secao("II", "DO LOCAL DA PRESTAÇÃO DOS SERVIÇOS")}
+    ${clausula(2, `Os serviços serão desempenhados em local definido em acordo prévio entre as Partes, para a execução das atividades destacadas no objeto.`)}
+    <p class="cg-p cg-indent">Projeto: ${projeto}</p>
+
+    ${secao("III", "DO PREÇO E FORMA DE PAGAMENTO")}
+    ${clausula(3, `Pela execução dos serviços objeto deste contrato, a CONTRATANTE pagará ao(à) CONTRATADO (A) o valor total de ${valorTotal}. O pagamento será realizado em parcela única, após a conclusão das atividades previstas no contrato, mediante validação da entrega e cumprimento das obrigações pactuadas.`)}
+    ${clausula(4, `Os pagamentos mencionados deverão ser realizados por transferência bancária em conta de titularidade da CONTRATADA, a seguir indicada:`)}
+    ${dadosBancarios}
+    ${paragrafoUnico(`Eventuais tributos decorrentes da prestação dos Serviços deverão ser arcados pelas respectivas PARTES, de acordo com a legislação tributária, e já estão abrangidos pela contraprestação.`)}
+    ${clausula(5, `Os pagamentos das diárias, para efeito de elucidação, considerarão cada mês completo de prestação de Serviços, com eventual pagamento proporcional no caso de prestação dos Serviços em período parcial do correspondente mês.`)}
+    ${clausula(6, `Todos os pagamentos devidos pela CONTRATANTE à CONTRATADA realizados por meio de crédito em conta corrente de titularidade da CONTRATADA terão o comprovante de depósito como prova inequívoca do respectivo pagamento e mecanismo de outorga automática de quitação por parte da CONTRATADA, da mesma forma, os pagamentos realizados em espécie deverão ser realizados e confirmados por meio de recibo que comprova a devida realização da quitação.`)}
+    ${clausula(7, `A CONTRATADA, sempre que for solicitada pela CONTRATANTE, exibirá os comprovantes dos pagamentos e liquidação de todas as obrigações decorrentes do cumprimento do presente Contrato.`)}
+
+    ${secao("IV", "DAS OBRIGAÇÕES COMUNS DAS PARTES")}
+    ${clausula(8, `As Partes acordam que os direitos de propriedade intelectual e/ou industrial vinculados às operações desenvolvidas serão de titularidade exclusiva da CONTRATANTE.`)}
+    ${clausula(9, `As Partes comprometem-se a cumprir, isolada ou conjuntamente, quando couber, todas as determinações impostas pelas autoridades públicas competentes, relativas ao serviço, bem como o pagamento de todos os tributos federais, estaduais e municipais que incidam ou venham a incidir sobre a atividade.`)}
+    ${clausula(10, `As Partes comprometem-se a não repassar qualquer material confidencial a terceiro ou para os concorrentes.`)}
+
+    ${secao("V", "DOS DIREITOS E OBRIGAÇÕES DA CONTRATANTE")}
+    ${clausula(11, `A CONTRATANTE fornecerá à CONTRATADA todas as informações e elementos necessários à execução do seu trabalho, envidando o máximo de esforços para a execução do Objeto deste Contrato e devendo especificar os detalhes necessários à sua perfeita consecução.`)}
+    ${clausula(12, `A CONTRATANTE poderá realizar auditorias periódicas para verificar a conformidade da CONTRATADA com as políticas de segurança, saúde e sustentabilidade. Qualquer não conformidade identificada deverá ser corrigida imediatamente, sob pena de rescisão do contrato.`)}
+    ${clausula(13, `Pelos serviços desempenhados, a CONTRATANTE compromete-se a realizar o pagamento pactuado na forma e periodicidade previstas neste Contrato.`)}
+
+    ${secao("VI", "DOS DIREITOS E OBRIGAÇÕES DA CONTRATADA")}
+    ${clausula(14, `Pela CONTRATADA, visando a realização do objeto deste Contrato, há a obrigação do que se segue:`)}
+    ${listaLetras([
+      "Prestar os serviços solicitados pela CONTRATANTE conforme descritivo, especificações previstas no Objeto;",
+      "Realizar a plena quitação de todas as obrigações fiscais e previdenciárias, quando aplicáveis, decorrentes do exercício de suas atividades;",
+      "Manter alto padrão de qualidade na execução dos Serviços;",
+      "Observar, na prestação dos Serviços, a legislação em vigor, incluindo, sem limitação, normas, leis, regulamentos, posturas e recomendações Federais, Estaduais e Municipais, obrigando-se a obter e manter de forma regular toda a habilitação, registro, licenças e/ou autorização pertinentes ao desenvolvimento regular das suas atividades, responsabilizando-se integralmente junto aos órgãos fiscalizadores;",
+      "Executar suas atividades em conformidade com os princípios da sustentabilidade e a Política Ambiental da CONTRATANTE, minimizando os impactos ambientais e promovendo o uso racional de recursos naturais, cumprindo todas as legislações ambientais aplicáveis, incluindo a Lei Federal nº 12.305/2010 (Política Nacional de Resíduos Sólidos) e demais normas federais, estaduais e municipais pertinentes à proteção e preservação do meio ambiente;",
+      "Implementar práticas de gestão de resíduos e de controle de poluição, garantindo a conformidade com os padrões estabelecidos pelos órgãos ambientais competentes;",
+      "Cumprir integralmente as normas de segurança e saúde estabelecidas pela CONTRATANTE, conforme disposto em sua Política de Saúde e Segurança e em conformidade com as demais legislações federais, estaduais e municipais aplicáveis à segurança e saúde ocupacional;",
+      "Utilizar corretamente os Equipamentos de Proteção Individual (EPIs), os quais devem possuir Certificado de Aprovação (CA) emitido pelo órgão competente e seguir as práticas de segurança estabelecidas no ambiente de trabalho e no campo;",
+      "Participar treinamentos e capacitações obrigatórias, conforme exigido pelas NRs e outras normativas legais relacionadas;",
+      "Realizar os esclarecimentos necessários à CONTRATANTE, bem como as informações concernentes à natureza e andamento dos Serviços;",
+      "Fornecer os respectivos documentos fiscais, referente ao(s) pagamento(s) do presente instrumento;",
+      "Fornecer a devida autorização de uso de imagem e voz e outros dados sensíveis, quando necessário, em nome da CONTRATANTE, para garantir toda a execução das atividades previstas neste Contrato;",
+      "Tratar de forma estritamente confidencial as informações levadas a seu conhecimento pela CONTRATANTE, pelos clientes ou dos terceiros envolvidos com as partes anteriormente descritas, somente utilizando-as para os fins contratados, sendo VEDADA a comercialização ou utilização para outros fins;",
+      "Manter o absoluto sigilo sobre as operações, dados, estratégias, materiais, informações e documentos da CONTRATANTE, dos clientes ou dos terceiros envolvidos com as partes anteriormente descritas, mesmo após a conclusão dos serviços ou do término da relação contratual."
+    ])}
+    ${clausula(15, `A CONTRATADA não poderá subcontratar terceiros para a execução dos serviços contratados sem a prévia e expressa autorização por escrito da CONTRATANTE. Caso a subcontratação seja autorizada, a CONTRATADA permanecerá integralmente responsável pelos atos e omissões de seus subcontratados, sendo sua obrigação garantir que estes cumpram todas as obrigações estabelecidas neste contrato, inclusive no que tange às normas de segurança, saúde e sustentabilidade.`)}
+    ${clausula(16, `Caso a impossibilidade referida na cláusula acima perdure por mais de 7 (sete) dias e a CONTRATADA não apresente, dentro deste prazo, substituto considerado adequado pela CONTRATANTE, nos termos da cláusula, a CONTRATANTE poderá rescindir o presente Contrato, sem pagamento de nenhuma multa ou penalidade, sem prejuízo de pleitear eventual reparação judicial pelos danos causados pela ausência da prestação dos serviços.`)}
+
+    ${secao("VII", "DO PRAZO")}
+    ${clausula(17, `O presente Contrato terá prazo de ${prazoTexto}, podendo ser renovado mediante aditivo contratual.`)}
+    ${paragrafoUnico(`Caso a CONTRATADA não cumpra os prazos estabelecidos para a execução dos serviços, será aplicada uma multa moratória de 0,5% (meio por cento) sobre o valor total contratual por dia de atraso, limitada ao máximo de 30% (trinta por cento) do valor total do contrato. A aplicação da multa ocorrerá automaticamente, independentemente de notificação prévia por parte da CONTRATANTE.`)}
+
+    ${secao("VIII", "DAS VEDAÇÕES E RESPONSABILIDADES")}
+    ${clausula(18, `É vedado à CONTRATADA, a qualquer título, ceder o uso da propriedade intelectual ou industrial relacionadas aos projetos decorrentes dos Serviços a terceiros ou utilizar as marcas dos projetos decorrentes deste Contrato para fins diferentes dos estabelecidos neste instrumento.`)}
+    ${clausula(19, `Fica vedado à CONTRATADA divulgar, por qualquer meio, assim como utilizar em outros estabelecimentos ou iniciativas as informações que tratem sobre fórmulas, metodologias, planilhas e demais informações confidenciais dos clientes e projetos que tenham ficado sob seu conhecimento em razão deste Contrato.`)}
+    ${clausula(20, `A CONTRATADA declara expressamente estar legalmente habilitada para a prestação dos Serviços objeto deste Contrato e que dispõe e manterá disponíveis durante toda a vigência do presente Contrato, as autorizações, registros, licenças e habilitações exigidas, bem como os recursos materiais e humanos, a qualificação, o conhecimento técnico e a expertise suficientes e adequados para a prestação dos Serviços.`)}
+    ${clausula(21, `A relação das Partes é àquela de contratantes independentes. Em nenhuma circunstância ou situação será presumida a existência de uma sociedade entre a CONTRATANTE e a CONTRATADA. Nenhuma disposição neste instrumento atribui nem atribuirá à CONTRATADA o status de sócio, distribuidor e/ou representante comercial da CONTRATANTE.`)}
+    ${clausula(22, `Em decorrência deste Contrato, sob nenhuma hipótese ou em qualquer situação, se presumirá a eventual existência, ou se estabelecerá a presunção de qualquer vínculo empregatício ou obrigações de caráter trabalhista e previdenciário entre a CONTRATANTE e a CONTRATADA, nem a CONTRATANTE será fiadora das obrigações e encargos trabalhistas e previdenciários da CONTRATADA, que assume, neste ato, integral responsabilidade por tais obrigações, inclusive as de caráter civil, penal, tributário e previdenciário.`)}
+    ${clausula(23, `A CONTRATADA declara e garante que não emprega trabalho infantil, forçado ou análogo ao escravo em suas operações, direta ou indiretamente. O descumprimento desta cláusula implicará em rescisão imediata do Contrato e aplicação de penalidades.`)}
+
+    ${secao("IX", "DOS DIREITOS DE TITULARIDADE")}
+    ${clausula(24, `Todo o desenvolvimento de peças publicitárias, conteúdo digital e/ou outros materiais vinculados ao Serviço, devidamente publicados nos canais oficiais das produções, bem como os grafismos, fotografias, vídeos, sons, imagens, vozes, músicas, roteiros, adaptações, assim como de todo o material e conteúdo de bastidores e produção são de propriedade exclusiva da CONTRATANTE, podendo deles se utilizar de forma irrestrita, não podendo a CONTRATADA, em hipótese alguma, mesmo em caso de rescisão contratual, pleitear judicial ou extrajudicialmente, a suspensão, impedimento, retirada do ar, diminuição ou vedação de circulação, publicidade, exposição, comercialização, mas não se limitando a estes, de todo o material e conteúdo oriundos do Contrato.`)}
+    ${paragrafoUnico(`O disposto acima aplica-se também ao conteúdo eventualmente produzido pela CONTRATANTE que ainda não tenha sido eventualmente lançado.`)}
+
+    ${secao("X", "DA RESCISÃO")}
+    ${clausula(25, `O presente Contrato poderá ser rescindido imediata e unilateralmente pelas Partes nas seguintes hipóteses:`)}
+    ${listaLetras([
+      "Ocorrência de comportamento ou acontecimento, no qual a CONTRATADA possua culpa ou dolo, que comprometa negativamente a reputação ou a imagem da CONTRATANTE ou de quaisquer dos seus Sócios, quando for o caso;",
+      "Prática de atos ilícitos por parte das Partes ou por terceiros sob as suas ordens e/ou responsabilidade;",
+      "Infração ao compromisso de confidencialidade pactuado na Cláusula 29ª;",
+      "Infração do compromisso anticorrupção pactuado na Cláusula 32ª;",
+      "A não observância de qualquer disposição deste Contrato por qualquer das Partes ou por qualquer indivíduo sob sua responsabilidade;",
+      "Em caso de regime de falência, em liquidação judicial ou extrajudicial, ou ainda se houver a dissolução total amigável ou judicial da sociedade;",
+      "Haja o encerramento das atividades de quaisquer das Partes."
+    ])}
+    ${clausula(26, `A ocorrência de qualquer das hipóteses mencionadas nas alíneas “a”, “b”, “c” e “d” da Cláusula supracitada implicará em multa devida pela Parte infratora na importância de R$100.000,00 (cem mil reais), sem prejuízo de indenizações cabíveis.`)}
+    ${clausula(27, `As Partes poderão ainda rescindir o presente Contrato sem justificativa, mediante comunicação prévia e escrita, com 30 (trinta) dias de antecedência. Caso contrário, será devido à CONTRATANTE multa compensatória no valor correspondente a 20% (vinte por cento) do valor do contrato.`)}
+    ${clausula(28, `Na hipótese de descumprimento de obrigação contratual por parte da CONTRATADA, que impossibilite a concretização do objeto do contrato, ocorrerá a rescisão do presente instrumento, sendo devido à CONTRATANTE multa compensatória no valor de 20% (vinte por cento) do valor do contrato.`)}
+
+    ${secao("XI", "DA CONFIDENCIALIDADE, NÃO COMPETIÇÃO E NÃO ALICIAMENTO")}
+    ${clausula(29, `As Partes, durante a vigência do presente Contrato e nos 02 (dois) anos subsequentes ao seu término ou rescisão, obrigar-se-ão a manter o mais completo e absoluto sigilo sobre quaisquer dados, materiais, informações, documentos, especificações técnicas ou comerciais, inovações e aperfeiçoamentos obtidos de uma Parte em relação à outra (“Informações Confidenciais”), ou que venham a lhe ser confiados em razão deste Contrato e dos serviços executados no curso deste, sejam eles de interesse de uma das Partes ou de terceiros, não podendo, sob qualquer pretexto, divulgar, revelar, reproduzir, utilizar ou deles dar conhecimento a terceiros, estranhos a esta contratação, sem a prévia anuência e concordância da Parte reveladora.`)}
+    ${paragrafoSimbolo(1, `A obrigação de confidencialidade aqui prevista não se aplica às informações disponibilizadas por qualquer uma das Partes que: (a) já eram de conhecimento da Parte receptora, quando de sua divulgação; (b) já eram de domínio público quando de sua divulgação; sem que tenha ocorrido qualquer violação de obrigação de confidencialidade pela Parte receptora; (c) tenham sido independentemente desenvolvidas ou obtidas pela Parte receptora sem a violação deste Contrato, exceto quando tais informações tiverem sido desenvolvidas com base nas Informações Confidenciais.`)}
+    ${paragrafoSimbolo(2, `A inobservância do disposto na Cláusula 29ª sujeitará a Parte violadora às penalidades decorrentes da violação e quebra de sigilo contratual prevista na Cláusula mencionada, sem prejuízo de arcar com as perdas e danos decorrentes do seu ato, apurado em processo judicial competente para esta finalidade.`)}
+    ${clausula(30, `A CONTRATADA, durante a vigência do presente Contrato e nos 02 (dois) anos subsequentes ao seu término ou rescisão, não poderá tomar parte, direta ou indiretamente, por meio de seus prepostos ou parentes, na qualidade de sócio, acionista, administrador, conselheiro, funcionário, representante, prestador de serviços ou outros, individualmente ou por meio de qualquer sociedade, negócio e/ou empreendimento que atue no Ramo de Negócios dentro do território brasileiro, junto a e/ou em favor de clientes da CONTRATANTE, sob pena de multa não compensatória no valor de R$100.000,00 (cem mil reais), sem prejuízo de arcar com as perdas e danos decorrentes do seu ato, apurado em processo judicial competente para esta finalidade.`)}
+    ${clausula(31, `Sob pena de multa não compensatória no valor de R$100.000,00 (cem mil reais), as Partes deverão se abster de contatar, negociar ou contratar empregados, parceiros, sócios ou diretores que tenham vínculo com a Parte contrária, não os encorajando, induzindo ou aliciando, direta ou indiretamente, para que deixem de prestar tais serviços e/ou para que ajuízem ações judiciais em face da Parte Contrária, ou para que revelem, direta ou indiretamente, seus segredos comerciais, seja em benefício próprio ou de terceiros.`)}
+
+    ${secao("XII", "DA LEI ANTICORRUPÇÃO")}
+    ${clausula(32, `As Partes declaram, entre si que:`)}
+    ${listaLetras([
+      "Ter sempre cumprido todas as leis aplicáveis, e não ter cometido, por ação ou omissão, nenhum ato que pudesse ou possa ser considerado uma violação às leis brasileiras ou estrangeiras aplicáveis, relacionadas a corrupção, suborno, fraude, conflito de interesses públicos, improbidade administrativa, violações a licitações e contratos públicos, lavagem de dinheiro, doações políticas ou eleitorais, ou condução de negócios de forma não ética, incluindo, sem limitação, o Decreto-Lei n° 2.848/1940, a Lei n° 8.429/1992, a Lei n° 8.666/1993, a Lei n° 9.504/1997, a Lei n° 9.613/1998, a Lei n° 12.813/2013 e a Lei nº 12.846/2013, assim como leis estrangeiras com eficácia extraterritorial aprovadas com base na Convenção sobre o Combate da Corrupção de Funcionários Públicos Estrangeiros em Transações Comerciais Internacionais da OCDE, inclusive seus regulamentos e demais normas relacionadas, bem como suas futuras alterações (“Leis Anticorrupção”).",
+      "Ter sempre cumprido todas as leis aplicáveis e normas relacionadas a contribuições e doações políticas, presentes, gratificações e despesas pagas a ou em nome de (i) agente, autoridade, funcionário, servidor, empregado, diretor, conselheiro ou representante de qualquer entidade governamental, departamento, agência ou ofício públicos, incluindo quaisquer entidades dos poderes Executivo, Legislativo e Judiciário, entidades da administração pública direta ou indireta, empresas públicas, sociedades de economia mista e fundações públicas, nacionais ou estrangeiras; (ii) qualquer pessoa exercendo, ainda que temporariamente e sem remuneração, cargo, função ou emprego em qualquer entidade de um Estado; (iii) diretor, conselheiro, empregado ou representante de uma organização internacional pública; e (iv) diretor, conselheiro ou empregado de qualquer partido político, bem como candidatos concorrendo a cargos públicos eletivos ou políticos, no Brasil ou no exterior (“Agentes Públicos”), ou a qualquer terceiro relacionado com um Agente Público;",
+      "Não ter (i) concedido, prometido ou autorizado a dação, oferta ou promessa de qualquer vantagem indevida (em dinheiro ou qualquer coisa de valor) a qualquer Agente Público, ou qualquer terceiro relacionado a Agente Público; (ii) financiado, provido, patrocinado ou subsidiado qualquer ato prejudicial ao governo ou qualquer Estado, nação ou governo (federal, estadual, municipal ou qualquer outra entidade ou subdivisão pública), qualquer entidade da administração pública direta, indireta ou fundacional, nacional ou estrangeira, incluindo, sem limitações, qualquer autoridade, órgão, autarquia, agência, conselho, comissão, secretariado, tribunal judicial ou arbitral, departamento, escritório ou representação, que exerça função executiva, legislativa, judiciária, regulatória ou administrativa, bem como organismo autônomo governamental, organização internacional de direito público e partidos políticos (“Autoridade Governamental”); (iii) usado terceiros, pessoas físicas ou jurídicas, para esconder ou simular os interesses reais ou a identidade dos beneficiários de qualquer ato prejudicial contra qualquer Autoridade Governamental; (iv) fraudado, manipulado, impedido, evitado, interferido ou obtido qualquer vantagem indevida de qualquer processo de licitação pública, ou de quaisquer contratos com qualquer Autoridade Governamental, ou (v) impedido investigações ou fiscalização por qualquer Autoridade Governamental ou interferido em seus atos;",
+      "Não ter recebido quaisquer notificações ou comunicações sobre violações às Leis Anticorrupção, e que não está, direta ou indiretamente (i) sob investigação ou monitoramento em virtude de denúncias de suborno e/ou corrupção; (ii) sujeito a processo judicial e/ou administrativo em curso; (iii) banido, listado como inidôneo ou proibido ou com restrições de direitos de contratar com qualquer Autoridade Governamental; (iv) sujeito a restrições ou sanções econômicas e de negócios por qualquer Autoridade Governamental; e (v) publicamente acusado ou suspeito de práticas de corrupção ou atos lesivos contra a administração pública;",
+      "Que, durante a vigência deste Acordo, obriga-se, não violar e não realizar qualquer ato que possa ser interpretado como uma violação a qualquer norma prevista nas Leis Anticorrupção;",
+      "Que se compromete a notificar por escrito a outra Parte, no prazo máximo de 24 (vinte e quatro) horas contadas da tomada de conhecimento do fato, a respeito de qualquer suspeita de ou efetiva violação das Leis Anticorrupção, bem como em casos em que obtiver ciência acerca de qualquer prática de suborno ou corrupção envolvendo seu nome."
+    ])}
+    ${paragrafoUnico(`O descumprimento, por uma das Partes, das Leis Anticorrupção poderá ser considerado uma infração grave, que implicará na rescisão da Parceria, sem prejuízo de obter reparação integral por perdas e danos, inclusive por quaisquer multas, tributos, juros, despesas, custos e honorários incorridos em conexão com a investigação de irregularidades ou defesas, diante de quaisquer acusações ou processos relacionados à violação ou suposta violação das Leis Anticorrupção de qualquer jurisdição.`)}
+
+    ${secao("XIII", "DA LEI GERAL DE PROTEÇÃO DE DADOS – LGPD")}
+    ${clausula(33, `As Partes declaram e garantem, mutuamente, que cumprem toda a legislação aplicável sobre segurança da informação, privacidade e proteção de dados, incluindo (sempre e quando aplicáveis ao presente Contrato) a Constituição Federal, o Código de Defesa do Consumidor, o Código Civil, o Marco Civil da Internet (Lei Federal nº 12.965/2014) e respectivo decreto regulamentador (Decreto nº 8.771/2016), a Lei Geral de Proteção de Dados (Lei Federal nº 13.709/2018) e demais normas setoriais ou gerais sobre o tema, comprometendo-se a tratar os dados classificados como pessoais, que sejam coletados, fornecidos ou acessados por meio ou em decorrência deste instrumento, exclusivamente para fins da execução do objeto de seu objeto, no curso do relacionamento existente entre as Partes e somente nos estritos limites aqui previstos, sem transferi-los a qualquer terceiro, exceto se expressamente autorizado pelo titular dos dados, por este ou outro instrumento ou, ainda, para o cumprimento de obrigação legal ou regulatória ou em caso de decisão judicial que obrigue o fornecimento.`)}
+    ${paragrafoSimbolo(1, `Em caso de eventual vazamento indevido de dados, as Partes a informar umas às outras sobre o vazamento, bem como sobre qual o dado vertido e a ação necessária para mitigação dos eventuais danos causados.`)}
+    ${paragrafoSimbolo(2, `A Partes se comprometem a executar os trabalhos a partir das premissas da LGPD, em especial os princípios da finalidade, adequação, transparência, livre acesso, segurança, prevenção e não discriminação no tratamento dos dados.`)}
+
+    ${secao("XIV", "DISPOSIÇÕES FINAIS")}
+    ${clausula(34, `O presente Contrato entra em vigor a partir do dia ${dataInicioExt}.`)}
+    ${clausula(35, `O presente Contrato reflete o acordo integral entre as Partes e legalmente substitui e revoga todos os documentos, obrigações e acordos assumidos entre elas antes da data deste instrumento, sejam eles verbais ou escritos, no que diz respeito ao objeto do presente Contrato.`)}
+    ${clausula(36, `Eventual tolerância às infrações das cláusulas e condições deste Contrato não constituirão novação ou renúncia aos direitos que são conferidos às Partes, podendo o cumprimento da obrigação e/ou a incidência da penalidade cominada ser exigida a qualquer tempo.`)}
+    ${clausula(37, `O presente Contrato obriga as Partes e os seus sucessores, a qualquer título, sendo as Partes responsáveis pelos atos e omissões de seus respectivos funcionários, administradores ou gerentes, prestadores de serviços, contratados ou prepostos, sob qualquer denominação.`)}
+    ${clausula(38, `Este Contrato é celebrado pelas Partes em caráter irrevogável e irretratável, e vincula não só as Partes, mas também seus respectivos sucessores e cessionários, a qualquer título, que assumam as obrigações dele decorrentes.`)}
+    ${clausula(39, `Os direitos e obrigações decorrentes do presente Contrato somente poderão ser cedidos por uma Parte mediante o consentimento por escrito da outra Parte. Não se aplica o disposto neste item às hipóteses de sucessão empresarial, seja em virtude de cisão, incorporação, fusão ou qualquer outra forma de reorganização societária.`)}
+    ${clausula(40, `Este Contrato não poderá ser alterado ou modificado em nenhuma de suas cláusulas ou condições, salvo mediante acordo por escrito, assinado pelos representantes legais de ambas as Partes.`)}
+    ${clausula(41, `Se uma disposição deste Contrato (ou parte de qualquer disposição) for considerada ilegal, inválida ou inexequível, a eficácia deste Contrato não será afetada, e tal disposição será aplicada com a mínima modificação necessária para torná-la legal, válida e exequível.`)}
+    ${clausula(42, `A Partes elegem o foro da cidade de Fortaleza/CE para dirimir quaisquer conflitos que possam surgir, assim como para dirimir dúvidas provenientes da execução e cumprimento deste instrumento.`)}
+    ${clausula(43, `Todas as obrigações e deveres contidos neste Contrato, poderão ser exigidos judicialmente, mesmo após do final mesmo, sendo este um documento com todos os efeitos de um Título Executivo Extrajudicial.`)}
+    ${clausula(44, `As Partes pactuam que o presente Contrato pode sofrer alterações em suas cláusulas por meio de Aditivo Contratual, firmado pelas Partes.`)}
+    ${clausula(45, `Fica estabelecido que o relacionamento entre as Partes, visando resguardar responsabilidades e obrigações, será normalmente pela forma escrita, através de consultas e respostas.`)}
+
+    <p class="cg-p">E, por estarem justas e convencionadas, as Partes assinam o presente Contrato em 02 (duas) vias de igual teor, juntamente com 02 (duas) testemunhas instrumentárias.</p>
+
+    <p class="cg-p cg-data-final">Fortaleza/CE, ${dataAssinaturaExt}.</p>
+
+    <div class="cg-sign-grid">
+      <div class="cg-sign-box">
+        <div class="cg-sign-line"></div>
+        <div>SETEG - SOLUÇÕES GEOLÓGICAS E AMBIENTAIS LTDA</div>
+        <div>R.p. Matheus Fontenelle Ximenes de Farias</div>
+        <div class="cg-sign-tag">(CONTRATANTE)</div>
+      </div>
+      <div class="cg-sign-box">
+        <div class="cg-sign-line"></div>
+        <div>${nomeContratada}</div>
+        <div class="cg-sign-tag">(CONTRATADA)</div>
+      </div>
+    </div>
+
+    <p class="cg-p cg-testemunhas">TESTEMUNHAS:</p>
+    <div class="cg-wit-grid">
+      <div class="cg-sign-box"><div class="cg-sign-line"></div><div>Nome:</div><div>CPF:</div></div>
+      <div class="cg-sign-box"><div class="cg-sign-line"></div><div>Nome:</div><div>CPF:</div></div>
+    </div>
+  `;
 }
 
 // ══════════════════════════════════════════════════════
@@ -1493,6 +1853,14 @@ function mostrarToast(msg,tipo){const t=document.getElementById("toast");t.textC
 function mascaraCnpjId(id){const el=document.getElementById(id);if(!el)return;let v=el.value.replace(/\D/g,"").slice(0,14);v=v.replace(/(\d{2})(\d)/,"$1.$2").replace(/(\d{3})(\d)/,"$1.$2").replace(/(\d{3})(\d)/,"$1/$2").replace(/(\d{4})(\d)/,"$1-$2");el.value=v;}
 function mascaraCpfId(id){const el=document.getElementById(id);if(!el)return;let v=el.value.replace(/\D/g,"").slice(0,11);v=v.replace(/(\d{3})(\d)/,"$1.$2").replace(/(\d{3})(\d)/,"$1.$2").replace(/(\d{3})(\d{1,2})$/,"$1-$2");el.value=v;}
 function mascaraTelId(id){const el=document.getElementById(id);if(!el)return;let v=el.value.replace(/\D/g,"").slice(0,11);if(v.length<=10)v=v.replace(/(\d{2})(\d{4})(\d{0,4})/,"($1) $2-$3");else v=v.replace(/(\d{2})(\d{5})(\d{0,4})/,"($1) $2-$3");el.value=v;}
+function mascaraMoedaId(id){
+  const el=document.getElementById(id); if(!el) return;
+  const v=el.value.replace(/[^\d,]/g,"");
+  const partes=v.split(",");
+  let inteiro=partes[0].replace(/^0+(?=\d)/,"").replace(/\B(?=(\d{3})+(?!\d))/g,".");
+  const decimal=partes.length>1?","+partes[1].slice(0,2):"";
+  el.value=inteiro+decimal;
+}
 
 // ══════════════════════════════════════════════════════
 //  START

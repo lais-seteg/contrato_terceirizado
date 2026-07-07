@@ -152,6 +152,13 @@
           <!-- DADOS DO TERCEIRIZADO — campos variam por tipo -->
           <div class="form-section-block">
 
+            <div class="form-grid" style="margin-bottom:.75rem">
+              <div class="form-group full-width">
+                <label class="form-label">🔗 Vincular Terceirizado já cadastrado <span style="font-weight:400;font-size:.72rem;color:var(--text-secondary)">(preenche nome, CPF, RG e endereço automaticamente)</span></label>
+                <select id="cTerceirizadoId" class="form-control" onchange="preencherTerceirizadoDoSelect()"></select>
+              </div>
+            </div>
+
             <!-- Formulário específico para Despachante -->
             <div id="secaoCTercDespachante" class="hidden">
               <div class="avaliacao-pergunta">
@@ -405,6 +412,23 @@
                 </div>
               </div>
             </div><!-- #secaoCTercAuxiliar -->
+          </div>
+
+          <!-- DADOS DO CONTRATO LEGAL — usados para gerar automaticamente o documento de contrato -->
+          <div class="form-section-block" id="secaoDadosContratoLegal">
+            <h4 class="form-subtitle">📄 Dados do Contrato <span style="font-weight:400;font-size:.72rem;color:var(--text-secondary)">(usados para gerar o Contrato de Prestação de Serviços automaticamente)</span></h4>
+            <div class="form-grid">
+              <div class="form-group"><label class="form-label">Número do Contrato</label><input id="cNumeroContrato" class="form-control" placeholder="Ex: 04/2025" /></div>
+              <div class="form-group"><label class="form-label">Projeto / Local</label><input id="cProjeto" class="form-control" placeholder="Ex: IBITU – CG1/CG2" /></div>
+              <div class="form-group"><label class="form-label">Valor Total (R$)</label><input id="cValorTotal" class="form-control" placeholder="0,00" oninput="mascaraMoedaId('cValorTotal')" /></div>
+              <div class="form-group"><label class="form-label">Início da Vigência</label><input id="cDataInicio" type="date" class="form-control" /></div>
+              <div class="form-group"><label class="form-label">Término da Vigência</label><input id="cDataFim" type="date" class="form-control" /></div>
+              <div class="form-group"><label class="form-label">CPF do(a) Contratado(a)</label><input id="cTercCpf" class="form-control" placeholder="000.000.000-00" maxlength="14" /></div>
+              <div class="form-group"><label class="form-label">RG do(a) Contratado(a)</label><input id="cTercRg" class="form-control" placeholder="00.000.000-0" /></div>
+              <div class="form-group"><label class="form-label">Estado Civil do(a) Contratado(a)</label><input id="cTercEstadoCivil" class="form-control" placeholder="Ex: solteiro(a), casado(a) sob regime de..." /></div>
+              <div class="form-group full-width"><label class="form-label">Endereço Completo do(a) Contratado(a)</label><input id="cTercEndereco" class="form-control" placeholder="Rua, número, bairro, cidade/UF" /></div>
+              <div class="form-group full-width"><label class="form-label">Objeto do Contrato</label><textarea id="cObjeto" class="form-control" rows="3" placeholder="Descreva os serviços específicos a serem prestados..."></textarea></div>
+            </div>
           </div>
 
           <!-- RESPOSTA À PENDÊNCIA — visível apenas quando líder edita contrato Pendente -->
@@ -950,6 +974,25 @@
           <span class="tipo-sel-badge">Formulário próprio</span>
         </button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Gerar Contrato -->
+<div id="modalContratoDoc" class="modal-overlay">
+  <div class="modal modal-contrato">
+    <div class="modal-header">
+      <h2 id="modalContratoDocTitulo">📄 Contrato de Prestação de Serviços</h2>
+      <button class="modal-close" id="btnFecharContratoDoc">×</button>
+    </div>
+    <div class="modal-body modal-body-contrato">
+      <p class="contrato-doc-hint" id="contratoDocHint">Os campos em <strong style="color:#000;background:#fff59d;padding:.05rem .3rem;border-radius:3px">amarelo</strong> ainda precisam ser completados manualmente. O documento inteiro é editável — as alterações são salvas automaticamente ao fechar ou baixar.</p>
+      <div id="contratoDocArea" contenteditable="true" spellcheck="false"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="btnFecharContratoDocOk">Fechar</button>
+      <button class="btn btn-ghost" id="btnRegerarContratoDoc">🔄 Gerar Novamente</button>
+      <button class="btn btn-primary" id="btnExportarContratoPDF">⬇️ Baixar PDF</button>
     </div>
   </div>
 </div>
