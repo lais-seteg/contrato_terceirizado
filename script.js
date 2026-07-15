@@ -1137,9 +1137,11 @@ function renderContratos() {
       <td>${statusBadge(c.status)}</td>
       <td class="col-acoes"><div class="table-actions">
         <button class="btn-icon" title="Visualizar" onclick="verDetalhesContrato('${c.id}')">👁</button>
-        ${c.cContratoHtml
-          ? `<button class="btn-icon btn-icon-green" title="Ver / Baixar Contrato Gerado" onclick="abrirGerarContrato('${c.id}')">📄</button>`
-          : `<button class="btn-icon btn-icon-teal" title="Gerar Contrato" onclick="abrirGerarContrato('${c.id}')">📄</button>`}
+        ${["Aprovado","Finalizado"].includes(c.status)
+          ? (c.cContratoHtml
+            ? `<button class="btn-icon btn-icon-green" title="Ver / Baixar Contrato Gerado" onclick="abrirGerarContrato('${c.id}')">📄</button>`
+            : `<button class="btn-icon btn-icon-teal" title="Gerar Contrato" onclick="abrirGerarContrato('${c.id}')">📄</button>`)
+          : ""}
         ${podeEditar(c)?`<button class="btn-icon btn-icon-orange" title="Editar" onclick="editarContrato('${c.id}')">✎</button>`:""}
         ${podeAnalisar()?`<button class="btn-icon btn-icon-green" title="Atualizar Status" onclick="abrirAnalise('${c.id}')">⚙</button>`:""}
         ${ehGestaoOuGP()?`<button class="btn-icon" title="Adicionar Observação" onclick="abrirModalObs('${c.id}')" style="font-size:.7rem">💬</button>`:""}
