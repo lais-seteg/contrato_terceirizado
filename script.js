@@ -1302,15 +1302,20 @@ function exportarContratoPDF() {
   salvarContratoDoc("baixado em PDF");
   const conteudoHtml = document.getElementById("contratoDocArea").innerHTML;
 
-  // Impressão isolada em janela própria (em vez de reaproveitar #printArea escondendo
-  // o resto do app com CSS): o restante da página (sidebar, rodapé fixo, modais) ficava
-  // presente no DOM durante a impressão mesmo com display:none, e isso vinha corrompendo
-  // o PDF gerado pelo navegador em qualquer contrato. Isolando o conteúdo numa janela em
-  // branco, só o documento do contrato existe ali — nada mais para o navegador renderizar.
-  const win = window.open("", "_blank");
-  if (!win) { mostrarToast("Permita pop-ups neste site para gerar o PDF.", "err"); return; }
-  win.document.open();
-  win.document.write(`<!DOCTYPE html>
+  // Impressão isolada num iframe oculto anexado à própria página — evita tanto o
+  // window.open (bloqueio de pop-up / risco de substituir a aba atual) quanto o
+  // truque de esconder o resto do app com CSS (#printArea), que deixava sidebar,
+  // rodapé fixo e modais presentes no DOM durante a impressão e corrompia o PDF.
+  // A classe "print-area" é a mesma que o style.css já usa para exibir conteúdo
+  // em @media print — sem ela aqui, a regra que esconde "body>*" na impressão
+  // escondia também o próprio documento do contrato, gerando página em branco.
+  const iframe = document.createElement("iframe");
+  iframe.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden";
+  document.body.appendChild(iframe);
+
+  const doc = iframe.contentWindow.document;
+  doc.open();
+  doc.write(`<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -1319,12 +1324,18 @@ function exportarContratoPDF() {
 <link rel="stylesheet" href="style.css">
 </head>
 <body style="margin:0;background:#fff">
-<div id="contratoDocArea" style="display:flex;flex-direction:column;align-items:center;gap:0">${conteudoHtml}</div>
+<div id="contratoDocArea" class="print-area" style="display:flex;flex-direction:column;align-items:center;gap:0">${conteudoHtml}</div>
 </body>
 </html>`);
-  win.document.close();
-  win.onload = () => {
-    setTimeout(() => { win.focus(); win.print(); }, 300);
+  doc.close();
+
+  const limpar = () => { if (iframe.parentNode) iframe.parentNode.removeChild(iframe); };
+  iframe.onload = () => {
+    setTimeout(() => {
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+      setTimeout(limpar, 1000);
+    }, 300);
   };
 }
 
