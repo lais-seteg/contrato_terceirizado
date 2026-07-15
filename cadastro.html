@@ -396,6 +396,10 @@
           <input id="tNascimento" type="date" class="form-control" />
         </div>
         <div class="form-group">
+          <label class="form-label">Estado Civil</label>
+          <input id="tEstadoCivil" class="form-control" placeholder="Ex: solteiro(a), casado(a) sob regime de..." />
+        </div>
+        <div class="form-group">
           <label class="form-label required">E-mail</label>
           <input id="tEmail" type="email" class="form-control" placeholder="seu@email.com" autocomplete="email" />
         </div>
@@ -539,7 +543,7 @@
             </div>
           </div>
         </div>
-        <div class="form-group full-width">
+        <div class="form-group full-width hidden" id="grpExpDirecao">
           <label class="form-label">Experiência com direção</label>
           <textarea id="tExpDirecao" class="form-control" rows="2" placeholder="Ex: 5 anos com habilitação B, estradas vicinais"></textarea>
         </div>
@@ -587,7 +591,13 @@
             <option value="">Selecione</option>
             <option>Pix</option>
             <option>Transferência bancária</option>
+            <option>Boleto</option>
+            <option>Parcelado</option>
           </select>
+        </div>
+        <div class="form-group hidden" id="grpParcelas">
+          <label class="form-label">Número de parcelas</label>
+          <input id="tParcelas" type="number" min="2" class="form-control" placeholder="Ex: 3" />
         </div>
         <div class="form-group">
           <label class="form-label">Disponibilidade de horário</label>
@@ -673,6 +683,8 @@
   function toggleCnhCategoria(val) {
     document.getElementById('cnhCategoriaWrap').style.display = val === 'sim' ? 'inline-flex' : 'none';
     if (val !== 'sim') document.getElementById('tCnh').value = '';
+    document.getElementById('grpExpDirecao').classList.toggle('hidden', val !== 'sim');
+    if (val !== 'sim') document.getElementById('tExpDirecao').value = '';
   }
 
   function mostrarToast(msg, tipo) {
@@ -728,6 +740,7 @@
     if (!comprov)   { mostrarToast('Informe em nome de quem será o comprovante.', 'err'); document.getElementById('tComprovante').focus(); return; }
     if (!emissao)   { mostrarToast('Informe se haverá nota fiscal ou recibo.', 'err'); document.getElementById('tEmissao').focus(); return; }
     if (!formaPgto) { mostrarToast('Informe a forma de pagamento.', 'err'); document.getElementById('tFormaPgto').focus(); return; }
+    if (formaPgto === 'Parcelado' && !v('tParcelas')) { mostrarToast('Informe o número de parcelas.', 'err'); document.getElementById('tParcelas').focus(); return; }
     if (!dados)     { mostrarToast('Informe os dados bancários ou chave Pix.', 'err'); document.getElementById('tDadosBancarios').focus(); return; }
     if (!emerg1N)   { mostrarToast('Informe o contato de emergência 01.', 'err'); document.getElementById('tEmerg1Nome').focus(); return; }
     if (!emerg1T)   { mostrarToast('Informe o telefone do contato de emergência 01.', 'err'); document.getElementById('tEmerg1Tel').focus(); return; }
@@ -747,6 +760,7 @@
         t_cpf:             cpf,
         t_rg:              v('tRg')              || null,
         t_nascimento:      v('tNascimento')      || null,
+        t_estado_civil:    v('tEstadoCivil')      || null,
         t_telefone:        telefone,
         t_estado:          v('tEstado') || null,
         t_cidade:          v('tCidade')          || null,
@@ -766,6 +780,7 @@
         t_comprovante:     comprov,
         t_emissao:         emissao,
         t_forma_pgto:      formaPgto,
+        t_parcelas:        (formaPgto === 'Parcelado' ? v('tParcelas') : '') || null,
         t_dados_bancarios: dados,
         t_disponibilidade: v('tDisponibilidade') || null,
         t_emerg1_nome:     emerg1N,
@@ -809,6 +824,9 @@
   document.getElementById('tEmerg2Tel').addEventListener('input', e => mascaraTel(e.target));
   document.getElementById('tPossuiCnpj').addEventListener('change', function () {
     document.getElementById('grpCnpj').classList.toggle('hidden', this.value !== 'Sim');
+  });
+  document.getElementById('tFormaPgto').addEventListener('change', function () {
+    document.getElementById('grpParcelas').classList.toggle('hidden', this.value !== 'Parcelado');
   });
 </script>
 </body>

@@ -223,39 +223,48 @@
                   <div class="radio-group">
                     <label class="radio-pill"><input type="radio" name="depFormaPgto" value="Pix"><span class="radio-pill-label">Pix</span></label>
                     <label class="radio-pill"><input type="radio" name="depFormaPgto" value="Transferência bancária"><span class="radio-pill-label">Transferência bancária</span></label>
+                    <label class="radio-pill"><input type="radio" name="depFormaPgto" value="Boleto"><span class="radio-pill-label">Boleto</span></label>
+                    <label class="radio-pill"><input type="radio" name="depFormaPgto" value="Parcelado"><span class="radio-pill-label">Parcelado</span></label>
                   </div>
                 </div>
               </div>
-              <div class="avaliacao-pergunta">
+              <div class="avaliacao-pergunta" id="grpDepParcelas" style="display:none">
                 <div class="avaliacao-num">9</div>
+                <div class="avaliacao-corpo">
+                  <label class="avaliacao-label">Número de parcelas</label>
+                  <input id="depParcelas" type="number" min="2" class="form-control" placeholder="Ex: 3" />
+                </div>
+              </div>
+              <div class="avaliacao-pergunta">
+                <div class="avaliacao-num">10</div>
                 <div class="avaliacao-corpo">
                   <label class="avaliacao-label required">Disponibilidade de horário</label>
                   <input id="depDisponibilidade" class="form-control" placeholder="Ex: Segunda a sexta, horário comercial" />
                 </div>
               </div>
               <div class="avaliacao-pergunta">
-                <div class="avaliacao-num">10</div>
+                <div class="avaliacao-num">11</div>
                 <div class="avaliacao-corpo">
                   <label class="avaliacao-label required">Nome do contato de emergência 01</label>
                   <input id="depEmerg1Nome" class="form-control" />
                 </div>
               </div>
               <div class="avaliacao-pergunta">
-                <div class="avaliacao-num">11</div>
+                <div class="avaliacao-num">12</div>
                 <div class="avaliacao-corpo">
                   <label class="avaliacao-label required">Telefone do contato de emergência 01</label>
                   <input id="depEmerg1Tel" class="form-control" placeholder="(00) 00000-0000" maxlength="15" />
                 </div>
               </div>
               <div class="avaliacao-pergunta">
-                <div class="avaliacao-num">12</div>
+                <div class="avaliacao-num">13</div>
                 <div class="avaliacao-corpo">
                   <label class="avaliacao-label required">Nome do contato de emergência 02</label>
                   <input id="depEmerg2Nome" class="form-control" />
                 </div>
               </div>
               <div class="avaliacao-pergunta" style="border-bottom:none;margin-bottom:0;padding-bottom:0">
-                <div class="avaliacao-num">13</div>
+                <div class="avaliacao-num">14</div>
                 <div class="avaliacao-corpo">
                   <label class="avaliacao-label required">Telefone do contato de emergência 02</label>
                   <input id="depEmerg2Tel" class="form-control" placeholder="(00) 00000-0000" maxlength="15" />
@@ -341,54 +350,73 @@
               <div class="avaliacao-pergunta">
                 <div class="avaliacao-num">9</div>
                 <div class="avaliacao-corpo">
+                  <label class="avaliacao-label required">Forma de pagamento</label>
+                  <div class="radio-group">
+                    <label class="radio-pill"><input type="radio" name="auxFormaPgto" value="Pix"><span class="radio-pill-label">Pix</span></label>
+                    <label class="radio-pill"><input type="radio" name="auxFormaPgto" value="Transferência bancária"><span class="radio-pill-label">Transferência bancária</span></label>
+                    <label class="radio-pill"><input type="radio" name="auxFormaPgto" value="Boleto"><span class="radio-pill-label">Boleto</span></label>
+                    <label class="radio-pill"><input type="radio" name="auxFormaPgto" value="Parcelado"><span class="radio-pill-label">Parcelado</span></label>
+                  </div>
+                </div>
+              </div>
+              <div class="avaliacao-pergunta" id="grpAuxParcelas" style="display:none">
+                <div class="avaliacao-num">10</div>
+                <div class="avaliacao-corpo">
+                  <label class="avaliacao-label">Número de parcelas</label>
+                  <input id="auxParcelas" type="number" min="2" class="form-control" placeholder="Ex: 3" />
+                </div>
+              </div>
+              <div class="avaliacao-pergunta">
+                <div class="avaliacao-num">11</div>
+                <div class="avaliacao-corpo">
                   <label class="avaliacao-label required">Nome do contato de emergência 01</label>
                   <input id="auxEmerg1Nome" class="form-control" />
                 </div>
               </div>
               <div class="avaliacao-pergunta">
-                <div class="avaliacao-num">10</div>
+                <div class="avaliacao-num">12</div>
                 <div class="avaliacao-corpo">
                   <label class="avaliacao-label required">Telefone do contato de emergência 01</label>
                   <input id="auxEmerg1Tel" class="form-control" placeholder="(00) 00000-0000" maxlength="15" />
                 </div>
               </div>
               <div class="avaliacao-pergunta">
-                <div class="avaliacao-num">11</div>
+                <div class="avaliacao-num">13</div>
                 <div class="avaliacao-corpo">
                   <label class="avaliacao-label required">Nome do contato de emergência 02</label>
                   <input id="auxEmerg2Nome" class="form-control" />
                 </div>
               </div>
               <div class="avaliacao-pergunta">
-                <div class="avaliacao-num">12</div>
+                <div class="avaliacao-num">14</div>
                 <div class="avaliacao-corpo">
                   <label class="avaliacao-label required">Telefone do contato de emergência 02</label>
                   <input id="auxEmerg2Tel" class="form-control" placeholder="(00) 00000-0000" maxlength="15" />
                 </div>
               </div>
               <div class="avaliacao-pergunta">
-                <div class="avaliacao-num">13</div>
+                <div class="avaliacao-num">15</div>
                 <div class="avaliacao-corpo">
                   <label class="avaliacao-label required">Data de nascimento</label>
                   <input id="auxNascimento" type="date" class="form-control" />
                 </div>
               </div>
               <div class="avaliacao-pergunta">
-                <div class="avaliacao-num">14</div>
+                <div class="avaliacao-num">16</div>
                 <div class="avaliacao-corpo">
                   <label class="avaliacao-label required">Endereço</label>
                   <input id="auxEndereco" class="form-control" />
                 </div>
               </div>
               <div class="avaliacao-pergunta">
-                <div class="avaliacao-num">15</div>
+                <div class="avaliacao-num">17</div>
                 <div class="avaliacao-corpo">
                   <label class="avaliacao-label required">Cidade</label>
                   <input id="auxCidade" class="form-control" />
                 </div>
               </div>
               <div class="avaliacao-pergunta">
-                <div class="avaliacao-num">16</div>
+                <div class="avaliacao-num">18</div>
                 <div class="avaliacao-corpo">
                   <label class="avaliacao-label required">Possui CNH?</label>
                   <div class="radio-group">
@@ -398,14 +426,14 @@
                 </div>
               </div>
               <div class="avaliacao-pergunta" id="grpAuxExpDirecao" style="display:none">
-                <div class="avaliacao-num">17</div>
+                <div class="avaliacao-num">19</div>
                 <div class="avaliacao-corpo">
                   <label class="avaliacao-label">Descrever a experiência com direção</label>
                   <input id="auxExpDirecao" class="form-control" placeholder="Ex: 5 anos com habilitação B, experiência em estradas vicinais" />
                 </div>
               </div>
               <div class="avaliacao-pergunta" style="border-bottom:none;margin-bottom:0;padding-bottom:0">
-                <div class="avaliacao-num">18</div>
+                <div class="avaliacao-num">20</div>
                 <div class="avaliacao-corpo">
                   <label class="avaliacao-label required">Já atuou e/ou vai atuar em algum projeto pela Seteg? Se sim, qual?</label>
                   <input id="auxProjetosSeteg" class="form-control" />
@@ -464,7 +492,7 @@
               <span class="tipo-icon-sm">👤</span>
               <div class="tipo-card-compact-text">
                 <strong>Prestador de Serviço</strong>
-                <span>Auxiliar / Consultor terceirizado · 18 campos</span>
+                <span>Auxiliar / Consultor terceirizado · 20 campos</span>
               </div>
               <svg class="tipo-card-compact-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="9 18 15 12 9 6"/></svg>
             </button>
@@ -560,6 +588,7 @@
               <div class="form-group"><label class="form-label required">CPF</label><input id="tCpf" class="form-control" placeholder="000.000.000-00" maxlength="14" /></div>
               <div class="form-group"><label class="form-label">RG</label><input id="tRg" class="form-control" /></div>
               <div class="form-group"><label class="form-label">Data de nascimento</label><input id="tNascimento" type="date" class="form-control" /></div>
+              <div class="form-group"><label class="form-label">Estado Civil</label><input id="tEstadoCivil" class="form-control" placeholder="Ex: solteiro(a), casado(a) sob regime de..." /></div>
               <div class="form-group"><label class="form-label required">Telefone</label><input id="tTelefone" class="form-control" placeholder="(00) 00000-0000" maxlength="15" /></div>
               <div class="form-group"><label class="form-label">Estado</label><input id="tEstado" class="form-control" /></div>
               <div class="form-group"><label class="form-label">Município</label><input id="tCidade" class="form-control" /></div>
@@ -609,8 +638,9 @@
                 <select id="tEmissao" class="form-control"><option value="">Selecione</option><option>Nota fiscal</option><option>Recibo</option></select>
               </div>
               <div class="form-group"><label class="form-label">Forma de pagamento</label>
-                <select id="tFormaPgto" class="form-control"><option value="">Selecione</option><option>Pix</option><option>Transferência bancária</option></select>
+                <select id="tFormaPgto" class="form-control"><option value="">Selecione</option><option>Pix</option><option>Transferência bancária</option><option>Boleto</option><option>Parcelado</option></select>
               </div>
+              <div class="form-group hidden" id="grpParcelasTerc"><label class="form-label">Número de parcelas</label><input id="tParcelas" type="number" min="2" class="form-control" placeholder="Ex: 3" /></div>
               <div class="form-group full-width"><label class="form-label">Dados bancários</label><textarea id="tDadosBancarios" class="form-control" rows="2" placeholder="Banco, agência, conta, chave Pix..."></textarea></div>
               <div class="form-group"><label class="form-label">Disponibilidade de horário</label><input id="tDisponibilidade" class="form-control" /></div>
             </div>

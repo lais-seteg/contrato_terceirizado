@@ -71,7 +71,7 @@ const CAMPOS_CONTRATO = [
   "cTercFuncao","cTercTelefone","cTercEstado","cTercMunicipio","cTercEndereco",
   "cTercEstadoCivil","cTercGraduacao","cTercNivelFormacao","cTercAreaExpertise","cTercRegistro",
   "cTercCrbio2","cTercCtf","cTercLattes","cTercCnh","cTercCursosExtras",
-  "cTercComprovante","cTercCnpj","cTercEmissao","cTercFormaPgto","cDadosPagamento",
+  "cTercComprovante","cTercCnpj","cTercEmissao","cTercFormaPgto","cTercParcelas","cDadosPagamento",
   "cTercDisponibilidade","cTercEmerg1Nome","cTercEmerg1Tel","cTercEmerg2Nome","cTercEmerg2Tel",
   "cTercProjetosSeteg",
   "cRespNome","cRespSetor","cRespCargo","cRespEmail","cRespDiretoria",
@@ -79,19 +79,21 @@ const CAMPOS_CONTRATO = [
 ];
 
 const CAMPOS_TERC = [
-  "tId","tNome","tTipo","tEmail","tCpf","tRg","tNascimento","tTelefone","tEstado",
+  "tId","tNome","tTipo","tEmail","tCpf","tRg","tNascimento","tEstadoCivil","tTelefone","tEstado",
   "tCidade","tEndereco","tGraduacao","tNivelFormacao","tAreaExpertise","tCursosExtras",
   "tLattes","tRegistro","tCrbio2","tCtf","tCnh","tExpDirecao","tPossuiCnpj","tCnpj",
-  "tComprovante","tEmissao","tFormaPgto","tDadosBancarios","tEmerg1Nome","tEmerg1Tel",
+  "tComprovante","tEmissao","tFormaPgto","tParcelas","tDadosBancarios","tEmerg1Nome","tEmerg1Tel",
   "tEmerg2Nome","tEmerg2Tel","tProjetosSeteg","tDisponibilidade","tOutrasInfo"
 ];
 const TERC_LABELS = {
   tNome:"Nome",tTipo:"Tipo",tEmail:"E-mail",tCpf:"CPF",tRg:"RG",tNascimento:"Nascimento",
+  tEstadoCivil:"Estado Civil",
   tTelefone:"Telefone",tEstado:"Estado",tCidade:"Cidade",tEndereco:"Endereço",
   tGraduacao:"Graduação",tNivelFormacao:"Nível Formação",tAreaExpertise:"Área",
   tCursosExtras:"Cursos",tLattes:"Lattes",tRegistro:"Registro",tCrbio2:"CRBio2",
   tCtf:"CTF",tCnh:"CNH",tExpDirecao:"Exp. Direção",tPossuiCnpj:"Possui CNPJ",
   tCnpj:"CNPJ",tComprovante:"Comprovante",tEmissao:"Emissão",tFormaPgto:"Forma Pgto",
+  tParcelas:"Parcelas",
   tDadosBancarios:"Dados Bancários",tDisponibilidade:"Disponibilidade",
   tEmerg1Nome:"Emerg 1 Nome",tEmerg1Tel:"Emerg 1 Tel",
   tEmerg2Nome:"Emerg 2 Nome",tEmerg2Tel:"Emerg 2 Tel",
@@ -379,6 +381,8 @@ function registrarListeners() {
     const grp = document.getElementById("grpAuxExpDirecao");
     if (grp) grp.style.display = r.value === "Sim" && r.checked ? "" : "none";
   }));
+  document.querySelectorAll('input[name="depFormaPgto"]').forEach(r => r.addEventListener("change", () => toggleParcelasGrupo("depFormaPgto","grpDepParcelas")));
+  document.querySelectorAll('input[name="auxFormaPgto"]').forEach(r => r.addEventListener("change", () => toggleParcelasGrupo("auxFormaPgto","grpAuxParcelas")));
 
   document.getElementById("pillsStatusC").querySelectorAll(".filter-pill").forEach(btn => {
     btn.addEventListener("click", () => {
@@ -402,6 +406,7 @@ function registrarListeners() {
   document.getElementById("btnSalvarTerc").addEventListener("click", salvarTerceirizado);
   document.getElementById("btnLimparTerc").addEventListener("click", limparFormTerc);
   document.getElementById("tPossuiCnpj").addEventListener("change", () => toggleCondicional("tPossuiCnpj","Sim","grpCnpjTerc"));
+  document.getElementById("tFormaPgto").addEventListener("change", () => toggleCondicional("tFormaPgto","Parcelado","grpParcelasTerc"));
   document.getElementById("tCpf").addEventListener("input", () => mascaraCpfId("tCpf"));
   document.getElementById("tTelefone").addEventListener("input", () => mascaraTelId("tTelefone"));
   document.getElementById("filtroTipoT").addEventListener("change", () => { STATE.filtros.terceirizados.tipo=document.getElementById("filtroTipoT").value; STATE.filtros.terceirizados.pagina=1; renderTerceirizados(); });
@@ -615,6 +620,10 @@ function limparFormContrato() {
   document.querySelectorAll('#secaoCTercDespachante input[type="radio"], #secaoCTercAuxiliar input[type="radio"]').forEach(r => r.checked = false);
   const grpExp = document.getElementById("grpAuxExpDirecao");
   if (grpExp) grpExp.style.display = "none";
+  const grpDepParc = document.getElementById("grpDepParcelas");
+  if (grpDepParc) grpDepParc.style.display = "none";
+  const grpAuxParc = document.getElementById("grpAuxParcelas");
+  if (grpAuxParc) grpAuxParc.style.display = "none";
 }
 
 function popularSelectTerceirizados() {
@@ -635,24 +644,51 @@ function preencherTerceirizadoDoSelect() {
   // Campos de identificação: sempre puxados para o bloco "Dados do Contrato"
   set("cTercCpf", t.tCpf);
   set("cTercRg", t.tRg);
+  set("cTercEstadoCivil", t.tEstadoCivil);
   set("cTercEndereco", t.tEndereco);
 
-  // Campos específicos do formulário do tipo selecionado
+  // Campos específicos do formulário do tipo selecionado — reaproveita os
+  // preencherCampos* usados na edição de contrato para puxar TUDO que já
+  // existe no cadastro do terceirizado, evitando redigitar o que já foi informado.
   if (tipo === "Despachante") {
-    set("depNome", t.tNome);
-    set("depEmail", t.tEmail);
-    set("depTelefone", t.tTelefone);
-    set("depMunicipioEstado", [t.tCidade, t.tEstado].filter(Boolean).join(" - "));
-    set("depDadosBancarios", t.tDadosBancarios);
+    preencherCamposDespachante({
+      cTercNome: t.tNome,
+      cTercEmail: t.tEmail,
+      cTercTelefone: t.tTelefone,
+      cTercMunicipio: [t.tCidade, t.tEstado].filter(Boolean).join(" - "),
+      cDadosPagamento: t.tDadosBancarios,
+      cTercDisponibilidade: t.tDisponibilidade,
+      cTercEmerg1Nome: t.tEmerg1Nome,
+      cTercEmerg1Tel: t.tEmerg1Tel,
+      cTercEmerg2Nome: t.tEmerg2Nome,
+      cTercEmerg2Tel: t.tEmerg2Tel,
+      cTercComprovante: t.tComprovante,
+      cTercEmissao: t.tEmissao,
+      cTercFormaPgto: t.tFormaPgto,
+      cTercParcelas: t.tParcelas
+    });
   } else if (tipo === "Prestador de serviço") {
-    set("auxNome", t.tNome);
-    set("auxGraduacao", t.tGraduacao);
-    set("auxEmail", t.tEmail);
-    set("auxTelefone", t.tTelefone);
-    set("auxNascimento", t.tNascimento);
-    set("auxEndereco", t.tEndereco);
-    set("auxCidade", t.tCidade);
-    set("auxDadosBancarios", t.tDadosBancarios);
+    preencherCamposAuxiliar({
+      cTercNome: t.tNome,
+      cTercGraduacao: t.tGraduacao,
+      cTercEmail: t.tEmail,
+      cTercTelefone: t.tTelefone,
+      cTercNascimento: t.tNascimento,
+      cTercEndereco: t.tEndereco,
+      cTercMunicipio: t.tCidade,
+      cDadosPagamento: t.tDadosBancarios,
+      cTercEmerg1Nome: t.tEmerg1Nome,
+      cTercEmerg1Tel: t.tEmerg1Tel,
+      cTercEmerg2Nome: t.tEmerg2Nome,
+      cTercEmerg2Tel: t.tEmerg2Tel,
+      cTercProjetosSeteg: t.tProjetosSeteg,
+      cTercAreaExpertise: t.tAreaExpertise,
+      cTercComprovante: t.tComprovante,
+      cTercEmissao: t.tEmissao,
+      cTercFormaPgto: t.tFormaPgto,
+      cTercParcelas: t.tParcelas,
+      cTercCnh: t.tCnh ? ("Sim" + (t.tExpDirecao ? " – " + t.tExpDirecao : "")) : "Não"
+    });
   }
   mostrarToast("Dados de " + t.tNome + " preenchidos automaticamente.", "ok");
 }
@@ -680,6 +716,7 @@ function lerCamposDespachante(item) {
   item.cTercComprovante     = document.querySelector('input[name="depComprovante"]:checked')?.value || "";
   item.cTercEmissao         = document.querySelector('input[name="depEmissao"]:checked')?.value    || "";
   item.cTercFormaPgto       = document.querySelector('input[name="depFormaPgto"]:checked')?.value  || "";
+  item.cTercParcelas       = item.cTercFormaPgto === "Parcelado" ? v("depParcelas") : "";
 }
 
 function preencherCamposDespachante(item) {
@@ -702,6 +739,8 @@ function preencherCamposDespachante(item) {
   chk("depComprovante", item.cTercComprovante);
   chk("depEmissao",     item.cTercEmissao);
   chk("depFormaPgto",   item.cTercFormaPgto);
+  s("depParcelas", item.cTercParcelas);
+  toggleParcelasGrupo("depFormaPgto","grpDepParcelas");
 }
 
 function lerCamposAuxiliar(item) {
@@ -724,6 +763,8 @@ function lerCamposAuxiliar(item) {
   item.cTercAreaExpertise = document.querySelector('input[name="auxAreaAfinidade"]:checked')?.value || "";
   item.cTercComprovante   = document.querySelector('input[name="auxComprovante"]:checked')?.value  || "";
   item.cTercEmissao       = document.querySelector('input[name="auxEmissao"]:checked')?.value      || "";
+  item.cTercFormaPgto     = document.querySelector('input[name="auxFormaPgto"]:checked')?.value    || "";
+  item.cTercParcelas      = item.cTercFormaPgto === "Parcelado" ? v("auxParcelas") : "";
   const cnh = document.querySelector('input[name="auxPossuiCnh"]:checked')?.value || "";
   const exp = v("auxExpDirecao");
   item.cTercCnh = cnh === "Sim" ? (exp ? "Sim – " + exp : "Sim") : (cnh || "");
@@ -752,6 +793,9 @@ function preencherCamposAuxiliar(item) {
   chk("auxAreaAfinidade", item.cTercAreaExpertise);
   chk("auxComprovante",   item.cTercComprovante);
   chk("auxEmissao",       item.cTercEmissao);
+  chk("auxFormaPgto",     item.cTercFormaPgto);
+  s("auxParcelas", item.cTercParcelas);
+  toggleParcelasGrupo("auxFormaPgto","grpAuxParcelas");
   if (item.cTercCnh) {
     const hasCnh = item.cTercCnh.startsWith("Sim");
     chk("auxPossuiCnh", hasCnh ? "Sim" : "Não");
@@ -813,6 +857,7 @@ function validarContrato(item) {
   if (!item.cTercNome)        return "Informe o nome completo (Q1).";
   if (!item.cTercEmissao)     return "Informe se haverá emissão de nota fiscal ou recibo.";
   if (!item.cTercFormaPgto)   return "Informe a forma de pagamento.";
+  if (item.cTercFormaPgto === "Parcelado" && !item.cTercParcelas) return "Informe o número de parcelas.";
   return null;
 }
 
@@ -984,6 +1029,7 @@ function gerarHTMLDetalhes(item) {
     <div class="detail-section-title">C · Terceirizado / Prestador</div>
     ${det("Nome",item.cTercNome)}${det("E-mail",item.cTercEmail)}${det("CPF",item.cTercCpf)}${det("Estado Civil",item.cTercEstadoCivil)}${det("Endereço",item.cTercEndereco)}${det("Função",item.cTercFuncao)}
     ${det("Telefone",item.cTercTelefone)}${det("Área",item.cTercAreaExpertise)}${det("Emissão",item.cTercEmissao)}${det("Forma Pgto",item.cTercFormaPgto)}
+    ${item.cTercFormaPgto==="Parcelado"?det("Parcelas",item.cTercParcelas):""}
     ${det("Dados Bancários / Pix",item.cDadosPagamento,"full")}
     <div class="detail-section-title">D · Entregas</div>
     <div class="detail-item full"><span>Tabela</span><strong>${entregasHTML}</strong></div>
@@ -1144,7 +1190,7 @@ function gerarPrintArea(item) {
         <div class="pf"><div class="pfl">Nome</div><div class="pfv">${esc(item.cTercNome||"-")}</div></div>
         <div class="pf"><div class="pfl">Função</div><div class="pfv">${esc(item.cTercFuncao||"-")}</div></div>
         <div class="pf"><div class="pfl">Emissão de</div><div class="pfv">${esc(item.cTercEmissao||"-")}</div></div>
-        <div class="pf"><div class="pfl">Forma de Pagamento</div><div class="pfv">${esc(item.cTercFormaPgto||"-")}</div></div>
+        <div class="pf"><div class="pfl">Forma de Pagamento</div><div class="pfv">${esc(item.cTercFormaPgto||"-")}${item.cTercFormaPgto==="Parcelado"&&item.cTercParcelas?` (${esc(item.cTercParcelas)}x)`:""}</div></div>
         <div class="pf pfw"><div class="pfl">Dados Bancários / Pix</div><div class="pfv">${esc(item.cDadosPagamento||"-")}</div></div>
       </div></div>
       <div class="ps"><div class="psh">E · Responsável Interno</div><div class="pg">
@@ -1338,6 +1384,23 @@ function montarContratoHTML(item) {
   const numeroContrato     = item.cNumeroContrato ? esc(item.cNumeroContrato) : `<span class="cg-yellow">[nº/ano]</span>`;
   const dataAssinaturaExt  = formatarDataExtenso(new Date().toISOString().slice(0, 10));
 
+  const formaPgto = item.cTercFormaPgto || "";
+  let textoParcelamento, textoMeioPagamento;
+  if (formaPgto === "Parcelado") {
+    const nParcelas = item.cTercParcelas ? esc(item.cTercParcelas) : `<span class="cg-yellow">[nº de parcelas]</span>`;
+    textoParcelamento  = `Pela execução dos serviços objeto deste contrato, a CONTRATANTE pagará ao(à) CONTRATADO (A) o valor total de ${valorTotal}, em ${nParcelas} parcelas, com vencimentos a serem definidos entre as Partes, mediante validação da entrega e cumprimento das obrigações pactuadas.`;
+    textoMeioPagamento = `Os pagamentos mencionados deverão ser realizados mediante depósito ou transferência bancária em conta de titularidade da CONTRATADA, a seguir indicada:`;
+  } else {
+    textoParcelamento  = `Pela execução dos serviços objeto deste contrato, a CONTRATANTE pagará ao(à) CONTRATADO (A) o valor total de ${valorTotal}. O pagamento será realizado em parcela única, após a conclusão das atividades previstas no contrato, mediante validação da entrega e cumprimento das obrigações pactuadas.`;
+    if (formaPgto === "Pix") {
+      textoMeioPagamento = `Os pagamentos mencionados deverão ser realizados via Pix, na chave de titularidade da CONTRATADA a seguir indicada:`;
+    } else if (formaPgto === "Boleto") {
+      textoMeioPagamento = `Os pagamentos mencionados deverão ser realizados mediante boleto bancário emitido em nome da CONTRATADA, conforme dados a seguir indicados:`;
+    } else {
+      textoMeioPagamento = `Os pagamentos mencionados deverão ser realizados por transferência bancária em conta de titularidade da CONTRATADA, a seguir indicada:`;
+    }
+  }
+
   const clausula = (n, texto) => `<p class="cg-p"><strong>Cláusula ${n}ª.</strong> ${texto}</p>`;
   const paragrafoUnico = texto => `<p class="cg-p cg-paragrafo">Parágrafo único. ${texto}</p>`;
   const paragrafoSimbolo = (n, texto) => `<p class="cg-p cg-paragrafo">§${n}º. ${texto}</p>`;
@@ -1364,8 +1427,8 @@ function montarContratoHTML(item) {
     <p class="cg-p cg-indent">Projeto: ${projeto}</p>
 
     ${secao("III", "DO PREÇO E FORMA DE PAGAMENTO")}
-    ${clausula(3, `Pela execução dos serviços objeto deste contrato, a CONTRATANTE pagará ao(à) CONTRATADO (A) o valor total de ${valorTotal}. O pagamento será realizado em parcela única, após a conclusão das atividades previstas no contrato, mediante validação da entrega e cumprimento das obrigações pactuadas.`)}
-    ${clausula(4, `Os pagamentos mencionados deverão ser realizados por transferência bancária em conta de titularidade da CONTRATADA, a seguir indicada:`)}
+    ${clausula(3, textoParcelamento)}
+    ${clausula(4, textoMeioPagamento)}
     ${dadosBancarios}
     ${paragrafoUnico(`Eventuais tributos decorrentes da prestação dos Serviços deverão ser arcados pelas respectivas PARTES, de acordo com a legislação tributária, e já estão abrangidos pela contraprestação.`)}
     ${clausula(5, `Os pagamentos das diárias, para efeito de elucidação, considerarão cada mês completo de prestação de Serviços, com eventual pagamento proporcional no caso de prestação dos Serviços em período parcial do correspondente mês.`)}
@@ -1537,7 +1600,7 @@ function calcularTotalEntregas(){
 // ══════════════════════════════════════════════════════
 function abrirFormNovoTerc(){limparFormTerc();document.getElementById("formTercTitulo").textContent="Cadastrar Terceirizado";document.getElementById("listaTerceirizados").classList.add("hidden");document.getElementById("formTerc").classList.remove("hidden");}
 function fecharFormTerc(){document.getElementById("formTerc").classList.add("hidden");document.getElementById("listaTerceirizados").classList.remove("hidden");renderTerceirizados();}
-function limparFormTerc(){document.getElementById("tercForm").reset();document.getElementById("tId").value="";document.getElementById("grpCnpjTerc").classList.add("hidden");}
+function limparFormTerc(){document.getElementById("tercForm").reset();document.getElementById("tId").value="";document.getElementById("grpCnpjTerc").classList.add("hidden");document.getElementById("grpParcelasTerc").classList.add("hidden");}
 function salvarTerceirizado(){
   const item=coletarCampos(CAMPOS_TERC);item.tId=item.tId||gerarId("TER");
   if(!item.tNome){mostrarToast("Informe o nome.","err");return;}
@@ -1545,6 +1608,7 @@ function salvarTerceirizado(){
   if(!item.tEmail){mostrarToast("Informe o e-mail.","err");return;}
   if(!item.tCpf){mostrarToast("Informe o CPF.","err");return;}
   if(!item.tTelefone){mostrarToast("Informe o telefone.","err");return;}
+  if(item.tFormaPgto==="Parcelado"&&!item.tParcelas){mostrarToast("Informe o número de parcelas.","err");return;}
   const idx=DB.terceirizados.findIndex(t=>t.tId===item.tId);
   if(idx>=0){
     const antigo=DB.terceirizados[idx];
@@ -1562,6 +1626,7 @@ function editarTerceirizado(id){
   limparFormTerc();document.getElementById("formTercTitulo").textContent="Editar Terceirizado";
   CAMPOS_TERC.forEach(campo=>{const el=document.getElementById(campo);if(el)el.value=item[campo]||"";});
   toggleCondicional("tPossuiCnpj","Sim","grpCnpjTerc");
+  toggleCondicional("tFormaPgto","Parcelado","grpParcelasTerc");
   document.getElementById("listaTerceirizados").classList.add("hidden");document.getElementById("formTerc").classList.remove("hidden");
 }
 function verTerceirizado(id) {
@@ -1587,11 +1652,11 @@ function gerarHTMLDetalhesTerceirizado(t, hist) {
     : `<p style="color:var(--text-muted);font-size:.8rem;padding:.5rem 0">Nenhum histórico de edição registrado.</p>`;
   return `<div class="detail-grid">
     <div class="detail-section-title">1 · Identificação</div>
-    ${di("Nome",t.tNome)}${di("Tipo",t.tTipo)}${di("E-mail",t.tEmail)}${di("CPF",t.tCpf)}${di("RG",t.tRg)}${di("Nascimento",formatarData(t.tNascimento))}${di("Telefone",t.tTelefone)}${di("Estado",t.tEstado)}${di("Cidade",t.tCidade)}${diF("Endereço",t.tEndereco)}
+    ${di("Nome",t.tNome)}${di("Tipo",t.tTipo)}${di("E-mail",t.tEmail)}${di("CPF",t.tCpf)}${di("RG",t.tRg)}${di("Nascimento",formatarData(t.tNascimento))}${di("Estado Civil",t.tEstadoCivil)}${di("Telefone",t.tTelefone)}${di("Estado",t.tEstado)}${di("Cidade",t.tCidade)}${diF("Endereço",t.tEndereco)}
     <div class="detail-section-title">2 · Formação e Expertise</div>
     ${di("Graduação",t.tGraduacao)}${di("Nível Formação",t.tNivelFormacao)}${di("Área",t.tAreaExpertise)}${di("Cursos extras",t.tCursosExtras)}${di("Lattes",t.tLattes)}${di("Registro",t.tRegistro)}${di("CRBio2",t.tCrbio2)}${di("CTF",t.tCtf)}${di("CNH",t.tCnh)}${diF("Exp. Direção",t.tExpDirecao)}
     <div class="detail-section-title">3 · Dados Financeiros</div>
-    ${di("Possui CNPJ",t.tPossuiCnpj)}${di("CNPJ",t.tCnpj)}${di("Comprovante",t.tComprovante)}${di("Emissão",t.tEmissao)}${di("Forma Pgto",t.tFormaPgto)}${diF("Dados Bancários",t.tDadosBancarios)}${di("Disponibilidade",t.tDisponibilidade)}
+    ${di("Possui CNPJ",t.tPossuiCnpj)}${di("CNPJ",t.tCnpj)}${di("Comprovante",t.tComprovante)}${di("Emissão",t.tEmissao)}${di("Forma Pgto",t.tFormaPgto)}${t.tFormaPgto==="Parcelado"?di("Parcelas",t.tParcelas):""}${diF("Dados Bancários",t.tDadosBancarios)}${di("Disponibilidade",t.tDisponibilidade)}
     <div class="detail-section-title">4 · Emergência</div>
     ${di("Emergência 1",t.tEmerg1Nome?(t.tEmerg1Nome+(t.tEmerg1Tel?" · "+t.tEmerg1Tel:"")):"")}${di("Emergência 2",t.tEmerg2Nome?(t.tEmerg2Nome+(t.tEmerg2Tel?" · "+t.tEmerg2Tel:"")):"")}</div>
     ${t.tProjetosSeteg||t.tOutrasInfo?`<div class="detail-grid"><div class="detail-section-title">5 · Projetos e Informações</div>${diF("Projetos Seteg",t.tProjetosSeteg)}${diF("Outras Informações",t.tOutrasInfo)}</div>`:""}
@@ -1841,6 +1906,7 @@ function gerarId(prefixo){
 }
 function coletarCampos(campos){const obj={};campos.forEach(c=>{const el=document.getElementById(c);if(el)obj[c]=el.value?el.value.trim():"";});return obj;}
 function toggleCondicional(selectId,valorAlvo,grupoId){const sel=document.getElementById(selectId);const grp=document.getElementById(grupoId);if(!sel||!grp)return;grp.classList.toggle("hidden",sel.value!==valorAlvo);}
+function toggleParcelasGrupo(radioName,grupoId){const grp=document.getElementById(grupoId);if(!grp)return;const marcado=document.querySelector(`input[name="${radioName}"]:checked`)?.value==="Parcelado";grp.style.display=marcado?"":"none";}
 function diasAteVencer(dataStr){if(!dataStr)return null;const h=new Date();h.setHours(0,0,0,0);const f=new Date(dataStr+"T00:00:00");return Math.round((f-h)/86400000);}
 function formatarData(data){if(!data)return"-";const d=data.length>10?new Date(data):new Date(data+"T00:00:00");if(isNaN(d))return"-";return d.toLocaleDateString("pt-BR");}
 function formatarDataHora(data){if(!data)return"-";const d=new Date(data);if(isNaN(d))return"-";return d.toLocaleString("pt-BR");}
