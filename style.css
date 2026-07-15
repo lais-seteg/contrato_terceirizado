@@ -214,6 +214,7 @@ body::before{content:'';position:fixed;inset:0;background:rgba(6,13,31,.92);z-in
 .art-table tbody tr:hover{background:var(--bg-card-hover)}
 .col-acoes{width:130px;text-align:center}
 .table-actions{display:flex;gap:.3rem;justify-content:center}
+.tabela-avaliacoes th,.tabela-avaliacoes td{text-align:center}
 .btn-icon{width:27px;height:27px;padding:0;border-radius:var(--radius-sm);font-size:.82rem;display:flex;align-items:center;justify-content:center;border:1px solid rgba(74,123,200,.4);background:rgba(74,123,200,.18);color:#6ea0ff;cursor:pointer;transition:all .2s ease}
 .btn-icon:hover{background:var(--blue);color:#fff}
 .btn-icon-danger{color:var(--red)!important;border-color:rgba(255,93,93,.4)!important;background:rgba(255,93,93,.12)!important}
