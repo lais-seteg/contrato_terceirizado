@@ -17,7 +17,7 @@ let STATE = {
   nomeUsuario: "",
   secaoAtiva: "dashboard",
   filtros: {
-    contratos:     { status: "", empresa: "", tipo: "", busca: "", pagina: 1 },
+    contratos:     { status: "", tipo: "", busca: "", pagina: 1 },
     terceirizados: { tipo: "", busca: "", pagina: 1 },
     avaliacoes:    { pagina: 1 },
     auditoria:     { busca: "", pagina: 1 }
@@ -393,7 +393,6 @@ function registrarListeners() {
       renderContratos();
     });
   });
-  document.getElementById("filtroEmpresaC").addEventListener("change", () => { STATE.filtros.contratos.empresa=document.getElementById("filtroEmpresaC").value; STATE.filtros.contratos.pagina=1; renderContratos(); });
   document.getElementById("filtroTipoC").addEventListener("change", () => { STATE.filtros.contratos.tipo=document.getElementById("filtroTipoC").value; STATE.filtros.contratos.pagina=1; renderContratos(); });
   document.getElementById("buscaC").addEventListener("input", () => { STATE.filtros.contratos.busca=document.getElementById("buscaC").value.toLowerCase(); STATE.filtros.contratos.pagina=1; renderContratos(); });
   document.getElementById("prevC").addEventListener("click", () => { STATE.filtros.contratos.pagina--; renderContratos(); });
@@ -1108,8 +1107,8 @@ function renderContratos() {
   const f = STATE.filtros.contratos;
   let lista = DB.contratos.filter(c => {
     if (STATE.perfil==="solicitante" && c.criadoPor!==STATE.nomeUsuario) return false;
-    const txt = `${c.id} ${c.cRazaoSocial} ${c.cNomeFantasia} ${c.cTercNome} ${c.cRespNome} ${c.cProjeto}`.toLowerCase();
-    return (!f.status||c.status===f.status)&&(!f.empresa||c.cEmpresaContratante===f.empresa)&&(!f.tipo||c.cTipoContratacao===f.tipo)&&(!f.busca||txt.includes(f.busca));
+    const txt = `${c.id} ${c.cProjeto} ${c.cTercNome} ${c.criadoPor}`.toLowerCase();
+    return (!f.status||c.status===f.status)&&(!f.tipo||c.cTipoContratacao===f.tipo)&&(!f.busca||txt.includes(f.busca));
   });
   const porPagina = Number(document.getElementById("perPageC").value);
   const totalPag  = Math.max(1,Math.ceil(lista.length/porPagina));
@@ -1129,10 +1128,10 @@ function renderContratos() {
       : (podaAvaliar ? `<button class="btn-icon btn-icon-teal" title="Avaliar prestador" onclick="abrirFormAvalPorContrato('${c.id}')">⭐</button>` : "");
     tbody.innerHTML+=`<tr>
       <td><span style="color:var(--blue-light);font-weight:700">${esc(c.id)}</span></td>
-      <td>${esc(c.cRazaoSocial||c.cNomeFantasia||"-")}</td>
+      <td>${esc(c.cProjeto||"-")}</td>
       <td>${esc(c.cTercNome||"-")}</td>
       <td>${esc(c.cTipoContratacao||"-")}</td>
-      <td>${esc(c.cEmpresaContratante||"-")}</td>
+      <td>${esc(c.criadoPor||"-")}</td>
       <td>${formatarData(c.cDataInicio)}</td>
       <td>${formatarData(c.cDataFim)}${alerta}</td>
       <td style="color:var(--green)">${c.cValorTotal?formatarMoeda(c.cValorTotal):"-"}</td>

@@ -517,17 +517,16 @@
             <button class="filter-pill" data-status="Finalizado">Finalizado</button>
           </div>
           <div class="filter-row">
-            <select id="filtroEmpresaC" class="form-control filter-select"><option value="">Contratante</option><option>Seteg</option><option>Licenza</option></select>
             <select id="filtroTipoC" class="form-control filter-select"><option value="">Tipo</option><option>Consultor terceirizado</option><option>Prestador de serviço</option><option>Despachante</option><option>Serviço pontual</option><option>Campanha periódica</option></select>
-            <input id="buscaC" class="form-control search-input" placeholder="Buscar contrato, empresa, terceirizado, líder..." />
+            <input id="buscaC" class="form-control search-input" placeholder="Buscar contrato, projeto, terceirizado, líder..." />
           </div>
         </div>
         <div class="table-wrapper">
           <div class="table-scroll">
-            <table class="art-table">
+            <table class="art-table tabela-centralizada">
               <thead>
                 <tr>
-                  <th>Nº</th><th>Empresa</th><th>Prestador</th><th>Tipo</th><th>Contratante</th>
+                  <th>Nº</th><th>Projeto</th><th>Prestador</th><th>Tipo</th><th>Solicitante (líder)</th>
                   <th>Início</th><th>Término</th><th>Valor Total</th><th>Status</th><th class="col-acoes">Ações</th>
                 </tr>
               </thead>
@@ -678,7 +677,7 @@
         </div>
         <div class="table-wrapper">
           <div class="table-scroll">
-            <table class="art-table">
+            <table class="art-table tabela-centralizada">
               <thead><tr><th>Nome</th><th>Tipo</th><th>Área</th><th>CPF</th><th>E-mail</th><th>Telefone</th><th>CNPJ/MEI</th><th class="col-acoes">Ações</th></tr></thead>
               <tbody id="tabelaTerceirizados"></tbody>
             </table>
@@ -844,7 +843,7 @@
         <div id="avalViewGestao" class="lista-wrapper">
           <div class="table-wrapper">
             <div class="table-scroll">
-              <table class="art-table tabela-avaliacoes">
+              <table class="art-table tabela-centralizada">
                 <thead><tr><th>Data</th><th>Avaliador</th><th>Prestador</th><th>Cliente</th><th>Projeto</th><th>Campo</th><th>Relatório</th><th>Prazo</th><th>Relac.</th><th class="col-acoes">Ações</th></tr></thead>
                 <tbody id="tabelaAvaliacoes"></tbody>
               </table>
@@ -860,7 +859,7 @@
           </div>
           <div class="table-wrapper">
             <div class="table-scroll">
-              <table class="art-table tabela-avaliacoes">
+              <table class="art-table tabela-centralizada">
                 <thead><tr><th>Data</th><th>Contrato</th><th>Prestador avaliado</th><th>Situação</th></tr></thead>
                 <tbody id="tabelaAvalSolicitante"></tbody>
               </table>
