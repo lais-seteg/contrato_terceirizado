@@ -1018,23 +1018,25 @@ function gerarHTMLDetalhes(item) {
       <div class="detail-item full"><span>Situação</span><strong><span class="status-badge st-pendente">Aguardando avaliação do líder responsável</span></strong></div>`;
   }
 
+  const emerg1 = item.cTercEmerg1Nome ? (item.cTercEmerg1Nome+(item.cTercEmerg1Tel?" · "+item.cTercEmerg1Tel:"")) : "";
+  const emerg2 = item.cTercEmerg2Nome ? (item.cTercEmerg2Nome+(item.cTercEmerg2Tel?" · "+item.cTercEmerg2Tel:"")) : "";
+
   return `<div class="detail-grid">
     <div class="detail-section-title">Identificação</div>
-    ${det("Nº",item.id)}${det("Status",statusBadge(item.status))}${det("Criado em",formatarDataHora(item.criadoEm))}${det("Por",item.criadoPor)}
-    <div class="detail-section-title">A · Empresa</div>
-    ${det("Razão Social",item.cRazaoSocial)}${det("CNPJ",item.cCnpjEmpresa)}${det("Contratante",item.cEmpresaContratante)}${det("Tipo",item.cTipoContratacao)}
-    <div class="detail-section-title">B · Contrato</div>
-    ${det("Nº Contrato",item.cNumeroContrato)}${det("Projeto",item.cProjeto)}${det("Objeto",item.cObjeto)}${det("Início",formatarData(item.cDataInicio))}${det("Término",formatarData(item.cDataFim))}${det("Valor Total",item.cValorTotal?formatarMoeda(item.cValorTotal):"-")}
-    ${det("Escopo",item.cEscopo,"full")}
-    <div class="detail-section-title">C · Terceirizado / Prestador</div>
-    ${det("Nome",item.cTercNome)}${det("E-mail",item.cTercEmail)}${det("CPF",item.cTercCpf)}${det("Estado Civil",item.cTercEstadoCivil)}${det("Endereço",item.cTercEndereco)}${det("Função",item.cTercFuncao)}
-    ${det("Telefone",item.cTercTelefone)}${det("Área",item.cTercAreaExpertise)}${det("Emissão",item.cTercEmissao)}${det("Forma Pgto",item.cTercFormaPgto)}
-    ${item.cTercFormaPgto==="Parcelado"?det("Parcelas",item.cTercParcelas):""}
+    ${det("Nº",item.id)}${det("Status",statusBadge(item.status))}${det("Tipo",item.cTipoContratacao)}${det("Criado em",formatarDataHora(item.criadoEm))}${det("Por",item.criadoPor)}
+    <div class="detail-section-title">A · Contrato</div>
+    ${det("Nº Contrato",item.cNumeroContrato)}${det("Projeto",item.cProjeto)}${det("Início",formatarData(item.cDataInicio))}${det("Término",formatarData(item.cDataFim))}${det("Valor Total",item.cValorTotal?formatarMoeda(item.cValorTotal):"-")}
+    ${det("Objeto",item.cObjeto,"full")}
+    <div class="detail-section-title">B · Terceirizado / Prestador</div>
+    ${det("Nome",item.cTercNome)}${det("Função",item.cTercFuncao)}${det("E-mail",item.cTercEmail)}${det("Telefone",item.cTercTelefone)}
+    ${det("CPF",item.cTercCpf)}${det("RG",item.cTercRg)}${det("Estado Civil",item.cTercEstadoCivil)}${det("Nascimento",formatarData(item.cTercNascimento))}
+    ${det("Endereço",item.cTercEndereco)}${det("Município",item.cTercMunicipio)}${det("Área",item.cTercAreaExpertise)}${det("Graduação",item.cTercGraduacao)}
+    ${det("CNH",item.cTercCnh)}${det("Projetos Seteg",item.cTercProjetosSeteg)}${det("Comprovante",item.cTercComprovante)}${det("Emissão",item.cTercEmissao)}
+    ${det("Forma Pgto",item.cTercFormaPgto)}${item.cTercFormaPgto==="Parcelado"?det("Parcelas",item.cTercParcelas):""}${det("Disponibilidade",item.cTercDisponibilidade)}
     ${det("Dados Bancários / Pix",item.cDadosPagamento,"full")}
-    <div class="detail-section-title">D · Entregas</div>
+    ${det("Emergência 1",emerg1)}${det("Emergência 2",emerg2)}
+    <div class="detail-section-title">C · Entregas</div>
     <div class="detail-item full"><span>Tabela</span><strong>${entregasHTML}</strong></div>
-    <div class="detail-section-title">E · Responsável Interno</div>
-    ${det("Nome",item.cRespNome)}${det("Setor",item.cRespSetor)}${det("Diretoria",item.cRespDiretoria)}
     ${item.cObsGP?`<div class="detail-section-title">Obs. DP/RH</div>${det("",item.cObsGP,"full")}`:""}
     ${item.cObsGestao?`<div class="detail-section-title">Obs. Gestão</div>${det("",item.cObsGestao,"full")}`:""}
     ${avalHTML}
