@@ -1300,8 +1300,32 @@ function fecharModalContratoDoc() {
 
 function exportarContratoPDF() {
   salvarContratoDoc("baixado em PDF");
-  document.getElementById("printArea").innerHTML = document.getElementById("contratoDocArea").innerHTML;
-  window.print();
+  const conteudoHtml = document.getElementById("contratoDocArea").innerHTML;
+
+  // Impressão isolada em janela própria (em vez de reaproveitar #printArea escondendo
+  // o resto do app com CSS): o restante da página (sidebar, rodapé fixo, modais) ficava
+  // presente no DOM durante a impressão mesmo com display:none, e isso vinha corrompendo
+  // o PDF gerado pelo navegador em qualquer contrato. Isolando o conteúdo numa janela em
+  // branco, só o documento do contrato existe ali — nada mais para o navegador renderizar.
+  const win = window.open("", "_blank");
+  if (!win) { mostrarToast("Permita pop-ups neste site para gerar o PDF.", "err"); return; }
+  win.document.open();
+  win.document.write(`<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Contrato de Prestação de Serviços</title>
+<base href="${document.baseURI}">
+<link rel="stylesheet" href="style.css">
+</head>
+<body style="margin:0;background:#fff">
+<div id="contratoDocArea" style="display:flex;flex-direction:column;align-items:center;gap:0">${conteudoHtml}</div>
+</body>
+</html>`);
+  win.document.close();
+  win.onload = () => {
+    setTimeout(() => { win.focus(); win.print(); }, 300);
+  };
 }
 
 // Divide o HTML gerado em páginas A4 físicas (297mm), respeitando a margem
