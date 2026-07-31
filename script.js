@@ -961,6 +961,10 @@ function salvarContrato() {
     const idEncontrado = document.getElementById("cTerceirizadoIdEncontrado")?.value || "";
     if (idEncontrado) {
       item.cTerceirizadoId = idEncontrado;
+      // CPF já cadastrado: os dados pessoais já existem (vieram de uma
+      // solicitação anterior), não precisa esperar o terceirizado preencher
+      // nada de novo — pula direto pra "Em Elaboração".
+      if (STATE.perfil === "solicitante") item.status = "Em Elaboração";
     } else {
       const stub = {
         tId: gerarId("TER"), tNome: item.cTercNome, tCpf: item.cTercCpf, tTelefone: item.cTercTelefone,
@@ -999,7 +1003,10 @@ function salvarContrato() {
   } else {
     item.criadoEm  = new Date().toISOString();
     item.criadoPor = STATE.nomeUsuario;
-    item.historico = [{ data:new Date().toISOString(), usuario:STATE.nomeUsuario, perfil:STATE.perfil, status:item.status, obs:"Contrato criado e enviado para análise." }];
+    const obsCriacao = criouCadastroNovo
+      ? "Contrato criado e enviado para análise."
+      : "Contrato criado com terceirizado já cadastrado (CPF já existente) — encaminhado direto para elaboração.";
+    item.historico = [{ data:new Date().toISOString(), usuario:STATE.nomeUsuario, perfil:STATE.perfil, status:item.status, obs:obsCriacao }];
     // CPF não encontrado: gera o link único de preenchimento (24h, uso único).
     // Se o CPF já existia, o cadastro é reaproveitado e nenhum link é gerado.
     if (criouCadastroNovo) gerarLinkParaContrato(item);
