@@ -402,7 +402,7 @@
         </div>
         <div class="form-group">
           <label class="form-label">Data de nascimento</label>
-          <input id="tNascimento" type="date" class="form-control" />
+          <input id="tNascimento" type="text" maxlength="10" placeholder="00/00/0000" class="form-control" />
         </div>
         <div class="form-group">
           <label class="form-label">Estado Civil</label>
@@ -783,6 +783,23 @@
     el.value = s;
   }
 
+  // Data: campo texto só com números, sempre dd/mm/aaaa (mesmo padrão do
+  // app principal — evita o date picker nativo mudar de formato conforme
+  // o idioma/SO do navegador de quem está preenchendo).
+  function mascaraData(el) {
+    let s = el.value.replace(/\D/g, '').slice(0, 8);
+    s = s.replace(/(\d{2})(\d)/, '$1/$2').replace(/(\d{2})(\d)/, '$1/$2');
+    el.value = s;
+  }
+  function dataBRparaISO(v) {
+    const m = String(v || '').trim().match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (!m) return '';
+    const d = +m[1], mo = +m[2], y = +m[3];
+    const dt = new Date(y, mo - 1, d);
+    if (dt.getFullYear() !== y || dt.getMonth() !== mo - 1 || dt.getDate() !== d) return '';
+    return `${String(y).padStart(4, '0')}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+  }
+
   function mascaraTel(el) {
     let s = el.value.replace(/\D/g, '').slice(0, 11);
     if (s.length <= 10) s = s.replace(/(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3');
@@ -824,6 +841,9 @@
     if (!dados)     { mostrarToast('Informe os dados bancários ou chave Pix.', 'err'); document.getElementById('tDadosBancarios').focus(); return; }
     if (!emerg1N)   { mostrarToast('Informe o contato de emergência 01.', 'err'); document.getElementById('tEmerg1Nome').focus(); return; }
     if (!emerg1T)   { mostrarToast('Informe o telefone do contato de emergência 01.', 'err'); document.getElementById('tEmerg1Tel').focus(); return; }
+    const nascimentoRaw = v('tNascimento');
+    const nascimentoISO = nascimentoRaw ? dataBRparaISO(nascimentoRaw) : '';
+    if (nascimentoRaw && !nascimentoISO) { mostrarToast('Data de nascimento inválida — use o formato dd/mm/aaaa.', 'err'); document.getElementById('tNascimento').focus(); return; }
 
     const btn = document.getElementById('btnEnviar');
     btn.disabled = true;
@@ -842,7 +862,7 @@
         t_email:           email,
         t_cpf:             cpf,
         t_rg:              v('tRg')              || null,
-        t_nascimento:      v('tNascimento')      || null,
+        t_nascimento:      nascimentoISO || null,
         t_estado_civil:    v('tEstadoCivil')      || null,
         t_telefone:        telefone,
         t_estado:          v('tEstado') || null,
@@ -927,6 +947,7 @@
   // ── Event listeners ──────────────────────────────────
   document.getElementById('btnEnviar').addEventListener('click', enviarCadastro);
   document.getElementById('tCpf').addEventListener('input', e => mascaraCpf(e.target));
+  document.getElementById('tNascimento').addEventListener('input', e => mascaraData(e.target));
   document.getElementById('tTelefone').addEventListener('input', e => mascaraTel(e.target));
   document.getElementById('tEmerg1Tel').addEventListener('input', e => mascaraTel(e.target));
   document.getElementById('tEmerg2Tel').addEventListener('input', e => mascaraTel(e.target));

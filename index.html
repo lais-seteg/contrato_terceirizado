@@ -421,7 +421,7 @@
                 <div class="avaliacao-num">15</div>
                 <div class="avaliacao-corpo">
                   <label class="avaliacao-label required">Data de nascimento</label>
-                  <input id="auxNascimento" type="date" class="form-control" />
+                  <input id="auxNascimento" type="text" maxlength="10" placeholder="00/00/0000" class="form-control" oninput="mascaraDataId('auxNascimento')" />
                 </div>
               </div>
               <div class="avaliacao-pergunta">
@@ -474,11 +474,11 @@
               <div class="form-group"><label class="form-label">Valor Total (R$)</label><input id="cValorTotal" class="form-control" placeholder="0,00" oninput="mascaraMoedaId('cValorTotal')" /></div>
               <div class="form-group">
                 <label class="form-label">Início da Vigência</label>
-                <input id="cDataInicio" type="date" class="form-control" />
+                <input id="cDataInicio" type="text" maxlength="10" placeholder="00/00/0000" class="form-control" oninput="mascaraDataId('cDataInicio')" />
               </div>
               <div class="form-group">
                 <label class="form-label">Término da Vigência</label>
-                <input id="cDataFim" type="date" class="form-control" />
+                <input id="cDataFim" type="text" maxlength="10" placeholder="00/00/0000" class="form-control" oninput="mascaraDataId('cDataFim')" />
               </div>
               <div class="form-group full-width">
                 <span class="modal-hint">A data de início deve anteceder as atividades de campo, pois documentos obrigatórios (ASO, treinamentos e demais documentos de SST) somente poderão ser emitidos após o início da vigência contratual.</span>
@@ -735,7 +735,7 @@
               <div class="form-group"><label class="form-label required">E-mail</label><input id="tEmail" type="email" class="form-control" /></div>
               <div class="form-group"><label class="form-label required">CPF</label><input id="tCpf" class="form-control" placeholder="000.000.000-00" maxlength="14" /></div>
               <div class="form-group"><label class="form-label">RG</label><input id="tRg" class="form-control" /></div>
-              <div class="form-group"><label class="form-label">Data de nascimento</label><input id="tNascimento" type="date" class="form-control" /></div>
+              <div class="form-group"><label class="form-label">Data de nascimento</label><input id="tNascimento" type="text" maxlength="10" placeholder="00/00/0000" class="form-control" oninput="mascaraDataId('tNascimento')" /></div>
               <div class="form-group"><label class="form-label">Estado Civil</label><input id="tEstadoCivil" class="form-control" placeholder="Ex: solteiro(a), casado(a) sob regime de..." /></div>
               <div class="form-group"><label class="form-label required">Telefone</label><input id="tTelefone" class="form-control" placeholder="(00) 00000-0000" maxlength="15" /></div>
               <div class="form-group"><label class="form-label">Estado</label><input id="tEstado" class="form-control" /></div>

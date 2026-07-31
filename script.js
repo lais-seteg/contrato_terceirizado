@@ -867,7 +867,7 @@ function lerCamposAuxiliar(item) {
   // equivalente em lerCamposDespachante().
   item.cTercGraduacao     = v("auxGraduacao");
   item.cTercEmail         = v("auxEmail") || item.cTercEmail;
-  item.cTercNascimento    = v("auxNascimento");
+  item.cTercNascimento    = dataBRparaISO(v("auxNascimento"));
   item.cTercEndereco      = v("auxEndereco") || v("cTercEndereco");
   item.cTercMunicipio     = v("auxCidade");
   item.cTercEstado        = "";
@@ -894,7 +894,7 @@ function preencherCamposAuxiliar(item) {
   s("auxGraduacao",      item.cTercGraduacao);
   s("auxEmail",          item.cTercEmail);
   s("auxTelefone",       item.cTercTelefone);
-  s("auxNascimento",     item.cTercNascimento);
+  s("auxNascimento",     dataISOparaBR(item.cTercNascimento));
   s("auxEndereco",       item.cTercEndereco);
   s("auxCidade",         item.cTercMunicipio);
   s("auxDadosBancarios", item.cDadosPagamento);
@@ -934,11 +934,19 @@ function salvarContrato() {
   item.id = item.cId || gerarId("CTR");
   // Solicitante sempre submete como "Pendente" (aguarda elaboração pelo DP/RH)
   item.status = STATE.perfil === "solicitante" ? "Pendente" : (item.cStatus || "Pendente");
-  const err = validarContrato(item);
-  if (err) { mostrarToast(err,"err"); return; }
 
   const idx = DB.contratos.findIndex(c=>c.id===item.id);
   const criandoNovo = idx < 0;
+  // Data da solicitação: a do próprio contrato se já existir, ou agora (está
+  // sendo criado agora) — usada para barrar Início da Vigência anterior a ela.
+  const dataSolicitacao = criandoNovo ? new Date().toISOString() : DB.contratos[idx].criadoEm;
+
+  const errData = validarEConverterData(item, "cDataInicio", "a data de início")
+    || validarEConverterData(item, "cDataFim", "a data de término");
+  if (errData) { mostrarToast(errData,"err"); return; }
+
+  const err = validarContrato(item, dataSolicitacao);
+  if (err) { mostrarToast(err,"err"); return; }
   // Só na criação: resolve quem é o terceirizado — reaproveita o cadastro já
   // existente (encontrado por CPF) ou cria um registro-base agora, que o próprio
   // terceirizado completa depois pelo link (Fluxo 1 → 2).
@@ -998,7 +1006,7 @@ function salvarContrato() {
   fecharFormContrato();
 }
 
-function validarContrato(item) {
+function validarContrato(item, dataSolicitacao) {
   if (!item.cTipoContratacao)     return "Tipo de contratação não selecionado.";
   if (!item.cTercNome)            return "Informe o nome completo do terceirizado.";
   if (!item.cTercCpf)             return "Informe o CPF do terceirizado.";
@@ -1011,6 +1019,9 @@ function validarContrato(item) {
   if (!item.cCargo)               return "Selecione o cargo.";
   if (item.cCargo === "Outro" && !item.cCargoOutro) return "Especifique o cargo.";
   if (!item.cSetor)               return "Informe o setor.";
+  if (item.cDataInicio && dataSolicitacao && item.cDataInicio < dataSolicitacao.slice(0,10)) {
+    return "A data de início não pode ser anterior à data da solicitação.";
+  }
   return null;
 }
 
@@ -1028,6 +1039,10 @@ function editarContrato(id) {
   });
   document.getElementById("cId").value    = item.id;
   document.getElementById("cStatus").value = item.status;
+  // Campos de data são texto dd/mm/aaaa na tela, mas ficam em ISO no item —
+  // o loop genérico acima já colocou o ISO cru no campo; sobrescreve aqui.
+  document.getElementById("cDataInicio").value = dataISOparaBR(item.cDataInicio);
+  document.getElementById("cDataFim").value    = dataISOparaBR(item.cDataFim);
   atualizarSecaoTerceirizado();
   preencherCamposContrato(item);
   if (item.cTercCpf) buscarTerceirizadoPorCpf();
@@ -1180,6 +1195,26 @@ function gerarHTMLDetalhes(item) {
   const emerg1 = item.cTercEmerg1Nome ? (item.cTercEmerg1Nome+(item.cTercEmerg1Tel?" · "+item.cTercEmerg1Tel:"")) : "";
   const emerg2 = item.cTercEmerg2Nome ? (item.cTercEmerg2Nome+(item.cTercEmerg2Tel?" · "+item.cTercEmerg2Tel:"")) : "";
 
+  // Link de preenchimento enviado ao terceirizado — fica registrado aqui pra
+  // sempre (mesmo expirado/já usado/depois de fechar o modal de geração),
+  // pra ter como conferir o que foi mandado.
+  let linkHTML = "";
+  if (item.cLinkToken) {
+    const url = new URL(`cadastro.html?ctr=${encodeURIComponent(item.id)}&tk=${encodeURIComponent(item.cLinkToken)}`, window.location.href).href;
+    const expirado = item.cLinkExpiraEm && new Date() >= new Date(item.cLinkExpiraEm);
+    const situacao = item.cLinkUsado
+      ? "✓ Usado pelo terceirizado"
+      : expirado
+        ? "⏳ Expirado (não foi usado a tempo)"
+        : `Aguardando resposta · expira em ${formatarDataHora(item.cLinkExpiraEm)}`;
+    linkHTML = `
+    <div class="detail-section-title">Link de Preenchimento Enviado</div>
+    ${det("Situação",situacao)}
+    <div class="detail-item full"><span>Link enviado</span><strong style="word-break:break-all">${esc(url)}
+      <button type="button" class="btn-icon" title="Copiar link" onclick="copiarTexto('${url.replace(/'/g,"\\'")}')">📋</button>
+    </strong></div>`;
+  }
+
   return `<div class="detail-grid">
     <div class="detail-section-title">Identificação</div>
     ${det("Nº",item.id)}${det("Status",statusBadge(item.status))}${det("Tipo",item.cTipoContratacao)}${det("Criado em",formatarDataHora(item.criadoEm))}${det("Por",item.criadoPor)}
@@ -1200,6 +1235,7 @@ function gerarHTMLDetalhes(item) {
     ${det("Dados Bancários / Pix",item.cDadosPagamento,"full")}
     ${det("Emergência 1",emerg1)}${det("Emergência 2",emerg2)}
     ` : ""}
+    ${linkHTML}
     <div class="detail-section-title">C · Entregas</div>
     <div class="detail-item full"><span>Tabela</span><strong>${entregasHTML}</strong></div>
     ${item.cObsGP?`<div class="detail-section-title">Obs. DP/RH</div>${det("",item.cObsGP,"full")}`:""}
@@ -1845,6 +1881,14 @@ function removerEntrega(i){entregas.splice(i,1);renderEntregas();}
 function editarEntrega(i){entregas[i].salvo=false;renderEntregas();}
 function salvarEntrega(i){if(!entregas[i].entrega){mostrarToast("Informe a descrição da entrega.","err");return;}entregas[i].salvo=true;renderEntregas();}
 function atualizarEntrega(i,campo,valor){entregas[i][campo]=valor;if(campo==="valor")calcularTotalEntregas();}
+// Campo de data da entrega: mascara dd/mm/aaaa na tela, guarda ISO no array
+// (mesmo padrão dos demais campos de data — ver mascaraDataId/dataBRparaISO).
+function atualizarEntregaData(i,el){
+  let v=el.value.replace(/\D/g,"").slice(0,8);
+  v=v.replace(/(\d{2})(\d)/,"$1/$2").replace(/(\d{2})(\d)/,"$1/$2");
+  el.value=v;
+  entregas[i].data=dataBRparaISO(v);
+}
 
 function renderEntregas() {
   const tbody=document.getElementById("entregasBody");
@@ -1856,7 +1900,7 @@ function renderEntregas() {
     if(e.salvo){
       tr.innerHTML=`<td class="td-salvo">${esc(e.entrega)||"—"}</td><td class="td-salvo">${esc(e.marco)||"—"}</td><td class="td-salvo">${formatarData(e.data)}</td><td class="td-salvo td-valor">${formatarMoeda(e.valor)}</td><td class="td-salvo">${esc(e.formaPagamento)||"—"}</td><td><div style="display:flex;gap:.25rem"><button type="button" class="btn-icon" onclick="editarEntrega(${i})">✎</button><button type="button" class="btn-icon btn-icon-danger" onclick="removerEntrega(${i})">✕</button></div></td>`;
     } else {
-      tr.innerHTML=`<td><input class="form-control" value="${esc(e.entrega)}" oninput="atualizarEntrega(${i},'entrega',this.value)" placeholder="Descrição"/></td><td><input class="form-control" value="${esc(e.marco)}" oninput="atualizarEntrega(${i},'marco',this.value)" placeholder="Marco"/></td><td><input class="form-control" type="date" value="${esc(e.data)}" oninput="atualizarEntrega(${i},'data',this.value)"/></td><td><input class="form-control" value="${esc(e.valor)}" oninput="atualizarEntrega(${i},'valor',this.value)" placeholder="0,00"/></td><td><input class="form-control" value="${esc(e.formaPagamento)}" oninput="atualizarEntrega(${i},'formaPagamento',this.value)" placeholder="Pix, Boleto..."/></td><td><div style="display:flex;gap:.25rem"><button type="button" class="btn-salvar-entrega" onclick="salvarEntrega(${i})">✓</button><button type="button" class="btn-icon btn-icon-danger" onclick="removerEntrega(${i})">✕</button></div></td>`;
+      tr.innerHTML=`<td><input class="form-control" value="${esc(e.entrega)}" oninput="atualizarEntrega(${i},'entrega',this.value)" placeholder="Descrição"/></td><td><input class="form-control" value="${esc(e.marco)}" oninput="atualizarEntrega(${i},'marco',this.value)" placeholder="Marco"/></td><td><input class="form-control" type="text" maxlength="10" placeholder="00/00/0000" value="${esc(dataISOparaBR(e.data))}" oninput="atualizarEntregaData(${i},this)"/></td><td><input class="form-control" value="${esc(e.valor)}" oninput="atualizarEntrega(${i},'valor',this.value)" placeholder="0,00"/></td><td><input class="form-control" value="${esc(e.formaPagamento)}" oninput="atualizarEntrega(${i},'formaPagamento',this.value)" placeholder="Pix, Boleto..."/></td><td><div style="display:flex;gap:.25rem"><button type="button" class="btn-salvar-entrega" onclick="salvarEntrega(${i})">✓</button><button type="button" class="btn-icon btn-icon-danger" onclick="removerEntrega(${i})">✕</button></div></td>`;
     }
     tbody.appendChild(tr);
   });
@@ -1879,6 +1923,8 @@ function fecharFormTerc(){document.getElementById("formTerc").classList.add("hid
 function limparFormTerc(){document.getElementById("tercForm").reset();document.getElementById("tId").value="";document.getElementById("grpCnpjTerc").classList.add("hidden");document.getElementById("grpParcelasTerc").classList.add("hidden");}
 function salvarTerceirizado(){
   const item=coletarCampos(CAMPOS_TERC);item.tId=item.tId||gerarId("TER");
+  const errData=validarEConverterData(item,"tNascimento","a data de nascimento");
+  if(errData){mostrarToast(errData,"err");return;}
   if(!item.tNome){mostrarToast("Informe o nome.","err");return;}
   if(!item.tTipo){mostrarToast("Informe o tipo.","err");return;}
   if(!item.tEmail){mostrarToast("Informe o e-mail.","err");return;}
@@ -1901,6 +1947,7 @@ function editarTerceirizado(id){
   const item=DB.terceirizados.find(t=>t.tId===id);if(!item)return;
   limparFormTerc();document.getElementById("formTercTitulo").textContent="Editar Terceirizado";
   CAMPOS_TERC.forEach(campo=>{const el=document.getElementById(campo);if(el)el.value=item[campo]||"";});
+  document.getElementById("tNascimento").value=dataISOparaBR(item.tNascimento);
   toggleCondicional("tPossuiCnpj","Sim","grpCnpjTerc");
   toggleCondicional("tFormaPgto","Parcelado","grpParcelasTerc");
   document.getElementById("listaTerceirizados").classList.add("hidden");document.getElementById("formTerc").classList.remove("hidden");
@@ -1991,6 +2038,12 @@ function copiarLinkContratoGerado() {
   navigator.clipboard.writeText(url)
     .then(() => mostrarToast("Link copiado! Envie para o terceirizado.", "ok"))
     .catch(() => mostrarToast("Copie o link manualmente: " + url, "err"));
+}
+
+function copiarTexto(texto) {
+  navigator.clipboard.writeText(texto)
+    .then(() => mostrarToast("Link copiado.", "ok"))
+    .catch(() => mostrarToast("Copie o link manualmente: " + texto, "err"));
 }
 
 function regenerarLinkContrato(id) {
@@ -2279,6 +2332,36 @@ function fecharModal(id){document.getElementById(id).classList.remove("active");
 function mostrarToast(msg,tipo){const t=document.getElementById("toast");t.textContent=msg;t.className="toast show"+(tipo==="ok"?" toast-ok":tipo==="err"?" toast-err":"");clearTimeout(t._timer);t._timer=setTimeout(()=>t.classList.remove("show"),3400);}
 function mascaraCnpjId(id){const el=document.getElementById(id);if(!el)return;let v=el.value.replace(/\D/g,"").slice(0,14);v=v.replace(/(\d{2})(\d)/,"$1.$2").replace(/(\d{3})(\d)/,"$1.$2").replace(/(\d{3})(\d)/,"$1/$2").replace(/(\d{4})(\d)/,"$1-$2");el.value=v;}
 function mascaraCpfId(id){const el=document.getElementById(id);if(!el)return;let v=el.value.replace(/\D/g,"").slice(0,11);v=v.replace(/(\d{3})(\d)/,"$1.$2").replace(/(\d{3})(\d)/,"$1.$2").replace(/(\d{3})(\d{1,2})$/,"$1-$2");el.value=v;}
+
+// Datas: campo texto só com números, sempre no formato dd/mm/aaaa — evita
+// depender do date picker nativo (que muda de formato conforme o idioma/SO
+// do navegador). Armazenamento interno continua em ISO (aaaa-mm-dd), igual
+// antes; a conversão só acontece na borda entrada/saída do formulário.
+function mascaraDataId(id){const el=document.getElementById(id);if(!el)return;let v=el.value.replace(/\D/g,"").slice(0,8);v=v.replace(/(\d{2})(\d)/,"$1/$2").replace(/(\d{2})(\d)/,"$1/$2");el.value=v;}
+function dataBRparaISO(v){
+  const m=String(v||"").trim().match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if(!m) return "";
+  const d=+m[1],mo=+m[2],y=+m[3];
+  const dt=new Date(y,mo-1,d);
+  if(dt.getFullYear()!==y||dt.getMonth()!==mo-1||dt.getDate()!==d) return "";
+  return `${String(y).padStart(4,"0")}-${String(mo).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+}
+function dataISOparaBR(v){
+  const m=String(v||"").match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(!m) return "";
+  return `${m[3]}/${m[2]}/${m[1]}`;
+}
+// Valida+converte um campo de data (dd/mm/aaaa) já coletado em item[campo];
+// deixa vazio se não preenchido (campo opcional), retorna mensagem de erro
+// se o texto digitado não for uma data válida.
+function validarEConverterData(item, campo, rotulo){
+  const raw=(item[campo]||"").trim();
+  if(!raw){ item[campo]=""; return null; }
+  const iso=dataBRparaISO(raw);
+  if(!iso) return `Informe ${rotulo} num formato válido (dd/mm/aaaa).`;
+  item[campo]=iso;
+  return null;
+}
 function mascaraTelId(id){const el=document.getElementById(id);if(!el)return;let v=el.value.replace(/\D/g,"").slice(0,11);if(v.length<=10)v=v.replace(/(\d{2})(\d{4})(\d{0,4})/,"($1) $2-$3");else v=v.replace(/(\d{2})(\d{5})(\d{0,4})/,"($1) $2-$3");el.value=v;}
 function mascaraMoedaId(id){
   const el=document.getElementById(id); if(!el) return;
