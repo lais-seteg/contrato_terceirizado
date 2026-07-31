@@ -1598,6 +1598,25 @@ function paginarContrato(container, rawHtml) {
 }
 
 function montarContratoHTML(item) {
+  // Preenche automaticamente com os dados que o próprio terceirizado já
+  // informou no cadastro (RG, estado civil, endereço, dados bancários, forma
+  // de pagamento...) — sem depender do DP clicar em "Sincronizar" antes de
+  // gerar o documento. Não sobrescreve valor já presente no contrato (ex.:
+  // se o DP já editou manualmente), só preenche o que ainda está vazio.
+  const terc = item.cTerceirizadoId ? DB.terceirizados.find(t => t.tId === item.cTerceirizadoId) : null;
+  if (terc) {
+    item = {
+      ...item,
+      cTercRg:            item.cTercRg         || terc.tRg,
+      cTercEstadoCivil:    item.cTercEstadoCivil || terc.tEstadoCivil,
+      cTercEndereco:       item.cTercEndereco     || terc.tEndereco,
+      cTercMunicipio:      item.cTercMunicipio    || [terc.tCidade, terc.tEstado].filter(Boolean).join(" - "),
+      cTercFuncao:         item.cTercFuncao       || terc.tGraduacao,
+      cDadosPagamento:     item.cDadosPagamento   || terc.tDadosBancarios,
+      cTercFormaPgto:      item.cTercFormaPgto    || terc.tFormaPgto,
+      cTercParcelas:       item.cTercParcelas     || terc.tParcelas,
+    };
+  }
   const nomeContratada     = cgFill(item.cTercNome, "nome completo");
   const estadoCivil        = cgFill(item.cTercEstadoCivil, "estado civil");
   const profissao          = cgFill(item.cTercFuncao, "profissão / função");
