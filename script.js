@@ -1165,7 +1165,11 @@ function verDetalhesContrato(id) {
 }
 
 function gerarHTMLDetalhes(item) {
-  const hist = item.historico||[];
+  // historico é gravado do mais antigo pro mais novo (sempre appendado no
+  // fim); a exibição é sempre do mais recente pro mais antigo, então
+  // inverte aqui — .slice() antes de .reverse() pra não mutar o array
+  // original (senão a próxima gravação salvaria a ordem invertida de volta).
+  const hist = (item.historico||[]).slice().reverse();
   const histHTML = hist.length
     ? `<div class="historico-lista">${hist.map(h=>`<div class="historico-item"><small>${formatarDataHora(h.data)} · ${esc(h.usuario||"-")}</small><strong>${esc(h.status)}</strong><p>${esc(h.obs||"-")}</p></div>`).join("")}</div>`
     : "<em style='color:var(--text-muted)'>Sem histórico.</em>";
