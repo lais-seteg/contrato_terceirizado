@@ -21,7 +21,8 @@ let STATE = {
     terceirizados: { tipo: "", busca: "", pagina: 1 },
     avaliacoes:    { pagina: 1 },
     auditoria:     { busca: "", pagina: 1 }
-  }
+  },
+  financeiro: { ano: new Date().getFullYear(), mes: new Date().getMonth() }
 };
 let entregas = [];
 
@@ -438,6 +439,10 @@ function registrarListeners() {
   document.getElementById("prevT").addEventListener("click", () => { STATE.filtros.terceirizados.pagina--; renderTerceirizados(); });
   document.getElementById("nextT").addEventListener("click", () => { STATE.filtros.terceirizados.pagina++; renderTerceirizados(); });
 
+  // ── Financeiro ──
+  document.getElementById("btnFinMesAnterior").addEventListener("click", () => mudarMesFinanceiro(-1));
+  document.getElementById("btnFinMesSeguinte").addEventListener("click", () => mudarMesFinanceiro(1));
+
   // ── Avaliações ──
   document.getElementById("btnNovaAval").addEventListener("click", () => abrirFormAval(null));
   document.getElementById("btnFecharAval").addEventListener("click", fecharFormAval);
@@ -543,6 +548,7 @@ function irParaSecao(secao) {
     case "terceirizados": renderTerceirizados(); break;
     case "avaliacoes":    renderAvaliacoes();    break;
     case "alertas":       renderAlertas();       break;
+    case "financeiro":    renderCalendarioFinanceiro(); break;
   }
 }
 
@@ -1173,8 +1179,16 @@ function gerarHTMLDetalhes(item) {
   const histHTML = hist.length
     ? `<div class="historico-lista">${hist.map(h=>`<div class="historico-item"><small>${formatarDataHora(h.data)} · ${esc(h.usuario||"-")}</small><strong>${esc(h.status)}</strong><p>${esc(h.obs||"-")}</p></div>`).join("")}</div>`
     : "<em style='color:var(--text-muted)'>Sem histórico.</em>";
+  // th/td com o mesmo padding em todas as colunas — sem isso o cabeçalho
+  // (que só tinha o estilo na 1ª coluna) ficava desalinhado com os dados.
+  const entTh = `padding:.3rem .5rem;color:var(--text-secondary);font-size:.62rem;text-transform:uppercase;text-align:left`;
+  const entTd = `padding:.3rem .5rem`;
   const entregasHTML = (item.entregas||[]).length
-    ? `<table style="width:100%;border-collapse:collapse;font-size:.76rem"><thead><tr style="background:rgba(10,36,89,.5)"><th style="padding:.3rem .5rem;color:var(--text-secondary);font-size:.62rem;text-transform:uppercase">Entrega</th><th>Marco</th><th>Data</th><th>Valor</th><th>Pgto</th></tr></thead><tbody>${(item.entregas||[]).map(e=>`<tr style="border-bottom:1px solid var(--border-color)"><td style="padding:.3rem .5rem">${esc(e.entrega||"-")}</td><td style="padding:.3rem .5rem">${esc(e.marco||"-")}</td><td style="padding:.3rem .5rem">${formatarData(e.data)}</td><td style="padding:.3rem .5rem;color:var(--green)">${formatarMoeda(e.valor)}</td><td style="padding:.3rem .5rem">${esc(e.formaPagamento||"-")}</td></tr>`).join("")}</tbody></table>`
+    ? `<table style="width:100%;border-collapse:collapse;font-size:.76rem"><thead><tr style="background:rgba(10,36,89,.5)">
+        <th style="${entTh}">Entrega</th><th style="${entTh}">Marco</th><th style="${entTh}">Data</th><th style="${entTh}">Valor</th><th style="${entTh}">Pgto</th>
+      </tr></thead><tbody>${(item.entregas||[]).map(e=>`<tr style="border-bottom:1px solid var(--border-color)">
+        <td style="${entTd}">${esc(e.entrega||"-")}</td><td style="${entTd}">${esc(e.marco||"-")}</td><td style="${entTd}">${formatarData(e.data)}</td><td style="${entTd};color:var(--green)">${formatarMoeda(e.valor)}</td><td style="${entTd}">${esc(e.formaPagamento||"-")}</td>
+      </tr>`).join("")}</tbody></table>`
     : "<em style='color:var(--text-muted)'>Nenhuma entrega cadastrada.</em>";
 
   const aval = DB.avaliacoes.find(a=>a.contratoId===item.id);
@@ -1214,9 +1228,13 @@ function gerarHTMLDetalhes(item) {
     linkHTML = `
     <div class="detail-section-title">Link de Preenchimento Enviado</div>
     ${det("Situação",situacao)}
-    <div class="detail-item full"><span>Link enviado</span><strong style="word-break:break-all">${esc(url)}
-      <button type="button" class="btn-icon" title="Copiar link" onclick="copiarTexto('${url.replace(/'/g,"\\'")}')">📋</button>
-    </strong></div>`;
+    <div class="detail-item full">
+      <span>Link enviado</span>
+      <div style="display:flex;align-items:center;gap:.4rem">
+        <strong style="word-break:break-all;flex:1">${esc(url)}</strong>
+        <button type="button" class="btn-icon" title="Copiar link" style="flex-shrink:0" onclick="copiarTexto('${url.replace(/'/g,"\\'")}')">📋</button>
+      </div>
+    </div>`;
   }
 
   return `<div class="detail-grid">
@@ -1486,6 +1504,10 @@ function abrirGerarContrato(id) {
     // Documento curto o bastante para caber sem rolagem: já libera direto.
     setTimeout(liberarSeChegouAoFim, 50);
   }
+
+  // DP confirma que coletou as assinaturas: encaminha direto ao financeiro.
+  const btnAssinado = document.getElementById("btnContratoAssinado");
+  if (btnAssinado) btnAssinado.classList.toggle("hidden", !(ehGestaoOuGP() && item.status === "Aguardando Assinaturas"));
 }
 
 // Botão dedicado "Encaminhar para Líder" — DP já confirmou os documentos e
@@ -1509,6 +1531,30 @@ function encaminharParaLider() {
   fecharModal("modalContratoDoc");
   renderContratos();
   mostrarToast("Contrato encaminhado para aprovação do líder.", "ok");
+}
+
+// Botão dedicado "✍️ Contrato Assinado" — DP confirma que coletou as
+// assinaturas e já encaminha direto para o financeiro efetuar o pagamento,
+// estampando a data usada no alerta/calendário de prazo de pagamento (10 dias).
+function contratoAssinado() {
+  const id = document.getElementById("modalContratoDoc").dataset.currentId;
+  const idx = DB.contratos.findIndex(c => c.id === id);
+  if (idx < 0) return;
+  salvarContratoDoc();
+  const ant = DB.contratos[idx].status;
+  DB.contratos[idx].status = "Aguardando Pagamento";
+  DB.contratos[idx].cDataEncaminhadoFinanceiro = new Date().toISOString();
+  DB.contratos[idx].historico = [...(DB.contratos[idx].historico || []), {
+    data: new Date().toISOString(), usuario: STATE.nomeUsuario, perfil: STATE.perfil,
+    status: "Aguardando Pagamento", obs: "Contrato assinado; encaminhado ao financeiro para pagamento."
+  }];
+  DB.contratos[idx].atualizadoEm = new Date().toISOString();
+  DB.contratos[idx].atualizadoPor = STATE.nomeUsuario;
+  registrarAuditoria("Contrato Assinado", "Contratos", id, ant, "Aguardando Pagamento", "Assinado e encaminhado ao financeiro.");
+  syncContrato(DB.contratos[idx]);
+  fecharModal("modalContratoDoc");
+  renderContratos();
+  mostrarToast("Contrato assinado! Encaminhado ao financeiro para pagamento.", "ok");
 }
 
 function regenerarContratoDoc() {
@@ -2300,6 +2346,101 @@ function renderAlertas(){
   const el=document.getElementById("listaAlertas");
   if(!alertas.length){el.innerHTML=`<div class="alertas-empty">✅ Nenhum vencimento próximo nos próximos 30 dias.</div>`;return;}
   el.innerHTML=alertas.map(a=>{const dl=a.dias<0?`Vencido há ${Math.abs(a.dias)} dia(s)`:a.dias===0?"Vence hoje!":`Vence em ${a.dias} dia(s)`;return`<div class="alerta-card alerta-${a.tipo}"><div class="alerta-titulo">${esc(a.titulo)}</div><div class="alerta-desc">${esc(a.desc)}</div><div class="alerta-meta">${dl}</div></div>`;}).join("");
+}
+
+// ══════════════════════════════════════════════════════
+//  FINANCEIRO — calendário de pagamentos
+// ══════════════════════════════════════════════════════
+// Junta os dois tipos de pagamento previsto: o prazo do financeiro (10 dias
+// a partir de quando o DP marca "Contrato Assinado") e as datas individuais
+// de cada entrega (contrato pode ter várias, com forma de pagamento própria).
+function gerarPagamentosFinanceiro(){
+  const eventos=[];
+  DB.contratos.forEach(c=>{
+    if(["Reprovado","Cancelado"].includes(c.status)) return; // não vão ser pagos
+    if(c.status==="Aguardando Pagamento" && c.cDataEncaminhadoFinanceiro){
+      const prazo=new Date(c.cDataEncaminhadoFinanceiro);
+      prazo.setDate(prazo.getDate()+10);
+      eventos.push({
+        data: prazo.toISOString().slice(0,10),
+        titulo: `${c.id} · ${c.cTercNome||"-"}`,
+        desc: "Prazo de pagamento (financeiro)",
+        valor: c.cValorTotal,
+        contratoId: c.id
+      });
+    }
+    (c.entregas||[]).forEach(e=>{
+      if(!e.data) return;
+      eventos.push({
+        data: e.data,
+        titulo: `${c.id} · ${e.entrega||"Entrega"}`,
+        desc: e.formaPagamento ? `Entrega — ${e.formaPagamento}` : "Entrega",
+        valor: e.valor,
+        contratoId: c.id
+      });
+    });
+  });
+  return eventos;
+}
+
+function mudarMesFinanceiro(delta){
+  STATE.financeiro.mes+=delta;
+  if(STATE.financeiro.mes<0){STATE.financeiro.mes=11;STATE.financeiro.ano--;}
+  if(STATE.financeiro.mes>11){STATE.financeiro.mes=0;STATE.financeiro.ano++;}
+  renderCalendarioFinanceiro();
+}
+
+function renderCalendarioFinanceiro(){
+  const grid=document.getElementById("finCalendarioGrid");
+  if(!grid) return;
+  const {ano,mes}=STATE.financeiro;
+  document.getElementById("finMesAtual").textContent=
+    new Date(ano,mes,1).toLocaleDateString("pt-BR",{month:"long",year:"numeric"});
+
+  const eventosDoMes=gerarPagamentosFinanceiro().filter(ev=>{
+    const d=new Date(ev.data+"T00:00:00");
+    return d.getFullYear()===ano && d.getMonth()===mes;
+  });
+  const porDia={};
+  eventosDoMes.forEach(ev=>{
+    const dia=+ev.data.slice(8,10);
+    (porDia[dia]=porDia[dia]||[]).push(ev);
+  });
+
+  const primeiroDiaSemana=new Date(ano,mes,1).getDay();
+  const totalDias=new Date(ano,mes+1,0).getDate();
+  const hoje=new Date();hoje.setHours(0,0,0,0);
+
+  let html=`<div class="fin-cal-semana">${["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"].map(d=>`<div>${d}</div>`).join("")}</div><div class="fin-cal-dias">`;
+  for(let i=0;i<primeiroDiaSemana;i++) html+=`<div class="fin-cal-dia fin-cal-vazio"></div>`;
+  for(let dia=1;dia<=totalDias;dia++){
+    const evs=porDia[dia]||[];
+    const ehHoje=new Date(ano,mes,dia).getTime()===hoje.getTime();
+    const total=evs.reduce((s,e)=>s+(parseFloat(String(e.valor||"0").replace(/\./g,"").replace(",","."))||0),0);
+    html+=`<div class="fin-cal-dia${ehHoje?" fin-cal-hoje":""}${evs.length?" fin-cal-tem-pagamento":""}">
+      <div class="fin-cal-num">${dia}</div>
+      ${evs.length?`<div class="fin-cal-eventos">
+        ${evs.slice(0,2).map(e=>`<div class="fin-cal-evento" title="${esc(e.titulo)} — ${esc(e.desc)}">${esc(e.titulo)}</div>`).join("")}
+        ${evs.length>2?`<div class="fin-cal-mais">+${evs.length-2}</div>`:""}
+        ${total?`<div class="fin-cal-total">${formatarMoeda(total)}</div>`:""}
+      </div>`:""}
+    </div>`;
+  }
+  html+="</div>";
+  grid.innerHTML=html;
+
+  const lista=document.getElementById("finListaPagamentos");
+  if(!eventosDoMes.length){
+    lista.innerHTML=`<div class="alertas-empty">✅ Nenhum pagamento previsto neste mês.</div>`;
+    return;
+  }
+  lista.innerHTML=eventosDoMes
+    .sort((a,b)=>a.data.localeCompare(b.data))
+    .map(e=>`<div class="alerta-card alerta-aviso">
+      <div class="alerta-titulo">${formatarData(e.data)} · ${esc(e.titulo)}</div>
+      <div class="alerta-desc">${esc(e.desc)}</div>
+      <div class="alerta-meta">${e.valor?formatarMoeda(e.valor):"-"}</div>
+    </div>`).join("");
 }
 
 // ══════════════════════════════════════════════════════

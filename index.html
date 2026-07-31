@@ -62,6 +62,10 @@
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         Terceirizados
       </button>
+      <button class="sidebar-btn perm-gp-gestao" data-secao="financeiro">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        Financeiro
+      </button>
       <button class="sidebar-btn" data-secao="avaliacoes">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
         Avalia&#231;&#245;es
@@ -1039,6 +1043,20 @@
       </div>
     </section>
 
+    <!-- ══════════ FINANCEIRO ══════════ -->
+    <section id="secao-financeiro" class="secao">
+      <div class="sec-header"><h2>Financeiro</h2></div>
+      <div class="fin-cal-controles">
+        <button class="btn-icon" id="btnFinMesAnterior">‹</button>
+        <span id="finMesAtual" class="fin-cal-mes"></span>
+        <button class="btn-icon" id="btnFinMesSeguinte">›</button>
+      </div>
+      <div class="alertas-scroll">
+        <div id="finCalendarioGrid" class="fin-cal"></div>
+        <h4 class="form-subtitle" style="margin-top:1rem">Pagamentos do mês</h4>
+        <div id="finListaPagamentos" class="alertas-grid"></div>
+      </div>
+    </section>
 
   </main>
 
@@ -1174,6 +1192,7 @@
       <button class="btn btn-primary" id="btnExportarContratoPDF">⬇️ Baixar PDF</button>
       <button class="btn btn-primary hidden" id="btnEncaminharLider" onclick="encaminharParaLider()">📤 Encaminhar para Líder</button>
       <button class="btn btn-primary hidden" id="btnAprovarLider" disabled onclick="aprovarComoLider()">Role até o final para aprovar</button>
+      <button class="btn btn-primary hidden" id="btnContratoAssinado" onclick="contratoAssinado()">✍️ Contrato Assinado</button>
     </div>
   </div>
 </div>

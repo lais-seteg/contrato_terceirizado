@@ -355,6 +355,27 @@ body::before{content:'';position:fixed;inset:0;background:rgba(6,13,31,.92);z-in
 .alerta-meta{font-size:.68rem;color:var(--text-muted)}
 .alertas-empty{text-align:center;padding:3rem;color:var(--text-secondary);font-size:.85rem}
 
+/* ─── FINANCEIRO · CALENDÁRIO ────────────────────── */
+.fin-cal-controles{display:flex;align-items:center;justify-content:center;gap:1rem;margin-bottom:.75rem}
+.fin-cal-mes{font-size:.95rem;font-weight:700;color:#fff;text-transform:capitalize;min-width:11rem;text-align:center}
+.fin-cal-semana{display:grid;grid-template-columns:repeat(7,1fr);gap:.4rem;margin-bottom:.4rem}
+.fin-cal-semana div{text-align:center;font-size:.65rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.03em}
+.fin-cal-dias{display:grid;grid-template-columns:repeat(7,1fr);gap:.4rem}
+.fin-cal-dia{min-height:5.5rem;background:var(--bg-card);border:1px solid var(--border-color);border-radius:var(--radius-sm);padding:.35rem;display:flex;flex-direction:column;gap:.2rem;overflow:hidden}
+.fin-cal-dia.fin-cal-vazio{background:transparent;border-color:transparent}
+.fin-cal-dia.fin-cal-hoje{border-color:var(--blue-light);box-shadow:0 0 0 1px var(--blue-light) inset}
+.fin-cal-dia.fin-cal-tem-pagamento{border-left:3px solid var(--teal)}
+.fin-cal-num{font-size:.72rem;font-weight:700;color:var(--text-secondary)}
+.fin-cal-hoje .fin-cal-num{color:var(--blue-light)}
+.fin-cal-eventos{display:flex;flex-direction:column;gap:.15rem;overflow:hidden}
+.fin-cal-evento{font-size:.62rem;color:#fff;background:rgba(26,188,156,.15);border-radius:3px;padding:.1rem .3rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fin-cal-mais{font-size:.6rem;color:var(--text-muted)}
+.fin-cal-total{font-size:.66rem;font-weight:700;color:var(--green);margin-top:auto}
+@media (max-width:900px){
+  .fin-cal-dia{min-height:3.6rem}
+  .fin-cal-evento{display:none}
+}
+
 /* ─── DETAIL MODAL ───────────────────────────────── */
 .detail-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:.55rem}
 .detail-item{background:var(--bg-input);border:1px solid var(--border-color);border-radius:var(--radius-sm);padding:.65rem}
