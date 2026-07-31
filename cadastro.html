@@ -928,6 +928,12 @@
   document.getElementById('tFormaPgto').addEventListener('change', function () {
     document.getElementById('grpParcelas').classList.toggle('hidden', this.value !== 'Parcelado');
   });
+
+  // Se veio de um link de solicitação (?ctr=&tk=), valida e trava
+  // Nome/CPF/Telefone com os dados já capturados pelo líder. Sem essa
+  // chamada o link nunca era validado e todo envio virava um cadastro
+  // novo (nunca reaproveitava o registro já criado pelo líder).
+  validarLinkContrato();
 </script>
 </body>
 </html>
