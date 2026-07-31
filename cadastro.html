@@ -720,7 +720,7 @@
 
     document.getElementById('cadForm').classList.add('hidden');
     const { data: contrato, error } = await supa.from('contratos')
-      .select('id, c_link_token, c_link_expira_em, c_link_usado, c_tipo_contratacao, c_terceirizado_id')
+      .select('id, c_link_token, c_link_expira_em, c_link_usado, c_tipo_contratacao, c_terceirizado_id, historico')
       .eq('id', ctr)
       .maybeSingle();
 
@@ -894,11 +894,19 @@
         return;
       }
 
-      // Consome o link (uso único) — o contrato permanece com seu status atual
-      // (base sempre "Pendente") até o DP dar seguimento à elaboração.
+      // Consome o link (uso único) e avança o status para "Em Elaboração" —
+      // o terceirizado respondeu, agora é a vez do DP conferir os documentos
+      // e gerar o contrato.
       if (contratoVinculado) {
+        const novoHistorico = [...(contratoVinculado.historico || []), {
+          data: new Date().toISOString(),
+          usuario: nome,
+          perfil: 'terceirizado',
+          status: 'Em Elaboração',
+          obs: 'Cadastro preenchido pelo terceirizado via link.'
+        }];
         const { error: errCtr } = await supa.from('contratos')
-          .update({ c_link_usado: true })
+          .update({ c_link_usado: true, status: 'Em Elaboração', historico: novoHistorico })
           .eq('id', contratoVinculado.id);
         if (errCtr) console.error(errCtr);
       }

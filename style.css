@@ -248,6 +248,7 @@ body::before{content:'';position:fixed;inset:0;background:rgba(6,13,31,.92);z-in
 .st-finalizado{background:rgba(26,188,156,.12);color:var(--teal);border-color:rgba(26,188,156,.35)}
 .st-aguar-lider{background:rgba(90,141,208,.12);color:#88bbff;border-color:rgba(90,141,208,.35)}
 .st-aguar-assinatura{background:rgba(155,89,182,.12);color:var(--purple);border-color:rgba(155,89,182,.35)}
+.st-aguar-pagamento{background:rgba(26,188,156,.12);color:var(--teal);border-color:rgba(26,188,156,.35)}
 /* ── Status legado (dados existentes) ── */
 .st-rascunho{background:rgba(108,117,125,.12);color:#9aa0ab;border-color:rgba(108,117,125,.35)}
 .st-elaboracao{background:rgba(58,101,176,.12);color:var(--blue-light);border-color:rgba(58,101,176,.35)}

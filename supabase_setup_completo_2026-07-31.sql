@@ -5,6 +5,7 @@
 --   - supabase_setup_2026-07-15.sql (estrutura original + seed de usuários)
 --   - migracao_2026-07-30_workflow_link_dados_contrato.sql
 --   - migracao_2026-07-31_fluxo_solicitante_cpf.sql
+--   - migracao_2026-07-31c_status_financeiro.sql
 -- Rode este arquivo inteiro no SQL Editor do Supabase, de uma vez.
 --
 -- ⚠⚠⚠ DESTRUTIVO ⚠⚠⚠
@@ -118,6 +119,7 @@ create table contratos (
   c_art                     text,
   c_escopo                  text,
   c_cronograma              text,
+  c_data_encaminhado_financeiro timestamptz,
   c_terceirizado_id         text,
   c_terc_nome               text,
   c_terc_email              text,

@@ -30,6 +30,7 @@ const STATUS_BTNS = {
   "gestao": [
     { status:"Em Elaboração",                  icon:"✎", label:"Em Elaboração",                  cls:"btn-status-warn" },
     { status:"Aguardando Aprovação do Líder",   icon:"👁", label:"Aguardando Aprovação do Líder",   cls:"btn-status-warn" },
+    { status:"Aguardando Pagamento",            icon:"💰", label:"Aguardando Pagamento",            cls:"btn-status-warn" },
     { status:"Aprovado",   icon:"✓", label:"Aprovado",   cls:"btn-status-ok"   },
     { status:"Reprovado",  icon:"✗", label:"Reprovado",  cls:"btn-status-err"  },
     { status:"Pendente de Ajuste", icon:"⚠", label:"Pendente de Ajuste", cls:"btn-status-warn" },
@@ -38,18 +39,23 @@ const STATUS_BTNS = {
   "gestao-pessoas": [
     { status:"Em Elaboração",                  icon:"✎", label:"Em Elaboração",                  cls:"btn-status-warn" },
     { status:"Aguardando Aprovação do Líder",   icon:"👁", label:"Aguardando Aprovação do Líder",   cls:"btn-status-warn" },
+    { status:"Aguardando Pagamento",            icon:"💰", label:"Aguardando Pagamento",            cls:"btn-status-warn" },
     { status:"Aprovado",   icon:"✓", label:"Aprovado",   cls:"btn-status-ok"   },
     { status:"Finalizado", icon:"✔", label:"Finalizado", cls:"btn-status-final" },
     { status:"Pendente de Ajuste", icon:"⚠", label:"Pendente de Ajuste", cls:"btn-status-warn" },
   ]
 };
 
-// Fluxo: Líder → Pendente → DP elabora (Em Elaboração) → Aguardando Aprovação do Líder
-// → líder aprova → Aguardando Assinaturas → DP coleta assinaturas → Aprovado → Finalizado
+// Fluxo: Líder cria (Pendente) → terceirizado responde pelo link (Em Elaboração,
+// automático) → DP confirma documentos e gera o contrato → botão "Encaminhar para
+// Líder" (Aguardando Aprovação do Líder) → líder aprova com scroll obrigatório
+// (Aguardando Assinaturas, automático) → DP assina e encaminha ao financeiro
+// (Aguardando Pagamento, stampa cDataEncaminhadoFinanceiro p/ alerta de 10 dias)
+// → financeiro paga e dá o OK (Aprovado) → Finalizado
 const STATUS_POR_PERFIL = {
   solicitante:      ["Pendente"],
-  "gestao-pessoas": ["Em Elaboração","Aguardando Aprovação do Líder","Aprovado","Finalizado","Pendente de Ajuste"],
-  gestao:           ["Em Elaboração","Aguardando Aprovação do Líder","Aprovado","Reprovado","Pendente de Ajuste","Finalizado"]
+  "gestao-pessoas": ["Em Elaboração","Aguardando Aprovação do Líder","Aguardando Pagamento","Aprovado","Finalizado","Pendente de Ajuste"],
+  gestao:           ["Em Elaboração","Aguardando Aprovação do Líder","Aguardando Pagamento","Aprovado","Reprovado","Pendente de Ajuste","Finalizado"]
 };
 
 const STATUS_CLASS = {
@@ -58,6 +64,7 @@ const STATUS_CLASS = {
   "Em Elaboração":                  "st-elaboracao",
   "Aguardando Aprovação do Líder":  "st-aguar-lider",
   "Aguardando Assinaturas":         "st-aguar-assinatura",
+  "Aguardando Pagamento":           "st-aguar-pagamento",
   "Aprovado":                       "st-aprovado",
   "Reprovado":                      "st-reprovado",
   "Pendente de Ajuste":             "st-pendente",
@@ -74,7 +81,7 @@ const CAMPOS_CONTRATO = [
   "cEmailEmpresa","cTelEmpresa","cEndEmpresa","cNumeroContrato","cEmpresaContratante",
   "cTipoContratacao","cTipoOutro","cDataInicio","cDataFim","cCentroCusto","cProjeto",
   "cUnidade","cValorMensal","cValorTotal","cObjeto","cObjetoOutro","cArt",
-  "cEscopo","cCronograma",
+  "cEscopo","cCronograma","cDataEncaminhadoFinanceiro",
   "cCargo","cCargoOutro","cSetor",
   "cObjetivoContrato","cObjetivoContratoOutro","cNaturezaContrato","cNaturezaContratoOutro",
   "cCondicoesPagamento",
@@ -1090,7 +1097,10 @@ function salvarAnalise() {
       obs: obs || `Decisão: ${novoStatus}.`
     }];
     registrarAuditoria("Mudança de Status","Contratos",id,ant,novoStatus,obs||"");
-    contratoAtualizado = {...c, status:novoStatus, historico, atualizadoEm:new Date().toISOString(), atualizadoPor:STATE.nomeUsuario};
+    // Encaminhado ao financeiro agora: guarda a data para o alerta de prazo de
+    // pagamento (10 dias, ver gerarAlertas()).
+    const extra = novoStatus === "Aguardando Pagamento" ? { cDataEncaminhadoFinanceiro: new Date().toISOString() } : {};
+    contratoAtualizado = {...c, ...extra, status:novoStatus, historico, atualizadoEm:new Date().toISOString(), atualizadoPor:STATE.nomeUsuario};
     return contratoAtualizado;
   });
   if (contratoAtualizado) syncContrato(contratoAtualizado);
@@ -1294,7 +1304,7 @@ function renderContratos() {
       <td>${statusBadge(c.status)}</td>
       <td class="col-acoes"><div class="table-actions">
         <button class="btn-icon" title="Visualizar" onclick="verDetalhesContrato('${c.id}')">👁</button>
-        ${["Em Elaboração","Aguardando Aprovação do Líder","Aguardando Assinaturas","Aprovado","Finalizado"].includes(c.status)
+        ${["Em Elaboração","Aguardando Aprovação do Líder","Aguardando Assinaturas","Aguardando Pagamento","Aprovado","Finalizado"].includes(c.status)
           ? (c.cContratoHtml
             ? `<button class="btn-icon btn-icon-green" title="Ver / Baixar Contrato Gerado" onclick="abrirGerarContrato('${c.id}')">📄</button>`
             : `<button class="btn-icon btn-icon-teal" title="Gerar Contrato" onclick="abrirGerarContrato('${c.id}')">📄</button>`)
@@ -1413,6 +1423,31 @@ function abrirGerarContrato(id) {
     // Paginação depende de medir altura real — só funciona com o modal já visível.
     paginarContrato(document.getElementById("contratoDocArea"), montarContratoHTML(item));
   }
+  const btnEncaminhar = document.getElementById("btnEncaminharLider");
+  if (btnEncaminhar) btnEncaminhar.classList.toggle("hidden", !(ehGestaoOuGP() && item.status === "Em Elaboração"));
+}
+
+// Botão dedicado "Encaminhar para Líder" — DP já confirmou os documentos e
+// gerou o contrato; encaminha direto para aprovação do líder, sem precisar
+// abrir o menu genérico de status.
+function encaminharParaLider() {
+  const id = document.getElementById("modalContratoDoc").dataset.currentId;
+  const idx = DB.contratos.findIndex(c => c.id === id);
+  if (idx < 0) return;
+  salvarContratoDoc(); // garante que o documento (com eventuais edições) fica salvo antes de encaminhar
+  const ant = DB.contratos[idx].status;
+  DB.contratos[idx].status = "Aguardando Aprovação do Líder";
+  DB.contratos[idx].historico = [...(DB.contratos[idx].historico || []), {
+    data: new Date().toISOString(), usuario: STATE.nomeUsuario, perfil: STATE.perfil,
+    status: "Aguardando Aprovação do Líder", obs: "Contrato gerado e encaminhado para aprovação do líder."
+  }];
+  DB.contratos[idx].atualizadoEm = new Date().toISOString();
+  DB.contratos[idx].atualizadoPor = STATE.nomeUsuario;
+  registrarAuditoria("Encaminhado ao Líder", "Contratos", id, ant, "Aguardando Aprovação do Líder", "Documento gerado e encaminhado para aprovação.");
+  syncContrato(DB.contratos[idx]);
+  fecharModal("modalContratoDoc");
+  renderContratos();
+  mostrarToast("Contrato encaminhado para aprovação do líder.", "ok");
 }
 
 function regenerarContratoDoc() {
@@ -2158,14 +2193,32 @@ function renderAvaliacoes(){
 // ══════════════════════════════════════════════════════
 //  ALERTAS
 // ══════════════════════════════════════════════════════
+// Prazo do financeiro: 10 dias corridos a partir do momento em que o DP
+// encaminha o contrato para pagamento (cDataEncaminhadoFinanceiro, timestamptz).
+function diasAtePrazoPagamento(dataEncaminhado){
+  if(!dataEncaminhado) return null;
+  const prazo=new Date(dataEncaminhado);
+  if(isNaN(prazo)) return null;
+  prazo.setDate(prazo.getDate()+10);
+  prazo.setHours(0,0,0,0);
+  const hoje=new Date();hoje.setHours(0,0,0,0);
+  return Math.round((prazo-hoje)/86400000);
+}
+
 function gerarAlertas(){
   const base = STATE.perfil==="solicitante"
     ? DB.contratos.filter(c=>c.criadoPor===STATE.nomeUsuario)
     : DB.contratos;
-  return base
+  const alertasVencimento = base
     .map(c => { const dias=diasAteVencer(c.cDataFim); return {titulo:`Contrato ${c.id} · ${c.cTercNome||c.cRazaoSocial}`,desc:"Vencimento do contrato",dias,tipo:dias<=7?"critico":dias<=15?"atencao":"aviso"}; })
-    .filter(a => a.dias!==null && a.dias<=30)
-    .sort((a,b)=>a.dias-b.dias);
+    .filter(a => a.dias!==null && a.dias<=30);
+  // Alerta de prazo de pagamento (financeiro) — só para quem acompanha
+  // pagamento (DP/Gestão); o líder não tem ação nessa etapa.
+  const alertasPagamento = STATE.perfil==="solicitante" ? [] : DB.contratos
+    .filter(c => c.status==="Aguardando Pagamento")
+    .map(c => { const dias=diasAtePrazoPagamento(c.cDataEncaminhadoFinanceiro); return {titulo:`Contrato ${c.id} · ${c.cTercNome||c.cRazaoSocial}`,desc:"Prazo de pagamento (financeiro)",dias,tipo:dias<=3?"critico":dias<=10?"atencao":"aviso"}; })
+    .filter(a => a.dias!==null && a.dias<=10);
+  return [...alertasVencimento, ...alertasPagamento].sort((a,b)=>a.dias-b.dias);
 }
 
 function renderAlertas(){
