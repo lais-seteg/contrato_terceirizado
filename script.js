@@ -508,6 +508,11 @@ function aplicarPermissoes() {
   document.querySelectorAll(".campo-interno").forEach(el => el.classList.toggle("hidden", p==="solicitante"));
   document.querySelectorAll(".campo-gestao").forEach(el => el.classList.toggle("hidden", p!=="gestao"));
 
+  // Gestão só acompanha/dá seguimento às solicitações — não cria contrato novo
+  // (isso é papel do líder solicitante). DP (gestao-pessoas) continua podendo.
+  const blocoNovo = document.getElementById("blocoNovoContrato");
+  if (blocoNovo) blocoNovo.classList.toggle("hidden", p==="gestao");
+
   // Avaliações: visões diferentes por perfil
   const isGP = p !== "solicitante";
   const vG = document.getElementById("avalViewGestao");

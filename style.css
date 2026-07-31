@@ -324,6 +324,12 @@ body::before{content:'';position:fixed;inset:0;background:rgba(6,13,31,.92);z-in
 .radio-pill-label{display:inline-flex;align-items:center;padding:.28rem .7rem;border:1px solid var(--border-color);border-radius:20px;background:transparent;color:var(--text-secondary);font-size:.72rem;font-weight:500;cursor:pointer;transition:var(--transition);white-space:nowrap;user-select:none}
 .radio-pill:hover .radio-pill-label{background:var(--bg-card-hover);color:var(--text-primary);border-color:var(--border-light)}
 .radio-pill input[type="radio"]:checked+.radio-pill-label,.radio-pill input[type="checkbox"]:checked+.radio-pill-label{font-weight:700;background:rgba(90,141,208,.15);border-color:var(--blue-light);color:var(--blue-light)}
+/* Documentação Obrigatória: labels bem mais longas que os pills normais
+   (Sim/Não, Pix...) — .form-grid (grid rígido) deixava o texto com
+   white-space:nowrap vazar por cima do item vizinho. Usa flex+wrap (igual
+   .radio-group) e permite quebra de linha dentro do próprio pill. */
+.doc-obrigatoria-grid{display:flex;flex-wrap:wrap;gap:.5rem .75rem}
+.doc-obrigatoria-grid .radio-pill-label{white-space:normal;max-width:280px}
 /* Cores por valor */
 .radio-pill[data-val="Excelente"] input:checked+.radio-pill-label{background:rgba(108,194,74,.15);border-color:var(--green);color:var(--green)}
 .radio-pill[data-val="Bom"] input:checked+.radio-pill-label{background:rgba(90,141,208,.15);border-color:var(--blue-light);color:var(--blue-light)}

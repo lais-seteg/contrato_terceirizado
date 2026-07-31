@@ -547,7 +547,13 @@
 
               <div class="form-group">
                 <label class="form-label required">Setor</label>
-                <input id="cSetor" class="form-control" />
+                <select id="cSetor" class="form-control">
+                  <option value="">Selecione</option>
+                  <option>PROJETOS</option>
+                  <option>ADMINISTRATIVO</option>
+                  <option>INOVAÇÃO</option>
+                  <option>FINANCEIRO</option>
+                </select>
                 <span class="modal-hint">Verificar o setor correspondente no PGR do projeto. Caso não exista PGR específico, utilizar o setor TÉCNICO do PGR padrão Seteg.</span>
               </div>
 
@@ -600,7 +606,7 @@
                documentos são enviados pelo terceirizado por fora do sistema. -->
           <div class="form-section-block">
             <h4 class="form-subtitle">📎 Documentação Obrigatória <span style="font-weight:400;font-size:.72rem;color:var(--text-secondary)">(controle de recebimento — os documentos são enviados por fora do sistema)</span></h4>
-            <div class="form-grid">
+            <div class="doc-obrigatoria-grid">
               <label class="radio-pill"><input type="checkbox" id="cDocIdentidade"><span class="radio-pill-label">Documento oficial com foto (CNH, RG ou similar)</span></label>
               <label class="radio-pill"><input type="checkbox" id="cDocComprovanteResidencia"><span class="radio-pill-label">Comprovante de residência</span></label>
               <label class="radio-pill"><input type="checkbox" id="cDocCnpj"><span class="radio-pill-label">Cartão CNPJ (quando aplicável)</span></label>
@@ -631,7 +637,7 @@
       <div id="listaContratos" class="lista-wrapper">
 
         <!-- Seletor de tipo: blocos inline -->
-        <div class="sol-block nova-block" style="margin-bottom:.75rem">
+        <div class="sol-block nova-block" id="blocoNovoContrato" style="margin-bottom:.75rem">
           <div class="sol-block-header">
             <span class="sol-block-title">Novo Contrato</span>
             <span class="sol-block-sub">Selecione o tipo de contratação para abrir o formulário</span>
