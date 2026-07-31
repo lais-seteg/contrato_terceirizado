@@ -28,37 +28,45 @@ let entregas = [];
 // Botões de decisão no modal de análise (ícone + label + classe)
 const STATUS_BTNS = {
   "gestao": [
+    { status:"Em Elaboração",                  icon:"✎", label:"Em Elaboração",                  cls:"btn-status-warn" },
+    { status:"Aguardando Aprovação do Líder",   icon:"👁", label:"Aguardando Aprovação do Líder",   cls:"btn-status-warn" },
     { status:"Aprovado",   icon:"✓", label:"Aprovado",   cls:"btn-status-ok"   },
     { status:"Reprovado",  icon:"✗", label:"Reprovado",  cls:"btn-status-err"  },
-    { status:"Pendente",   icon:"⚠", label:"Pendente",   cls:"btn-status-warn" },
+    { status:"Pendente de Ajuste", icon:"⚠", label:"Pendente de Ajuste", cls:"btn-status-warn" },
     { status:"Finalizado", icon:"✔", label:"Finalizado", cls:"btn-status-final" },
   ],
   "gestao-pessoas": [
+    { status:"Em Elaboração",                  icon:"✎", label:"Em Elaboração",                  cls:"btn-status-warn" },
+    { status:"Aguardando Aprovação do Líder",   icon:"👁", label:"Aguardando Aprovação do Líder",   cls:"btn-status-warn" },
     { status:"Aprovado",   icon:"✓", label:"Aprovado",   cls:"btn-status-ok"   },
     { status:"Finalizado", icon:"✔", label:"Finalizado", cls:"btn-status-final" },
-    { status:"Pendente",   icon:"⚠", label:"Pendente",   cls:"btn-status-warn" },
+    { status:"Pendente de Ajuste", icon:"⚠", label:"Pendente de Ajuste", cls:"btn-status-warn" },
   ]
 };
 
-// Fluxo: Líder → Em Fila → Gestão aprova → Aprovado → GP finaliza → Finalizado
+// Fluxo: Líder → Pendente → DP elabora (Em Elaboração) → Aguardando Aprovação do Líder
+// → líder aprova → Aguardando Assinaturas → DP coleta assinaturas → Aprovado → Finalizado
 const STATUS_POR_PERFIL = {
-  solicitante:      ["Em Fila"],
-  "gestao-pessoas": ["Aprovado","Finalizado","Pendente"],
-  gestao:           ["Em Fila","Aprovado","Reprovado","Pendente","Finalizado"]
+  solicitante:      ["Pendente"],
+  "gestao-pessoas": ["Em Elaboração","Aguardando Aprovação do Líder","Aprovado","Finalizado","Pendente de Ajuste"],
+  gestao:           ["Em Elaboração","Aguardando Aprovação do Líder","Aprovado","Reprovado","Pendente de Ajuste","Finalizado"]
 };
 
 const STATUS_CLASS = {
   // Status ativos
-  "Em Fila":   "st-em-fila",
-  "Aprovado":  "st-aprovado",
-  "Reprovado": "st-reprovado",
-  "Pendente":  "st-pendente",
-  "Finalizado":"st-finalizado",
+  "Pendente":                       "st-pendente",
+  "Em Elaboração":                  "st-elaboracao",
+  "Aguardando Aprovação do Líder":  "st-aguar-lider",
+  "Aguardando Assinaturas":         "st-aguar-assinatura",
+  "Aprovado":                       "st-aprovado",
+  "Reprovado":                      "st-reprovado",
+  "Pendente de Ajuste":             "st-pendente",
+  "Finalizado":                     "st-finalizado",
+  "Cancelado":                      "st-cancelado",
   // Legado (dados existentes)
-  "Rascunho":"st-rascunho","Em Elaboração":"st-elaboracao",
+  "Rascunho":"st-rascunho","Em Fila":"st-em-fila",
   "Aguardando Gestão de Pessoas":"st-aguar-gp","Em Análise DP/RH":"st-analise",
-  "Aguardando Gestão":"st-aguar-gestao","Pendente de Ajuste":"st-pendente",
-  "Cancelado":"st-cancelado","Encerrado":"st-encerrado"
+  "Aguardando Gestão":"st-aguar-gestao","Encerrado":"st-encerrado"
 };
 
 const CAMPOS_CONTRATO = [
@@ -67,6 +75,10 @@ const CAMPOS_CONTRATO = [
   "cTipoContratacao","cTipoOutro","cDataInicio","cDataFim","cCentroCusto","cProjeto",
   "cUnidade","cValorMensal","cValorTotal","cObjeto","cObjetoOutro","cArt",
   "cEscopo","cCronograma",
+  "cCargo","cCargoOutro","cSetor",
+  "cObjetivoContrato","cObjetivoContratoOutro","cNaturezaContrato","cNaturezaContratoOutro",
+  "cCondicoesPagamento",
+  "cDocIdentidade","cDocComprovanteResidencia","cDocCnpj","cDocCurriculo",
   "cTerceirizadoId","cTercNome","cTercEmail","cTercCpf","cTercRg","cTercNascimento",
   "cTercFuncao","cTercTelefone","cTercEstado","cTercMunicipio","cTercEndereco",
   "cTercEstadoCivil","cTercGraduacao","cTercNivelFormacao","cTercAreaExpertise","cTercRegistro",
@@ -384,6 +396,12 @@ function registrarListeners() {
   document.querySelectorAll('input[name="depFormaPgto"]').forEach(r => r.addEventListener("change", () => toggleParcelasGrupo("depFormaPgto","grpDepParcelas")));
   document.querySelectorAll('input[name="auxFormaPgto"]').forEach(r => r.addEventListener("change", () => toggleParcelasGrupo("auxFormaPgto","grpAuxParcelas")));
 
+  // ── Identificação do terceirizado (busca por CPF) e novos campos de Dados do Contrato ──
+  document.getElementById("cTercCpf").addEventListener("input", buscarTerceirizadoPorCpf);
+  document.querySelectorAll('input[name="cObjetivoContrato"]').forEach(r => r.addEventListener("change", () => toggleCondicionalRadio("cObjetivoContrato","Outro","grpObjetivoContratoOutro")));
+  document.querySelectorAll('input[name="cNaturezaContrato"]').forEach(r => r.addEventListener("change", () => toggleCondicionalRadio("cNaturezaContrato","Outro","grpNaturezaContratoOutro")));
+  document.getElementById("cCargo").addEventListener("change", () => toggleCondicional("cCargo","Outro","grpCargoOutro"));
+
   document.getElementById("pillsStatusC").querySelectorAll(".filter-pill").forEach(btn => {
     btn.addEventListener("click", () => {
       document.getElementById("pillsStatusC").querySelectorAll(".filter-pill").forEach(b=>b.classList.remove("active"));
@@ -488,8 +506,8 @@ function aplicarPermissoes() {
 
 function podeEditar(item) {
   if (STATE.perfil !== "solicitante") return true;
-  // Líder pode editar somente os próprios contratos em "Em Fila" ou "Pendente" (retornado para ajuste)
-  return item && item.criadoPor === STATE.nomeUsuario && ["Em Fila","Pendente"].includes(item.status);
+  // Líder pode editar somente os próprios contratos em "Pendente" ou "Pendente de Ajuste" (retornado para ajuste)
+  return item && item.criadoPor === STATE.nomeUsuario && ["Pendente","Pendente de Ajuste"].includes(item.status);
 }
 function podeExcluir()  { return STATE.perfil === "gestao"; }
 function podeAnalisar() { return STATE.perfil !== "solicitante"; }
@@ -532,7 +550,7 @@ function renderDashboard() {
   document.getElementById("kpiAtivos").textContent     = meus.filter(c=>!["Reprovado","Finalizado"].includes(c.status)).length;
   document.getElementById("kpiAprovados").textContent  = meus.filter(c=>c.status==="Aprovado").length;
   document.getElementById("kpiVencendo").textContent   = meus.filter(c=>{const d=diasAteVencer(c.cDataFim);return d!==null&&d>=0&&d<=30;}).length;
-  document.getElementById("kpiPendencias").textContent = meus.filter(c=>["Em Fila","Pendente"].includes(c.status)).length;
+  document.getElementById("kpiPendencias").textContent = meus.filter(c=>["Pendente","Pendente de Ajuste"].includes(c.status)).length;
   document.getElementById("kpiTercs").textContent      = DB.terceirizados.length;
   document.getElementById("kpiAvalPendentes").textContent = meus.filter(c=>contratoAguardaAvaliacao(c)).length;
 
@@ -590,7 +608,6 @@ function selecionarTipoContrato(tipo) {
   document.getElementById("formContratoTitulo").textContent = "Novo Contrato";
   document.getElementById("listaContratos").classList.add("hidden");
   document.getElementById("formContrato").classList.remove("hidden");
-  popularSelectTerceirizados();
   const sel = document.getElementById("cTipoContratacao");
   sel.value = tipo;
   atualizarSecaoTerceirizado();
@@ -610,7 +627,7 @@ function fecharFormContrato() {
 function limparFormContrato() {
   document.getElementById("contratoForm").reset();
   document.getElementById("cId").value = "";
-  document.getElementById("cStatus").value = "Em Fila";
+  document.getElementById("cStatus").value = "Pendente";
   document.getElementById("secaoRespostaPendencia").classList.add("hidden");
   const rp = document.getElementById("cRespostaPendencia");
   if (rp) rp.value = "";
@@ -623,20 +640,81 @@ function limparFormContrato() {
   if (grpDepParc) grpDepParc.style.display = "none";
   const grpAuxParc = document.getElementById("grpAuxParcelas");
   if (grpAuxParc) grpAuxParc.style.display = "none";
+  limparMatchTerceirizadoCpf();
+  entregas = [];
+  renderEntregas();
+  ["grpCargoOutro","grpObjetivoContratoOutro","grpNaturezaContratoOutro"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.add("hidden");
+  });
 }
 
-function popularSelectTerceirizados() {
-  const sel = document.getElementById("cTerceirizadoId");
-  if (!sel) return;
-  sel.innerHTML = '<option value="">— Preencher manualmente abaixo —</option>';
-  DB.terceirizados.forEach(t => { sel.innerHTML += `<option value="${t.tId}">${esc(t.tNome)} · ${t.tTipo||""}</option>`; });
+// ══════════════════════════════════════════════════════
+//  IDENTIFICAÇÃO DO TERCEIRIZADO — busca por CPF (Fluxo 1/3)
+// ══════════════════════════════════════════════════════
+// Estritamente os dígitos do CPF, para comparar valores mascarados
+// de formas diferentes ("123.456.789-00" vs dígitos só) como iguais.
+function somenteDigitos(v) { return String(v || "").replace(/\D/g, ""); }
+
+function buscarTerceirizadoPorCpfDigitos(cpfDigitos) {
+  if (cpfDigitos.length !== 11) return null;
+  return DB.terceirizados.find(t => somenteDigitos(t.tCpf) === cpfDigitos) || null;
 }
 
-function preencherTerceirizadoDoSelect() {
-  const id = document.getElementById("cTerceirizadoId").value;
-  if (!id) return;
-  const t = DB.terceirizados.find(x=>x.tId===id);
-  if (!t) return;
+// Disparado a cada digitação no CPF do bloco "Identificação do Terceirizado".
+// Se o CPF já existir em Terceirizados, trava Nome/Telefone com os dados já
+// cadastrados (o líder não redigita e não vê mais nada do cadastro) e guarda
+// o id encontrado em #cTerceirizadoIdEncontrado — nenhum link será gerado ao
+// salvar, pois a pessoa já está cadastrada.
+function buscarTerceirizadoPorCpf() {
+  mascaraCpfId("cTercCpf");
+  const cpfDigitos = somenteDigitos(document.getElementById("cTercCpf").value);
+  const nomeEl = document.getElementById("cTercNome");
+  const telEl  = document.getElementById("cTercTelefone");
+  const badge  = document.getElementById("cTercCpfMatchBadge");
+  const idEl   = document.getElementById("cTerceirizadoIdEncontrado");
+
+  const t = buscarTerceirizadoPorCpfDigitos(cpfDigitos);
+  if (t) {
+    nomeEl.value = t.tNome || "";
+    telEl.value  = t.tTelefone || "";
+    nomeEl.readOnly = true;
+    telEl.readOnly  = true;
+    idEl.value = t.tId;
+    if (badge) { badge.textContent = "✓ Terceirizado já cadastrado — dados preenchidos automaticamente."; badge.classList.remove("hidden"); }
+  } else {
+    nomeEl.readOnly = false;
+    telEl.readOnly  = false;
+    idEl.value = "";
+    if (badge) badge.classList.add("hidden");
+  }
+}
+
+function limparMatchTerceirizadoCpf() {
+  const nomeEl = document.getElementById("cTercNome");
+  const telEl  = document.getElementById("cTercTelefone");
+  const badge  = document.getElementById("cTercCpfMatchBadge");
+  const idEl   = document.getElementById("cTerceirizadoIdEncontrado");
+  if (nomeEl) nomeEl.readOnly = false;
+  if (telEl)  telEl.readOnly  = false;
+  if (idEl)   idEl.value = "";
+  if (badge)  badge.classList.add("hidden");
+}
+
+// Botão "🔄 Sincronizar dados do terceirizado cadastrado" — só DP
+// (perm-gp-gestao). Puxa os dados pessoais completos já preenchidos pelo
+// próprio terceirizado (via link) para o bloco de identificação completa,
+// visível apenas ao DP, na hora de elaborar o contrato/documento.
+function sincronizarDadosTerceirizado() {
+  const cId = document.getElementById("cId").value;
+  let tercId = document.getElementById("cTerceirizadoIdEncontrado")?.value || "";
+  if (!tercId && cId) {
+    const atual = DB.contratos.find(c => c.id === cId);
+    tercId = atual?.cTerceirizadoId || "";
+  }
+  if (!tercId) { mostrarToast("Nenhum terceirizado vinculado a esta solicitação ainda.", "err"); return; }
+  const t = DB.terceirizados.find(x => x.tId === tercId);
+  if (!t) { mostrarToast("Cadastro do terceirizado não encontrado.", "err"); return; }
   const tipo = document.getElementById("cTipoContratacao").value;
   const set = (elId, val) => { const el = document.getElementById(elId); if (el && val) el.value = val; };
 
@@ -698,11 +776,45 @@ function atualizarSecaoTerceirizado() {
   document.getElementById("secaoCTercAuxiliar").classList.toggle("hidden", tipo !== "Prestador de serviço");
 }
 
+// Campos de "Dados do Contrato" que são radio-groups (por name) ou checkboxes —
+// não passam por coletarCampos()/CAMPOS_CONTRATO (que só lê .value de elementos
+// com id igual à chave), então são lidos/preenchidos manualmente aqui, seguindo o
+// mesmo padrão já usado em lerCamposDespachante/lerCamposAuxiliar.
+function lerCamposContrato(item) {
+  const marcado = name => document.querySelector(`input[name="${name}"]:checked`)?.value || "";
+  item.cArt = marcado("cArt");
+  item.cObjetivoContrato = marcado("cObjetivoContrato");
+  item.cNaturezaContrato = marcado("cNaturezaContrato");
+  const checado = id => document.getElementById(id)?.checked || false;
+  item.cDocIdentidade = checado("cDocIdentidade");
+  item.cDocComprovanteResidencia = checado("cDocComprovanteResidencia");
+  item.cDocCnpj = checado("cDocCnpj");
+  item.cDocCurriculo = checado("cDocCurriculo");
+}
+
+function preencherCamposContrato(item) {
+  const marcarRadio = (name, val) => { if (!val) return; const r = document.querySelector(`input[name="${name}"][value="${val}"]`); if (r) r.checked = true; };
+  marcarRadio("cArt", item.cArt);
+  marcarRadio("cObjetivoContrato", item.cObjetivoContrato);
+  marcarRadio("cNaturezaContrato", item.cNaturezaContrato);
+  toggleCondicionalRadio("cObjetivoContrato","Outro","grpObjetivoContratoOutro");
+  toggleCondicionalRadio("cNaturezaContrato","Outro","grpNaturezaContratoOutro");
+  toggleCondicional("cCargo","Outro","grpCargoOutro");
+  const marcarCheck = (id, val) => { const el = document.getElementById(id); if (el) el.checked = !!val; };
+  marcarCheck("cDocIdentidade", item.cDocIdentidade);
+  marcarCheck("cDocComprovanteResidencia", item.cDocComprovanteResidencia);
+  marcarCheck("cDocCnpj", item.cDocCnpj);
+  marcarCheck("cDocCurriculo", item.cDocCurriculo);
+}
+
 function lerCamposDespachante(item) {
   const v = id => (document.getElementById(id)?.value||"").trim();
-  item.cTercNome            = v("depNome");
-  item.cTercEmail           = v("depEmail");
-  item.cTercTelefone        = v("depTelefone");
+  // Nome/Telefone NÃO são lidos de depNome/depTelefone: esses campos ficam no
+  // bloco "Dados Completos" (só DP, vazio até o líder sincronizar) — a fonte
+  // da verdade é sempre o bloco "Identificação do Terceirizado" (cTercNome/
+  // cTercTelefone), já lido antes desta função rodar. Sobrescrever aqui
+  // apagava o que o líder acabou de digitar.
+  item.cTercEmail           = v("depEmail") || item.cTercEmail;
   item.cTercMunicipio       = v("depMunicipioEstado");
   item.cTercEstado          = "";
   item.cTercFuncao          = "Despachante";
@@ -744,10 +856,10 @@ function preencherCamposDespachante(item) {
 
 function lerCamposAuxiliar(item) {
   const v = id => (document.getElementById(id)?.value||"").trim();
-  item.cTercNome          = v("auxNome");
+  // Nome/Telefone NÃO são lidos de auxNome/auxTelefone — ver comentário
+  // equivalente em lerCamposDespachante().
   item.cTercGraduacao     = v("auxGraduacao");
-  item.cTercEmail         = v("auxEmail");
-  item.cTercTelefone      = v("auxTelefone");
+  item.cTercEmail         = v("auxEmail") || item.cTercEmail;
   item.cTercNascimento    = v("auxNascimento");
   item.cTercEndereco      = v("auxEndereco") || v("cTercEndereco");
   item.cTercMunicipio     = v("auxCidade");
@@ -808,31 +920,55 @@ function preencherCamposAuxiliar(item) {
 
 function salvarContrato() {
   const item = coletarCampos(CAMPOS_CONTRATO);
+  lerCamposContrato(item);
   if      (item.cTipoContratacao === "Despachante")     lerCamposDespachante(item);
   else if (item.cTipoContratacao === "Prestador de serviço") lerCamposAuxiliar(item);
+  item.entregas = entregas.map(({entrega,marco,data,valor,formaPagamento}) => ({entrega,marco,data,valor,formaPagamento}));
   item.id = item.cId || gerarId("CTR");
-  // Solicitante sempre submete como "Em Fila" (aguarda aprovação da Gestão)
-  item.status = STATE.perfil === "solicitante" ? "Em Fila" : (item.cStatus || "Em Fila");
+  // Solicitante sempre submete como "Pendente" (aguarda elaboração pelo DP/RH)
+  item.status = STATE.perfil === "solicitante" ? "Pendente" : (item.cStatus || "Pendente");
   const err = validarContrato(item);
   if (err) { mostrarToast(err,"err"); return; }
+
   const idx = DB.contratos.findIndex(c=>c.id===item.id);
-  if (idx >= 0) {
+  const criandoNovo = idx < 0;
+  // Só na criação: resolve quem é o terceirizado — reaproveita o cadastro já
+  // existente (encontrado por CPF) ou cria um registro-base agora, que o próprio
+  // terceirizado completa depois pelo link (Fluxo 1 → 2).
+  let criouCadastroNovo = false;
+  if (criandoNovo) {
+    const idEncontrado = document.getElementById("cTerceirizadoIdEncontrado")?.value || "";
+    if (idEncontrado) {
+      item.cTerceirizadoId = idEncontrado;
+    } else {
+      const stub = {
+        tId: gerarId("TER"), tNome: item.cTercNome, tCpf: item.cTercCpf, tTelefone: item.cTercTelefone,
+        tTipo: item.cTipoContratacao, criadoEm: new Date().toISOString(), criadoPor: STATE.nomeUsuario
+      };
+      DB.terceirizados.unshift(stub);
+      syncTerceirizado(stub);
+      item.cTerceirizadoId = stub.tId;
+      criouCadastroNovo = true;
+    }
+  }
+
+  if (!criandoNovo) {
     const ant = DB.contratos[idx].status;
-    const eraPendente = ant === "Pendente" && STATE.perfil === "solicitante";
+    const eraPendenteAjuste = ant === "Pendente de Ajuste" && STATE.perfil === "solicitante";
     DB.contratos[idx] = { ...DB.contratos[idx], ...item, atualizadoEm:new Date().toISOString(), atualizadoPor:STATE.nomeUsuario };
 
-    if (eraPendente) {
-      // Líder respondendo à pendência: registra resposta e volta a Em Fila
+    if (eraPendenteAjuste) {
+      // Líder respondendo ao ajuste solicitado: registra resposta e volta a Pendente
       const resposta = (document.getElementById("cRespostaPendencia")?.value||"").trim()
         || "Contrato reenviado após ajuste pelo líder.";
       DB.contratos[idx].historico = [...(DB.contratos[idx].historico||[]), {
         data: new Date().toISOString(),
         usuario: STATE.nomeUsuario,
         perfil: STATE.perfil,
-        status: "Em Fila",
+        status: "Pendente",
         obs: resposta
       }];
-      registrarAuditoria("Resposta à Pendência","Contratos",item.id,ant,"Em Fila",resposta);
+      registrarAuditoria("Resposta à Pendência","Contratos",item.id,ant,"Pendente",resposta);
       mostrarToast("Contrato reenviado para análise.","ok");
     } else {
       registrarAuditoria("Edição","Contratos",item.id,ant,item.status,`Contrato de ${item.cTercNome||"-"}`);
@@ -843,20 +979,31 @@ function salvarContrato() {
     item.criadoEm  = new Date().toISOString();
     item.criadoPor = STATE.nomeUsuario;
     item.historico = [{ data:new Date().toISOString(), usuario:STATE.nomeUsuario, perfil:STATE.perfil, status:item.status, obs:"Contrato criado e enviado para análise." }];
+    // CPF não encontrado: gera o link único de preenchimento (24h, uso único).
+    // Se o CPF já existia, o cadastro é reaproveitado e nenhum link é gerado.
+    if (criouCadastroNovo) gerarLinkParaContrato(item);
     DB.contratos.unshift(item);
     registrarAuditoria("Criação","Contratos",item.id,"",item.status,`Contrato de ${item.cTercNome||"-"}`);
     syncContrato(item);
     mostrarToast("Contrato enviado para análise.","ok");
+    if (criouCadastroNovo) mostrarModalLinkContrato(item);
   }
   fecharFormContrato();
 }
 
 function validarContrato(item) {
-  if (!item.cTipoContratacao) return "Tipo de contratação não selecionado.";
-  if (!item.cTercNome)        return "Informe o nome completo (Q1).";
-  if (!item.cTercEmissao)     return "Informe se haverá emissão de nota fiscal ou recibo.";
-  if (!item.cTercFormaPgto)   return "Informe a forma de pagamento.";
-  if (item.cTercFormaPgto === "Parcelado" && !item.cTercParcelas) return "Informe o número de parcelas.";
+  if (!item.cTipoContratacao)     return "Tipo de contratação não selecionado.";
+  if (!item.cTercNome)            return "Informe o nome completo do terceirizado.";
+  if (!item.cTercCpf)             return "Informe o CPF do terceirizado.";
+  if (!item.cTercTelefone)        return "Informe o telefone do terceirizado.";
+  if (!item.cArt)                 return "Informe se há necessidade de ART.";
+  if (!item.cObjetivoContrato)    return "Selecione o objeto do contrato.";
+  if (item.cObjetivoContrato === "Outro" && !item.cObjetivoContratoOutro) return "Especifique o objeto do contrato.";
+  if (!item.cNaturezaContrato)    return "Selecione o tipo de contrato.";
+  if (item.cNaturezaContrato === "Outro" && !item.cNaturezaContratoOutro) return "Especifique o tipo de contrato.";
+  if (!item.cCargo)               return "Selecione o cargo.";
+  if (item.cCargo === "Outro" && !item.cCargoOutro) return "Especifique o cargo.";
+  if (!item.cSetor)               return "Informe o setor.";
   return null;
 }
 
@@ -866,7 +1013,6 @@ function editarContrato(id) {
   if (!podeEditar(item)) { mostrarToast("Sem permissão para editar.","err"); return; }
   limparFormContrato();
   document.getElementById("formContratoTitulo").textContent = "Editar Contrato · " + item.id;
-  popularSelectTerceirizados();
   CAMPOS_CONTRATO.forEach(campo => {
     const el = document.getElementById(campo);
     if (!el) return;
@@ -876,10 +1022,14 @@ function editarContrato(id) {
   document.getElementById("cId").value    = item.id;
   document.getElementById("cStatus").value = item.status;
   atualizarSecaoTerceirizado();
+  preencherCamposContrato(item);
+  if (item.cTercCpf) buscarTerceirizadoPorCpf();
+  entregas = (item.entregas||[]).map(e => ({...e, salvo:true}));
+  renderEntregas();
   if      (item.cTipoContratacao === "Despachante")       preencherCamposDespachante(item);
   else if (item.cTipoContratacao === "Prestador de serviço") preencherCamposAuxiliar(item);
   // Mostra seção de resposta à pendência para líder que está respondendo
-  const mostraPendencia = item.status === "Pendente" && STATE.perfil === "solicitante";
+  const mostraPendencia = item.status === "Pendente de Ajuste" && STATE.perfil === "solicitante";
   document.getElementById("secaoRespostaPendencia").classList.toggle("hidden", !mostraPendencia);
   if (mostraPendencia) {
     const rp = document.getElementById("cRespostaPendencia");
@@ -924,8 +1074,8 @@ function salvarAnalise() {
   let novoStatus = document.getElementById("analiseStatusVal").value;
   if (!id) return;
 
-  // Obs sem decisão explícita → entra como Pendente
-  if (!novoStatus && obs) novoStatus = "Pendente";
+  // Obs sem decisão explícita → entra como Pendente de Ajuste
+  if (!novoStatus && obs) novoStatus = "Pendente de Ajuste";
   if (!novoStatus) { mostrarToast("Selecione uma decisão ou adicione uma observação.","err"); return; }
 
   let contratoAtualizado;
@@ -1025,15 +1175,21 @@ function gerarHTMLDetalhes(item) {
     ${det("Nº",item.id)}${det("Status",statusBadge(item.status))}${det("Tipo",item.cTipoContratacao)}${det("Criado em",formatarDataHora(item.criadoEm))}${det("Por",item.criadoPor)}
     <div class="detail-section-title">A · Contrato</div>
     ${det("Nº Contrato",item.cNumeroContrato)}${det("Projeto",item.cProjeto)}${det("Início",formatarData(item.cDataInicio))}${det("Término",formatarData(item.cDataFim))}${det("Valor Total",item.cValorTotal?formatarMoeda(item.cValorTotal):"-")}
+    ${det("Necessidade de ART",item.cArt)}${det("Cargo",item.cCargo==="Outro"?item.cCargoOutro:item.cCargo)}${det("Setor",item.cSetor)}
+    ${det("Objeto do Contrato (classificação)",item.cObjetivoContrato==="Outro"?item.cObjetivoContratoOutro:item.cObjetivoContrato)}${det("Tipo de Contrato",item.cNaturezaContrato==="Outro"?item.cNaturezaContratoOutro:item.cNaturezaContrato)}
     ${det("Objeto",item.cObjeto,"full")}
+    ${det("Cronograma",item.cCronograma,"full")}${det("Dados para pagamento",item.cCondicoesPagamento,"full")}${det("Outras informações",item.cOutrasInfo,"full")}
     <div class="detail-section-title">B · Terceirizado / Prestador</div>
-    ${det("Nome",item.cTercNome)}${det("Função",item.cTercFuncao)}${det("E-mail",item.cTercEmail)}${det("Telefone",item.cTercTelefone)}
-    ${det("CPF",item.cTercCpf)}${det("RG",item.cTercRg)}${det("Estado Civil",item.cTercEstadoCivil)}${det("Nascimento",formatarData(item.cTercNascimento))}
+    ${det("Nome",item.cTercNome)}${det("CPF",item.cTercCpf)}${det("Telefone",item.cTercTelefone)}
+    ${STATE.perfil !== "solicitante" ? `
+    ${det("Função",item.cTercFuncao)}${det("E-mail",item.cTercEmail)}
+    ${det("RG",item.cTercRg)}${det("Estado Civil",item.cTercEstadoCivil)}${det("Nascimento",formatarData(item.cTercNascimento))}
     ${det("Endereço",item.cTercEndereco)}${det("Município",item.cTercMunicipio)}${det("Área",item.cTercAreaExpertise)}${det("Graduação",item.cTercGraduacao)}
     ${det("CNH",item.cTercCnh)}${det("Projetos Seteg",item.cTercProjetosSeteg)}${det("Comprovante",item.cTercComprovante)}${det("Emissão",item.cTercEmissao)}
     ${det("Forma Pgto",item.cTercFormaPgto)}${item.cTercFormaPgto==="Parcelado"?det("Parcelas",item.cTercParcelas):""}${det("Disponibilidade",item.cTercDisponibilidade)}
     ${det("Dados Bancários / Pix",item.cDadosPagamento,"full")}
     ${det("Emergência 1",emerg1)}${det("Emergência 2",emerg2)}
+    ` : ""}
     <div class="detail-section-title">C · Entregas</div>
     <div class="detail-item full"><span>Tabela</span><strong>${entregasHTML}</strong></div>
     ${item.cObsGP?`<div class="detail-section-title">Obs. DP/RH</div>${det("",item.cObsGP,"full")}`:""}
@@ -1138,10 +1294,16 @@ function renderContratos() {
       <td>${statusBadge(c.status)}</td>
       <td class="col-acoes"><div class="table-actions">
         <button class="btn-icon" title="Visualizar" onclick="verDetalhesContrato('${c.id}')">👁</button>
-        ${["Aprovado","Finalizado"].includes(c.status)
+        ${["Em Elaboração","Aguardando Aprovação do Líder","Aguardando Assinaturas","Aprovado","Finalizado"].includes(c.status)
           ? (c.cContratoHtml
             ? `<button class="btn-icon btn-icon-green" title="Ver / Baixar Contrato Gerado" onclick="abrirGerarContrato('${c.id}')">📄</button>`
             : `<button class="btn-icon btn-icon-teal" title="Gerar Contrato" onclick="abrirGerarContrato('${c.id}')">📄</button>`)
+          : ""}
+        ${(!c.cTerceirizadoId && ["Pendente","Em Elaboração"].includes(c.status))
+          ? `<button class="btn-icon" title="Copiar/gerar link para o terceirizado preencher" onclick="regenerarLinkContrato('${c.id}')">🔗</button>`
+          : ""}
+        ${(STATE.perfil==="solicitante" && c.criadoPor===STATE.nomeUsuario && c.status==="Aguardando Aprovação do Líder")
+          ? `<button class="btn-icon btn-icon-green" title="Revisar e Aprovar" onclick="abrirAprovacaoLider('${c.id}')">✅</button>`
           : ""}
         ${podeEditar(c)?`<button class="btn-icon btn-icon-orange" title="Editar" onclick="editarContrato('${c.id}')">✎</button>`:""}
         ${podeAnalisar()?`<button class="btn-icon btn-icon-green" title="Atualizar Status" onclick="abrirAnalise('${c.id}')">⚙</button>`:""}
@@ -1572,6 +1734,7 @@ function montarContratoHTML(item) {
     ${clausula(43, `Todas as obrigações e deveres contidos neste Contrato, poderão ser exigidos judicialmente, mesmo após do final mesmo, sendo este um documento com todos os efeitos de um Título Executivo Extrajudicial.`)}
     ${clausula(44, `As Partes pactuam que o presente Contrato pode sofrer alterações em suas cláusulas por meio de Aditivo Contratual, firmado pelas Partes.`)}
     ${clausula(45, `Fica estabelecido que o relacionamento entre as Partes, visando resguardar responsabilidades e obrigações, será normalmente pela forma escrita, através de consultas e respostas.`)}
+    ${clausula(46, `O responsável pela contratação deverá alinhar previamente com o terceirizado os critérios de validação da entrega, bem como o prazo necessário para análise e aprovação técnica da demanda, garantindo ciência das etapas internas do processo. Após a validação técnica, o processo será encaminhado ao setor financeiro, que terá prazo de até 10 dias para efetivação do pagamento. Todo terceirizado deverá emitir nota fiscal para viabilização do pagamento pelos serviços prestados. Eventuais exceções deverão ser previamente alinhadas e aprovadas pela Gerência Administrativa/Financeira e pela Diretoria de Projetos.`)}
 
     <p class="cg-p">E, por estarem justas e convencionadas, as Partes assinam o presente Contrato em 02 (duas) vias de igual teor, juntamente com 02 (duas) testemunhas instrumentárias.</p>
 
@@ -1593,8 +1756,8 @@ function montarContratoHTML(item) {
 
     <p class="cg-p cg-testemunhas">TESTEMUNHAS:</p>
     <div class="cg-wit-grid">
-      <div class="cg-sign-box"><div class="cg-sign-line"></div><div>Nome:</div><div>CPF:</div></div>
-      <div class="cg-sign-box"><div class="cg-sign-line"></div><div>Nome:</div><div>CPF:</div></div>
+      <div class="cg-sign-box"><div class="cg-sign-line"></div><div>Nome: Eveline Andrade Mesquita</div><div>CPF: 032.392.603-79</div></div>
+      <div class="cg-sign-box"><div class="cg-sign-line"></div><div>Nome: Talita de Lima Rodrigues</div><div>CPF: 028.261.183-58</div></div>
     </div>
   `;
 }
@@ -1723,6 +1886,96 @@ function copiarLinkCadastro() {
   navigator.clipboard.writeText(url)
     .then(() => mostrarToast('Link de cadastro copiado! Envie para o terceirizado.', 'ok'))
     .catch(() => mostrarToast('Copie o link manualmente: ' + url, 'err'));
+}
+
+// ══════════════════════════════════════════════════════
+//  LINK ÚNICO DE PREENCHIMENTO (por contrato, 24h, uso único)
+// ══════════════════════════════════════════════════════
+function gerarUUID() {
+  if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, c => {
+    const r = Math.random() * 16 | 0, v = c === "x" ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+
+function gerarLinkParaContrato(item) {
+  item.cLinkToken = gerarUUID();
+  item.cLinkExpiraEm = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+  item.cLinkUsado = false;
+}
+
+function mostrarModalLinkContrato(item) {
+  const url = new URL(`cadastro.html?ctr=${encodeURIComponent(item.id)}&tk=${encodeURIComponent(item.cLinkToken)}`, window.location.href).href;
+  document.getElementById("linkContratoGerado").value = url;
+  abrirModal("modalLinkContrato");
+}
+
+function copiarLinkContratoGerado() {
+  const url = document.getElementById("linkContratoGerado").value;
+  navigator.clipboard.writeText(url)
+    .then(() => mostrarToast("Link copiado! Envie para o terceirizado.", "ok"))
+    .catch(() => mostrarToast("Copie o link manualmente: " + url, "err"));
+}
+
+function regenerarLinkContrato(id) {
+  const item = DB.contratos.find(c => c.id === id);
+  if (!item) return;
+  if (item.cTerceirizadoId) { mostrarToast("Este contrato já tem um terceirizado vinculado.", "err"); return; }
+  if (!confirm("Isso invalida o link anterior (se ainda não usado) e gera um novo. Continuar?")) return;
+  gerarLinkParaContrato(item);
+  syncContrato(item);
+  mostrarModalLinkContrato(item);
+}
+
+// ══════════════════════════════════════════════════════
+//  APROVAÇÃO DO LÍDER (scroll obrigatório até o fim)
+// ══════════════════════════════════════════════════════
+function abrirAprovacaoLider(id) {
+  const item = DB.contratos.find(c => c.id === id);
+  if (!item) return;
+  if (item.status !== "Aguardando Aprovação do Líder") { mostrarToast("Este contrato não está aguardando sua aprovação.", "err"); return; }
+  if (item.criadoPor !== STATE.nomeUsuario) { mostrarToast("Sem permissão.", "err"); return; }
+
+  document.getElementById("modalAprovacaoLider").dataset.currentId = id;
+  const btn = document.getElementById("btnAprovarLider");
+  btn.disabled = true;
+  btn.textContent = "Role até o final para aprovar";
+
+  abrirModal("modalAprovacaoLider");
+  const corpo = document.getElementById("aprovacaoLiderBody");
+  const area  = document.getElementById("aprovacaoLiderArea");
+  paginarContrato(area, item.cContratoHtml || montarContratoHTML(item));
+  corpo.scrollTop = 0;
+
+  function liberarSeChegouAoFim() {
+    if (corpo.scrollTop + corpo.clientHeight >= corpo.scrollHeight - 4) {
+      btn.disabled = false;
+      btn.textContent = "✓ Aprovar Contrato";
+    }
+  }
+  corpo.onscroll = liberarSeChegouAoFim;
+  // Documento curto o bastante para caber sem rolagem: já libera direto.
+  setTimeout(liberarSeChegouAoFim, 50);
+}
+
+function aprovarComoLider() {
+  const id = document.getElementById("modalAprovacaoLider").dataset.currentId;
+  const idx = DB.contratos.findIndex(c => c.id === id);
+  if (idx < 0) return;
+  const ant = DB.contratos[idx].status;
+  DB.contratos[idx].status = "Aguardando Assinaturas";
+  DB.contratos[idx].historico = [...(DB.contratos[idx].historico || []), {
+    data: new Date().toISOString(), usuario: STATE.nomeUsuario, perfil: STATE.perfil,
+    status: "Aguardando Assinaturas", obs: "Contrato revisado e aprovado pelo líder solicitante."
+  }];
+  DB.contratos[idx].atualizadoEm = new Date().toISOString();
+  DB.contratos[idx].atualizadoPor = STATE.nomeUsuario;
+  registrarAuditoria("Aprovação do Líder", "Contratos", id, ant, "Aguardando Assinaturas", "Aprovado pelo líder; encaminhado ao DP para assinaturas.");
+  syncContrato(DB.contratos[idx]);
+  fecharModal("modalAprovacaoLider");
+  renderContratos();
+  mostrarToast("Contrato aprovado! Encaminhado ao DP para assinaturas.", "ok");
 }
 
 // ══════════════════════════════════════════════════════
@@ -1945,6 +2198,7 @@ function gerarId(prefixo){
 function coletarCampos(campos){const obj={};campos.forEach(c=>{const el=document.getElementById(c);if(el)obj[c]=el.value?el.value.trim():"";});return obj;}
 function toggleCondicional(selectId,valorAlvo,grupoId){const sel=document.getElementById(selectId);const grp=document.getElementById(grupoId);if(!sel||!grp)return;grp.classList.toggle("hidden",sel.value!==valorAlvo);}
 function toggleParcelasGrupo(radioName,grupoId){const grp=document.getElementById(grupoId);if(!grp)return;const marcado=document.querySelector(`input[name="${radioName}"]:checked`)?.value==="Parcelado";grp.style.display=marcado?"":"none";}
+function toggleCondicionalRadio(radioName,valorAlvo,grupoId){const grp=document.getElementById(grupoId);if(!grp)return;const marcado=document.querySelector(`input[name="${radioName}"]:checked`)?.value===valorAlvo;grp.classList.toggle("hidden",!marcado);}
 function diasAteVencer(dataStr){if(!dataStr)return null;const h=new Date();h.setHours(0,0,0,0);const f=new Date(dataStr+"T00:00:00");return Math.round((f-h)/86400000);}
 function formatarData(data){if(!data)return"-";const d=data.length>10?new Date(data):new Date(data+"T00:00:00");if(isNaN(d))return"-";return d.toLocaleDateString("pt-BR");}
 function formatarDataHora(data){if(!data)return"-";const d=new Date(data);if(isNaN(d))return"-";return d.toLocaleString("pt-BR");}

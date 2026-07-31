@@ -246,6 +246,8 @@ body::before{content:'';position:fixed;inset:0;background:rgba(6,13,31,.92);z-in
 .st-reprovado{background:rgba(255,93,93,.12);color:var(--red);border-color:rgba(255,93,93,.35)}
 .st-pendente{background:rgba(251,225,34,.1);color:#d4b800;border-color:rgba(251,225,34,.3)}
 .st-finalizado{background:rgba(26,188,156,.12);color:var(--teal);border-color:rgba(26,188,156,.35)}
+.st-aguar-lider{background:rgba(90,141,208,.12);color:#88bbff;border-color:rgba(90,141,208,.35)}
+.st-aguar-assinatura{background:rgba(155,89,182,.12);color:var(--purple);border-color:rgba(155,89,182,.35)}
 /* ── Status legado (dados existentes) ── */
 .st-rascunho{background:rgba(108,117,125,.12);color:#9aa0ab;border-color:rgba(108,117,125,.35)}
 .st-elaboracao{background:rgba(58,101,176,.12);color:var(--blue-light);border-color:rgba(58,101,176,.35)}
@@ -317,10 +319,10 @@ body::before{content:'';position:fixed;inset:0;background:rgba(6,13,31,.92);z-in
 /* Radio pills */
 .radio-group{display:flex;flex-wrap:wrap;gap:.32rem}
 .radio-pill{position:relative;cursor:pointer;display:inline-flex}
-.radio-pill input[type="radio"]{position:absolute;opacity:0;width:0;height:0;pointer-events:none}
+.radio-pill input[type="radio"],.radio-pill input[type="checkbox"]{position:absolute;opacity:0;width:0;height:0;pointer-events:none}
 .radio-pill-label{display:inline-flex;align-items:center;padding:.28rem .7rem;border:1px solid var(--border-color);border-radius:20px;background:transparent;color:var(--text-secondary);font-size:.72rem;font-weight:500;cursor:pointer;transition:var(--transition);white-space:nowrap;user-select:none}
 .radio-pill:hover .radio-pill-label{background:var(--bg-card-hover);color:var(--text-primary);border-color:var(--border-light)}
-.radio-pill input[type="radio"]:checked+.radio-pill-label{font-weight:700;background:rgba(90,141,208,.15);border-color:var(--blue-light);color:var(--blue-light)}
+.radio-pill input[type="radio"]:checked+.radio-pill-label,.radio-pill input[type="checkbox"]:checked+.radio-pill-label{font-weight:700;background:rgba(90,141,208,.15);border-color:var(--blue-light);color:var(--blue-light)}
 /* Cores por valor */
 .radio-pill[data-val="Excelente"] input:checked+.radio-pill-label{background:rgba(108,194,74,.15);border-color:var(--green);color:var(--green)}
 .radio-pill[data-val="Bom"] input:checked+.radio-pill-label{background:rgba(90,141,208,.15);border-color:var(--blue-light);color:var(--blue-light)}
@@ -461,7 +463,7 @@ body::before{content:'';position:fixed;inset:0;background:rgba(6,13,31,.92);z-in
 /* ─── GERAÇÃO DE CONTRATO (modelo Seteg) ────────────── */
 .modal-contrato{max-width:920px;max-height:94vh}
 .modal-body-contrato{background:#525659;padding:1.6rem;display:flex;flex-direction:column;align-items:center;gap:6mm}
-#contratoDocArea{outline:none;display:flex;flex-direction:column;align-items:center;gap:6mm;width:100%}
+#contratoDocArea,#aprovacaoLiderArea{outline:none;display:flex;flex-direction:column;align-items:center;gap:6mm;width:100%}
 .contrato-page{
   position:relative;width:210mm;height:297mm;flex-shrink:0;box-sizing:border-box;
   box-shadow:0 6px 24px rgba(0,0,0,.4);overflow:hidden;background:#fff;

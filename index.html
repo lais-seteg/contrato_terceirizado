@@ -58,7 +58,7 @@
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
         Contratos
       </button>
-      <button class="sidebar-btn" data-secao="terceirizados">
+      <button class="sidebar-btn perm-gp-gestao" data-secao="terceirizados">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         Terceirizados
       </button>
@@ -149,14 +149,39 @@
 
           <input type="hidden" id="cTipoContratacao" />
 
-          <!-- DADOS DO TERCEIRIZADO — campos variam por tipo -->
+          <!-- IDENTIFICAÇÃO DO TERCEIRIZADO — só o essencial para o líder. Nenhum
+               dado pessoal sensível é preenchido aqui: o próprio terceirizado
+               completa o cadastro pelo link gerado ao salvar (ou, se o CPF já
+               existir, o cadastro existente é reaproveitado automaticamente). -->
           <div class="form-section-block">
-
-            <div class="form-grid" style="margin-bottom:.75rem">
-              <div class="form-group full-width">
-                <label class="form-label">🔗 Vincular Terceirizado já cadastrado <span style="font-weight:400;font-size:.72rem;color:var(--text-secondary)">(preenche nome, CPF, RG e endereço automaticamente)</span></label>
-                <select id="cTerceirizadoId" class="form-control" onchange="preencherTerceirizadoDoSelect()"></select>
+            <h4 class="form-subtitle">👤 Identificação do Terceirizado</h4>
+            <div id="cTercCpfMatchBadge" class="pendencia-aviso hidden" style="color:var(--green);border-color:rgba(26,188,156,.35);background:rgba(26,188,156,.1)"></div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label class="form-label required">CPF</label>
+                <input id="cTercCpf" class="form-control" placeholder="000.000.000-00" maxlength="14" />
               </div>
+              <div class="form-group">
+                <label class="form-label required">Nome completo</label>
+                <input id="cTercNome" class="form-control" placeholder="Nome do terceirizado" />
+              </div>
+              <div class="form-group">
+                <label class="form-label required">Telefone</label>
+                <input id="cTercTelefone" class="form-control" placeholder="(00) 00000-0000" maxlength="15" oninput="mascaraTelId('cTercTelefone')" />
+              </div>
+            </div>
+            <input type="hidden" id="cTerceirizadoIdEncontrado" />
+          </div>
+
+          <!-- DADOS COMPLETOS DO TERCEIRIZADO — só DP/RH. Preenchidos pelo próprio
+               terceirizado via link; o DP sincroniza aqui para elaborar o contrato. -->
+          <div class="form-section-block perm-gp-gestao hidden" id="secaoIdentificacaoCompleta">
+            <h4 class="form-subtitle">🔒 Dados Completos do Terceirizado <span style="font-weight:400;font-size:.72rem;color:var(--text-secondary)">(visível só para DP/RH — preenchidos pelo próprio terceirizado)</span></h4>
+            <button type="button" class="btn btn-ghost" style="margin-bottom:.75rem" onclick="sincronizarDadosTerceirizado()">🔄 Sincronizar dados do terceirizado cadastrado</button>
+            <div class="form-grid" style="margin-bottom:.75rem">
+              <div class="form-group"><label class="form-label">RG</label><input id="cTercRg" class="form-control" placeholder="00.000.000-0" /></div>
+              <div class="form-group"><label class="form-label">Estado Civil</label><input id="cTercEstadoCivil" class="form-control" placeholder="Ex: solteiro(a), casado(a) sob regime de..." /></div>
+              <div class="form-group full-width"><label class="form-label">Endereço Completo</label><input id="cTercEndereco" class="form-control" placeholder="Rua, número, bairro, cidade/UF" /></div>
             </div>
 
             <!-- Formulário específico para Despachante -->
@@ -205,7 +230,6 @@
                   <label class="avaliacao-label required">Haverá emissão de</label>
                   <div class="radio-group">
                     <label class="radio-pill"><input type="radio" name="depEmissao" value="Nota fiscal"><span class="radio-pill-label">Nota fiscal</span></label>
-                    <label class="radio-pill"><input type="radio" name="depEmissao" value="Recibo"><span class="radio-pill-label">Recibo</span></label>
                   </div>
                 </div>
               </div>
@@ -336,7 +360,6 @@
                   <label class="avaliacao-label required">Haverá emissão de</label>
                   <div class="radio-group">
                     <label class="radio-pill"><input type="radio" name="auxEmissao" value="Nota fiscal"><span class="radio-pill-label">Nota fiscal</span></label>
-                    <label class="radio-pill"><input type="radio" name="auxEmissao" value="Recibo"><span class="radio-pill-label">Recibo</span></label>
                   </div>
                 </div>
               </div>
@@ -440,28 +463,150 @@
                 </div>
               </div>
             </div><!-- #secaoCTercAuxiliar -->
-          </div>
+          </div><!-- #secaoIdentificacaoCompleta -->
 
-          <!-- DADOS DO CONTRATO LEGAL — usados para gerar automaticamente o documento de contrato -->
+          <!-- DADOS DO CONTRATO — termos do contrato, preenchidos pelo líder -->
           <div class="form-section-block" id="secaoDadosContratoLegal">
             <h4 class="form-subtitle">📄 Dados do Contrato <span style="font-weight:400;font-size:.72rem;color:var(--text-secondary)">(usados para gerar o Contrato de Prestação de Serviços automaticamente)</span></h4>
             <div class="form-grid">
               <div class="form-group"><label class="form-label">Número do Contrato</label><input id="cNumeroContrato" class="form-control" placeholder="Ex: 04/2025" /></div>
               <div class="form-group"><label class="form-label">Projeto / Local</label><input id="cProjeto" class="form-control" placeholder="Ex: IBITU – CG1/CG2" /></div>
               <div class="form-group"><label class="form-label">Valor Total (R$)</label><input id="cValorTotal" class="form-control" placeholder="0,00" oninput="mascaraMoedaId('cValorTotal')" /></div>
-              <div class="form-group"><label class="form-label">Início da Vigência</label><input id="cDataInicio" type="date" class="form-control" /></div>
-              <div class="form-group"><label class="form-label">Término da Vigência</label><input id="cDataFim" type="date" class="form-control" /></div>
-              <div class="form-group"><label class="form-label">CPF do(a) Contratado(a)</label><input id="cTercCpf" class="form-control" placeholder="000.000.000-00" maxlength="14" /></div>
-              <div class="form-group"><label class="form-label">RG do(a) Contratado(a)</label><input id="cTercRg" class="form-control" placeholder="00.000.000-0" /></div>
-              <div class="form-group"><label class="form-label">Estado Civil do(a) Contratado(a)</label><input id="cTercEstadoCivil" class="form-control" placeholder="Ex: solteiro(a), casado(a) sob regime de..." /></div>
-              <div class="form-group full-width"><label class="form-label">Endereço Completo do(a) Contratado(a)</label><input id="cTercEndereco" class="form-control" placeholder="Rua, número, bairro, cidade/UF" /></div>
+              <div class="form-group">
+                <label class="form-label">Início da Vigência</label>
+                <input id="cDataInicio" type="date" class="form-control" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Término da Vigência</label>
+                <input id="cDataFim" type="date" class="form-control" />
+              </div>
+              <div class="form-group full-width">
+                <span class="modal-hint">A data de início deve anteceder as atividades de campo, pois documentos obrigatórios (ASO, treinamentos e demais documentos de SST) somente poderão ser emitidos após o início da vigência contratual.</span>
+              </div>
               <div class="form-group full-width"><label class="form-label">Objeto do Contrato</label><textarea id="cObjeto" class="form-control" rows="3" placeholder="Descreva os serviços específicos a serem prestados..."></textarea></div>
+
+              <div class="form-group full-width">
+                <label class="form-label required">Necessidade de ART</label>
+                <div class="radio-group">
+                  <label class="radio-pill"><input type="radio" name="cArt" value="Sim"><span class="radio-pill-label">Sim</span></label>
+                  <label class="radio-pill"><input type="radio" name="cArt" value="Não"><span class="radio-pill-label">Não</span></label>
+                </div>
+              </div>
+
+              <div class="form-group full-width">
+                <label class="form-label required">Objeto do contrato (classificação)</label>
+                <div class="radio-group">
+                  <label class="radio-pill"><input type="radio" name="cObjetivoContrato" value="Campo"><span class="radio-pill-label">Campo</span></label>
+                  <label class="radio-pill"><input type="radio" name="cObjetivoContrato" value="Relatório"><span class="radio-pill-label">Relatório</span></label>
+                  <label class="radio-pill"><input type="radio" name="cObjetivoContrato" value="Campo e Relatórios"><span class="radio-pill-label">Campo e Relatórios</span></label>
+                  <label class="radio-pill"><input type="radio" name="cObjetivoContrato" value="Outro"><span class="radio-pill-label">Outro</span></label>
+                </div>
+              </div>
+              <div class="form-group full-width hidden" id="grpObjetivoContratoOutro">
+                <label class="form-label">Especificar objeto do contrato</label>
+                <input id="cObjetivoContratoOutro" class="form-control" />
+              </div>
+
+              <div class="form-group full-width">
+                <label class="form-label required">Tipo de contrato</label>
+                <div class="radio-group">
+                  <label class="radio-pill"><input type="radio" name="cNaturezaContrato" value="Serviço pontual"><span class="radio-pill-label">Serviço pontual</span></label>
+                  <label class="radio-pill"><input type="radio" name="cNaturezaContrato" value="Campanha periódica"><span class="radio-pill-label">Campanha periódica</span></label>
+                  <label class="radio-pill"><input type="radio" name="cNaturezaContrato" value="Outro"><span class="radio-pill-label">Outro</span></label>
+                </div>
+              </div>
+              <div class="form-group full-width hidden" id="grpNaturezaContratoOutro">
+                <label class="form-label">Especificar tipo do contrato</label>
+                <input id="cNaturezaContratoOutro" class="form-control" />
+              </div>
+
+              <div class="form-group">
+                <label class="form-label required">Cargo</label>
+                <select id="cCargo" class="form-control">
+                  <option value="">Selecione</option>
+                  <option>ANALISTA AMBIENTAL I</option>
+                  <option>ANALISTA AMBIENTAL I BIÓLOGO</option>
+                  <option>ANALISTA AMBIENTAL II</option>
+                  <option>ANALISTA AMBIENTAL II BIÓLOGO</option>
+                  <option>ASSISTENTE AMBIENTAL</option>
+                  <option>AUXILIAR CAMPO</option>
+                  <option>COORDENADOR</option>
+                  <option>TÉCNICO AMBIENTAL</option>
+                  <option value="Outro">Outro</option>
+                </select>
+                <span class="modal-hint">Verificar inicialmente o PGR do projeto e identificar os cargos previstos. Caso não exista PGR específico, utilizar um dos cargos do PGR padrão Seteg. Caso seja necessária outra nomenclatura, consultar SST e Departamento Pessoal.</span>
+              </div>
+              <div class="form-group hidden" id="grpCargoOutro">
+                <label class="form-label">Especificar cargo</label>
+                <input id="cCargoOutro" class="form-control" />
+              </div>
+
+              <div class="form-group">
+                <label class="form-label required">Setor</label>
+                <input id="cSetor" class="form-control" />
+                <span class="modal-hint">Verificar o setor correspondente no PGR do projeto. Caso não exista PGR específico, utilizar o setor TÉCNICO do PGR padrão Seteg.</span>
+              </div>
+
+              <div class="form-group full-width">
+                <label class="form-label">Cronograma</label>
+                <textarea id="cCronograma" class="form-control" rows="4" placeholder="Detalhe todas as datas previstas para execução das atividades..."></textarea>
+              </div>
+
+              <div class="form-group full-width">
+                <label class="form-label">Dados para pagamento</label>
+                <textarea id="cCondicoesPagamento" class="form-control" rows="3" placeholder="Dados bancários ou chave Pix"></textarea>
+                <span class="modal-hint">Pagamentos somente poderão ser realizados em conta de titularidade do contratado.</span>
+              </div>
+
+              <div class="form-group full-width">
+                <label class="form-label">Entregas</label>
+                <div class="table-wrapper">
+                  <table class="art-table">
+                    <thead>
+                      <tr><th>Entrega</th><th>Marco</th><th>Data</th><th>Valor (R$)</th><th>Forma de Pagamento</th><th class="col-acoes">Ações</th></tr>
+                    </thead>
+                    <tbody id="entregasBody"></tbody>
+                    <tfoot>
+                      <tr><td colspan="3" style="text-align:right;font-weight:600">Total</td><td id="totalEntregas" style="color:var(--green);font-weight:700">R$ 0,00</td><td colspan="2"></td></tr>
+                    </tfoot>
+                  </table>
+                  <div id="entregasVazio" class="table-empty" style="display:none"><div class="empty-state"><strong>Nenhuma entrega cadastrada.</strong></div></div>
+                </div>
+                <button type="button" class="btn btn-ghost" style="margin-top:.5rem" onclick="adicionarLinhaEntrega()">+ Adicionar entrega</button>
+              </div>
+
+              <div class="form-group full-width">
+                <label class="form-label">Outras informações</label>
+                <textarea id="cOutrasInfo" class="form-control" rows="3"></textarea>
+              </div>
+
+              <div class="form-group full-width">
+                <label class="form-label">Observações</label>
+                <div class="pendencia-aviso" style="color:var(--text-secondary);border-color:var(--border-color);background:var(--bg-secondary)">
+                  O responsável pela contratação deverá alinhar previamente com o terceirizado os critérios de validação da entrega, bem como o prazo necessário para análise e aprovação técnica da demanda, garantindo ciência das etapas internas do processo.<br><br>
+                  Após a validação técnica, o processo será encaminhado ao setor financeiro, que terá prazo de até 10 dias para efetivação do pagamento.<br><br>
+                  Todo terceirizado deverá emitir nota fiscal para viabilização do pagamento pelos serviços prestados.<br><br>
+                  Eventuais exceções deverão ser previamente alinhadas e aprovadas pela Gerência Administrativa/Financeira e pela Diretoria de Projetos.
+                </div>
+              </div>
             </div>
           </div>
 
-          <!-- RESPOSTA À PENDÊNCIA — visível apenas quando líder edita contrato Pendente -->
+          <!-- DOCUMENTAÇÃO OBRIGATÓRIA — checklist de controle, sem upload. Os
+               documentos são enviados pelo terceirizado por fora do sistema. -->
+          <div class="form-section-block">
+            <h4 class="form-subtitle">📎 Documentação Obrigatória <span style="font-weight:400;font-size:.72rem;color:var(--text-secondary)">(controle de recebimento — os documentos são enviados por fora do sistema)</span></h4>
+            <div class="form-grid">
+              <label class="radio-pill"><input type="checkbox" id="cDocIdentidade"><span class="radio-pill-label">Documento oficial com foto (CNH, RG ou similar)</span></label>
+              <label class="radio-pill"><input type="checkbox" id="cDocComprovanteResidencia"><span class="radio-pill-label">Comprovante de residência</span></label>
+              <label class="radio-pill"><input type="checkbox" id="cDocCnpj"><span class="radio-pill-label">Cartão CNPJ (quando aplicável)</span></label>
+              <label class="radio-pill"><input type="checkbox" id="cDocCurriculo"><span class="radio-pill-label">Currículo</span></label>
+            </div>
+          </div>
+
+          <!-- RESPOSTA À PENDÊNCIA — visível apenas quando líder edita contrato Pendente de Ajuste -->
           <div class="form-section-block secao-pendencia hidden" id="secaoRespostaPendencia">
-            <div class="pendencia-aviso">⚠ Este contrato está <strong>Pendente</strong>. Faça os ajustes necessários e informe sua resposta antes de reenviar.</div>
+            <div class="pendencia-aviso">⚠ Este contrato está <strong>Pendente de Ajuste</strong>. Faça os ajustes necessários e informe sua resposta antes de reenviar.</div>
             <h4 class="form-subtitle" style="color:#c8a800">Resposta à Pendência</h4>
             <div class="form-grid">
               <div class="form-group full-width">
@@ -510,10 +655,13 @@
         <div class="table-controls">
           <div class="filter-pills" id="pillsStatusC">
             <button class="filter-pill active" data-status="">Todos</button>
-            <button class="filter-pill" data-status="Em Fila">Em Fila</button>
+            <button class="filter-pill" data-status="Pendente">Pendente</button>
+            <button class="filter-pill" data-status="Em Elaboração">Em Elaboração</button>
+            <button class="filter-pill" data-status="Aguardando Aprovação do Líder">Aguardando Aprovação do Líder</button>
+            <button class="filter-pill" data-status="Aguardando Assinaturas">Aguardando Assinaturas</button>
             <button class="filter-pill" data-status="Aprovado">Aprovado</button>
             <button class="filter-pill" data-status="Reprovado">Reprovado</button>
-            <button class="filter-pill" data-status="Pendente">Pendente</button>
+            <button class="filter-pill" data-status="Pendente de Ajuste">Pendente de Ajuste</button>
             <button class="filter-pill" data-status="Finalizado">Finalizado</button>
           </div>
           <div class="filter-row">
@@ -634,7 +782,7 @@
                 <select id="tComprovante" class="form-control"><option value="">Selecione</option><option>Pessoa jurídica</option><option>Pessoa física</option></select>
               </div>
               <div class="form-group"><label class="form-label">Haverá emissão de</label>
-                <select id="tEmissao" class="form-control"><option value="">Selecione</option><option>Nota fiscal</option><option>Recibo</option></select>
+                <select id="tEmissao" class="form-control"><option value="">Selecione</option><option>Nota fiscal</option></select>
               </div>
               <div class="form-group"><label class="form-label">Forma de pagamento</label>
                 <select id="tFormaPgto" class="form-control"><option value="">Selecione</option><option>Pix</option><option>Transferência bancária</option><option>Boleto</option><option>Parcelado</option></select>
@@ -1022,6 +1170,47 @@
       <button class="btn btn-ghost" id="btnFecharContratoDocOk">Fechar</button>
       <button class="btn btn-ghost" id="btnRegerarContratoDoc">🔄 Gerar Novamente</button>
       <button class="btn btn-primary" id="btnExportarContratoPDF">⬇️ Baixar PDF</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Link de Preenchimento do Terceirizado -->
+<div id="modalLinkContrato" class="modal-overlay">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">
+      <h2>🔗 Link de preenchimento gerado</h2>
+      <button class="modal-close" onclick="fecharModal('modalLinkContrato')">×</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:.85rem;color:var(--text-secondary);margin-bottom:.75rem">
+        Envie este link ao terceirizado para que ele preencha seus próprios dados.
+        O link expira em 24h e só pode ser respondido uma vez.
+      </p>
+      <div class="form-group">
+        <input id="linkContratoGerado" class="form-control" readonly onclick="this.select()" />
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="fecharModal('modalLinkContrato')">Fechar</button>
+      <button class="btn btn-primary" onclick="copiarLinkContratoGerado()">📋 Copiar link</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Aprovação do Líder (scroll obrigatório até o fim para liberar o botão) -->
+<div id="modalAprovacaoLider" class="modal-overlay">
+  <div class="modal modal-contrato">
+    <div class="modal-header">
+      <h2>👁 Revisão e Aprovação do Contrato</h2>
+      <button class="modal-close" onclick="fecharModal('modalAprovacaoLider')">×</button>
+    </div>
+    <div class="modal-body modal-body-contrato" id="aprovacaoLiderBody">
+      <p class="contrato-doc-hint">Leia o contrato até o final. O botão de aprovação só é liberado depois que você rolar o documento inteiro.</p>
+      <div id="aprovacaoLiderArea"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="fecharModal('modalAprovacaoLider')">Fechar</button>
+      <button class="btn btn-primary" id="btnAprovarLider" disabled onclick="aprovarComoLider()">Role até o final para aprovar</button>
     </div>
   </div>
 </div>

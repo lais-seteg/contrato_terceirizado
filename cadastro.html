@@ -368,6 +368,15 @@
     <div id="successId" class="success-id"></div>
   </div>
 
+  <!-- Link inválido/expirado/já usado (oculto inicialmente) -->
+  <div id="linkInvalidoBox" class="success-box hidden">
+    <div class="success-circle" style="background:#FF5D5D">✕</div>
+    <h2>Link inválido</h2>
+    <p>Este link expirou. Solicite um novo cadastro ao responsável.<br>
+      <small>(O link também deixa de funcionar se já tiver sido utilizado, ou se o
+      endereço estiver incorreto.)</small></p>
+  </div>
+
   <form id="cadForm" novalidate>
 
     <p class="cad-required-note">Campos marcados com <span>*</span> são obrigatórios.</p>
@@ -582,7 +591,6 @@
           <select id="tEmissao" class="form-control">
             <option value="">Selecione</option>
             <option>Nota fiscal</option>
-            <option>Recibo</option>
           </select>
         </div>
         <div class="form-group">
@@ -654,6 +662,22 @@
       </div>
     </div>
 
+    <!-- ── 6 · Documentação obrigatória — lembrete, sem upload no formulário ── -->
+    <div class="cad-section">
+      <div class="cad-section-head">
+        <div class="cad-section-num">6</div>
+        <span class="cad-section-title">Documentação obrigatória</span>
+      </div>
+      <p class="cad-hint">Além deste formulário, envie separadamente (e-mail ou WhatsApp) para a
+        pessoa responsável pela contratação os seguintes documentos:</p>
+      <ul class="cad-hint" style="margin:.4rem 0 0 1.1rem">
+        <li>Documento oficial com foto (CNH, RG ou similar)</li>
+        <li>Comprovante de residência</li>
+        <li>Cartão CNPJ (quando aplicável)</li>
+        <li>Currículo</li>
+      </ul>
+    </div>
+
     <!-- ── Enviar ── -->
     <div class="cad-submit-wrap">
       <button type="button" id="btnEnviar">Enviar Cadastro</button>
@@ -677,8 +701,64 @@
   const SUPA_KEY = 'sb_publishable_4gHAO6N33CaLCKgVzPa6Dw_YMP5LXo4';
   const supa = supabase.createClient(SUPA_URL, SUPA_KEY);
 
+  // Preenchido quando o acesso vem de um link de solicitação específico
+  // (?ctr=CTR-000X&tk=<token>) — ver validarLinkContrato(). Nesse caso o
+  // cadastro em "terceirizados" já existe (criado pelo líder com Nome/CPF/
+  // Telefone ao abrir a solicitação) — o envio faz UPDATE nesse registro,
+  // nunca um INSERT novo.
+  let contratoVinculado = null;
+
   // ── Utilitários ──────────────────────────────────────
   function v(id) { return (document.getElementById(id)?.value || '').trim(); }
+
+  // ── Link único de preenchimento (24h, uso único) ─────
+  async function validarLinkContrato() {
+    const params = new URLSearchParams(window.location.search);
+    const ctr = params.get('ctr');
+    const tk  = params.get('tk');
+    if (!ctr || !tk) return; // acesso genérico (link fixo da seção Terceirizados) — segue normal
+
+    document.getElementById('cadForm').classList.add('hidden');
+    const { data: contrato, error } = await supa.from('contratos')
+      .select('id, c_link_token, c_link_expira_em, c_link_usado, c_tipo_contratacao, c_terceirizado_id')
+      .eq('id', ctr)
+      .maybeSingle();
+
+    const invalido = error || !contrato
+      || contrato.c_link_token !== tk
+      || contrato.c_link_usado
+      || !contrato.c_link_expira_em
+      || new Date() >= new Date(contrato.c_link_expira_em);
+
+    if (invalido) {
+      document.getElementById('linkInvalidoBox').classList.remove('hidden');
+      return;
+    }
+
+    contratoVinculado = contrato;
+    document.getElementById('cadForm').classList.remove('hidden');
+    if (contrato.c_tipo_contratacao) {
+      const selTipo = document.getElementById('tTipo');
+      selTipo.value = contrato.c_tipo_contratacao;
+      selTipo.disabled = true;
+    }
+
+    // Pré-preenche e trava Nome/CPF/Telefone já capturados pelo líder ao abrir
+    // a solicitação — o terceirizado só completa o restante do cadastro.
+    if (contrato.c_terceirizado_id) {
+      const { data: terc } = await supa.from('terceirizados')
+        .select('t_nome, t_cpf, t_telefone')
+        .eq('id', contrato.c_terceirizado_id)
+        .maybeSingle();
+      if (terc) {
+        ['tNome','tCpf','tTelefone'].forEach((id, i) => {
+          const el = document.getElementById(id);
+          const val = [terc.t_nome, terc.t_cpf, terc.t_telefone][i];
+          if (el && val) { el.value = val; el.readOnly = true; }
+        });
+      }
+    }
+  }
 
   function toggleCnhCategoria(val) {
     document.getElementById('cnhCategoriaWrap').style.display = val === 'sim' ? 'inline-flex' : 'none';
@@ -738,7 +818,7 @@
     if (!telefone)  { mostrarToast('Informe seu telefone.', 'err'); document.getElementById('tTelefone').focus(); return; }
     if (!tipo)      { mostrarToast('Selecione o tipo de prestação de serviço.', 'err'); document.getElementById('tTipo').focus(); return; }
     if (!comprov)   { mostrarToast('Informe em nome de quem será o comprovante.', 'err'); document.getElementById('tComprovante').focus(); return; }
-    if (!emissao)   { mostrarToast('Informe se haverá nota fiscal ou recibo.', 'err'); document.getElementById('tEmissao').focus(); return; }
+    if (!emissao)   { mostrarToast('Informe se haverá emissão de nota fiscal.', 'err'); document.getElementById('tEmissao').focus(); return; }
     if (!formaPgto) { mostrarToast('Informe a forma de pagamento.', 'err'); document.getElementById('tFormaPgto').focus(); return; }
     if (formaPgto === 'Parcelado' && !v('tParcelas')) { mostrarToast('Informe o número de parcelas.', 'err'); document.getElementById('tParcelas').focus(); return; }
     if (!dados)     { mostrarToast('Informe os dados bancários ou chave Pix.', 'err'); document.getElementById('tDadosBancarios').focus(); return; }
@@ -750,10 +830,13 @@
     btn.textContent = 'Enviando…';
 
     try {
-      const id = await gerarProximoId();
+      // Quando o acesso vem de um link de solicitação, o registro em
+      // "terceirizados" já existe (stub criado pelo líder com Nome/CPF/
+      // Telefone) — completa esse registro via UPDATE. Sem link (acesso
+      // genérico pela seção Terceirizados), cria um registro novo via INSERT.
+      const idExistente = contratoVinculado?.c_terceirizado_id || null;
 
-      const row = {
-        id,
+      const dadosPessoais = {
         t_nome:            nome,
         t_tipo:            tipo,
         t_email:           email,
@@ -788,12 +871,20 @@
         t_emerg2_nome:     v('tEmerg2Nome')      || null,
         t_emerg2_tel:      v('tEmerg2Tel')       || null,
         t_projetos_seteg:  v('tProjetosSeteg')   || null,
-        t_outras_info:     v('tOutrasInfo')      || null,
-        criado_em:         new Date().toISOString(),
-        criado_por:        'Cadastro Externo'
+        t_outras_info:     v('tOutrasInfo')      || null
       };
 
-      const { error } = await supa.from('terceirizados').insert(row);
+      let id, error;
+      if (idExistente) {
+        id = idExistente;
+        ({ error } = await supa.from('terceirizados')
+          .update({ ...dadosPessoais, atualizado_em: new Date().toISOString() })
+          .eq('id', idExistente));
+      } else {
+        id = await gerarProximoId();
+        ({ error } = await supa.from('terceirizados')
+          .insert({ id, ...dadosPessoais, criado_em: new Date().toISOString(), criado_por: 'Cadastro Externo' }));
+      }
 
       if (error) {
         console.error(error);
@@ -801,6 +892,15 @@
         btn.disabled = false;
         btn.textContent = 'Enviar Cadastro';
         return;
+      }
+
+      // Consome o link (uso único) — o contrato permanece com seu status atual
+      // (base sempre "Pendente") até o DP dar seguimento à elaboração.
+      if (contratoVinculado) {
+        const { error: errCtr } = await supa.from('contratos')
+          .update({ c_link_usado: true })
+          .eq('id', contratoVinculado.id);
+        if (errCtr) console.error(errCtr);
       }
 
       document.getElementById('cadForm').classList.add('hidden');
