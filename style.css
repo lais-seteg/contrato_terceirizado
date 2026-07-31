@@ -464,7 +464,7 @@ body::before{content:'';position:fixed;inset:0;background:rgba(6,13,31,.92);z-in
 /* ─── GERAÇÃO DE CONTRATO (modelo Seteg) ────────────── */
 .modal-contrato{max-width:920px;max-height:94vh}
 .modal-body-contrato{background:#525659;padding:1.6rem;display:flex;flex-direction:column;align-items:center;gap:6mm}
-#contratoDocArea,#aprovacaoLiderArea{outline:none;display:flex;flex-direction:column;align-items:center;gap:6mm;width:100%}
+#contratoDocArea{outline:none;display:flex;flex-direction:column;align-items:center;gap:6mm;width:100%}
 .contrato-page{
   position:relative;width:210mm;height:297mm;flex-shrink:0;box-sizing:border-box;
   box-shadow:0 6px 24px rgba(0,0,0,.4);overflow:hidden;background:#fff;

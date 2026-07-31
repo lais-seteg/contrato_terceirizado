@@ -1163,8 +1163,9 @@
       <h2 id="modalContratoDocTitulo">📄 Contrato de Prestação de Serviços</h2>
       <button class="modal-close" id="btnFecharContratoDoc">×</button>
     </div>
-    <div class="modal-body modal-body-contrato">
+    <div class="modal-body modal-body-contrato" id="contratoDocBody">
       <p class="contrato-doc-hint" id="contratoDocHint">Os campos em <strong style="color:#000;background:#fff59d;padding:.05rem .3rem;border-radius:3px">amarelo</strong> ainda precisam ser completados manualmente. O documento inteiro é editável — as alterações são salvas automaticamente ao fechar ou baixar.</p>
+      <p class="contrato-doc-hint hidden" id="contratoDocAprovarHint">Leia o contrato até o final. O botão de aprovação só é liberado depois que você rolar o documento inteiro.</p>
       <div id="contratoDocArea" contenteditable="true" spellcheck="false"></div>
     </div>
     <div class="modal-footer">
@@ -1172,6 +1173,7 @@
       <button class="btn btn-ghost" id="btnRegerarContratoDoc">🔄 Gerar Novamente</button>
       <button class="btn btn-primary" id="btnExportarContratoPDF">⬇️ Baixar PDF</button>
       <button class="btn btn-primary hidden" id="btnEncaminharLider" onclick="encaminharParaLider()">📤 Encaminhar para Líder</button>
+      <button class="btn btn-primary hidden" id="btnAprovarLider" disabled onclick="aprovarComoLider()">Role até o final para aprovar</button>
     </div>
   </div>
 </div>
@@ -1199,23 +1201,6 @@
   </div>
 </div>
 
-<!-- Modal Aprovação do Líder (scroll obrigatório até o fim para liberar o botão) -->
-<div id="modalAprovacaoLider" class="modal-overlay">
-  <div class="modal modal-contrato">
-    <div class="modal-header">
-      <h2>👁 Revisão e Aprovação do Contrato</h2>
-      <button class="modal-close" onclick="fecharModal('modalAprovacaoLider')">×</button>
-    </div>
-    <div class="modal-body modal-body-contrato" id="aprovacaoLiderBody">
-      <p class="contrato-doc-hint">Leia o contrato até o final. O botão de aprovação só é liberado depois que você rolar o documento inteiro.</p>
-      <div id="aprovacaoLiderArea"></div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="fecharModal('modalAprovacaoLider')">Fechar</button>
-      <button class="btn btn-primary" id="btnAprovarLider" disabled onclick="aprovarComoLider()">Role até o final para aprovar</button>
-    </div>
-  </div>
-</div>
 
 <div id="printArea" class="print-area"></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>

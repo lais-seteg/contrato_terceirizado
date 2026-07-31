@@ -1312,9 +1312,6 @@ function renderContratos() {
         ${(!c.cTerceirizadoId && ["Pendente","Em Elaboração"].includes(c.status))
           ? `<button class="btn-icon" title="Copiar/gerar link para o terceirizado preencher" onclick="regenerarLinkContrato('${c.id}')">🔗</button>`
           : ""}
-        ${(STATE.perfil==="solicitante" && c.criadoPor===STATE.nomeUsuario && c.status==="Aguardando Aprovação do Líder")
-          ? `<button class="btn-icon btn-icon-green" title="Revisar e Aprovar" onclick="abrirAprovacaoLider('${c.id}')">✅</button>`
-          : ""}
         ${podeEditar(c)?`<button class="btn-icon btn-icon-orange" title="Editar" onclick="editarContrato('${c.id}')">✎</button>`:""}
         ${podeAnalisar()?`<button class="btn-icon btn-icon-green" title="Atualizar Status" onclick="abrirAnalise('${c.id}')">⚙</button>`:""}
         ${ehGestaoOuGP()?`<button class="btn-icon" title="Adicionar Observação" onclick="abrirModalObs('${c.id}')" style="font-size:.7rem">💬</button>`:""}
@@ -1425,6 +1422,30 @@ function abrirGerarContrato(id) {
   }
   const btnEncaminhar = document.getElementById("btnEncaminharLider");
   if (btnEncaminhar) btnEncaminhar.classList.toggle("hidden", !(ehGestaoOuGP() && item.status === "Em Elaboração"));
+
+  // Líder dono do contrato, aguardando aprovação: mostra o botão de aprovar
+  // direto aqui (mesmo modal de Ver/Baixar Contrato) — só libera depois que
+  // o líder rolar o documento inteiro.
+  const podeAprovar = STATE.perfil === "solicitante" && item.criadoPor === STATE.nomeUsuario && item.status === "Aguardando Aprovação do Líder";
+  const btnAprovar = document.getElementById("btnAprovarLider");
+  const hintAprovar = document.getElementById("contratoDocAprovarHint");
+  if (btnAprovar) btnAprovar.classList.toggle("hidden", !podeAprovar);
+  if (hintAprovar) hintAprovar.classList.toggle("hidden", !podeAprovar);
+  if (podeAprovar) {
+    btnAprovar.disabled = true;
+    btnAprovar.textContent = "Role até o final para aprovar";
+    const corpo = document.getElementById("contratoDocBody");
+    corpo.scrollTop = 0;
+    const liberarSeChegouAoFim = () => {
+      if (corpo.scrollTop + corpo.clientHeight >= corpo.scrollHeight - 4) {
+        btnAprovar.disabled = false;
+        btnAprovar.textContent = "✓ Aprovar Contrato";
+      }
+    };
+    corpo.onscroll = liberarSeChegouAoFim;
+    // Documento curto o bastante para caber sem rolagem: já libera direto.
+    setTimeout(liberarSeChegouAoFim, 50);
+  }
 }
 
 // Botão dedicado "Encaminhar para Líder" — DP já confirmou os documentos e
@@ -1983,40 +2004,16 @@ function regenerarLinkContrato(id) {
 }
 
 // ══════════════════════════════════════════════════════
-//  APROVAÇÃO DO LÍDER (scroll obrigatório até o fim)
+//  APROVAÇÃO DO LÍDER (scroll obrigatório até o fim) — dentro do próprio
+//  modal de Ver/Baixar Contrato (modalContratoDoc); ver abrirGerarContrato().
 // ══════════════════════════════════════════════════════
-function abrirAprovacaoLider(id) {
-  const item = DB.contratos.find(c => c.id === id);
-  if (!item) return;
-  if (item.status !== "Aguardando Aprovação do Líder") { mostrarToast("Este contrato não está aguardando sua aprovação.", "err"); return; }
-  if (item.criadoPor !== STATE.nomeUsuario) { mostrarToast("Sem permissão.", "err"); return; }
-
-  document.getElementById("modalAprovacaoLider").dataset.currentId = id;
-  const btn = document.getElementById("btnAprovarLider");
-  btn.disabled = true;
-  btn.textContent = "Role até o final para aprovar";
-
-  abrirModal("modalAprovacaoLider");
-  const corpo = document.getElementById("aprovacaoLiderBody");
-  const area  = document.getElementById("aprovacaoLiderArea");
-  paginarContrato(area, item.cContratoHtml || montarContratoHTML(item));
-  corpo.scrollTop = 0;
-
-  function liberarSeChegouAoFim() {
-    if (corpo.scrollTop + corpo.clientHeight >= corpo.scrollHeight - 4) {
-      btn.disabled = false;
-      btn.textContent = "✓ Aprovar Contrato";
-    }
-  }
-  corpo.onscroll = liberarSeChegouAoFim;
-  // Documento curto o bastante para caber sem rolagem: já libera direto.
-  setTimeout(liberarSeChegouAoFim, 50);
-}
-
 function aprovarComoLider() {
-  const id = document.getElementById("modalAprovacaoLider").dataset.currentId;
+  const id = document.getElementById("modalContratoDoc").dataset.currentId;
   const idx = DB.contratos.findIndex(c => c.id === id);
   if (idx < 0) return;
+  if (DB.contratos[idx].status !== "Aguardando Aprovação do Líder") { mostrarToast("Este contrato não está aguardando sua aprovação.", "err"); return; }
+  if (DB.contratos[idx].criadoPor !== STATE.nomeUsuario) { mostrarToast("Sem permissão.", "err"); return; }
+  salvarContratoDoc(); // garante que qualquer edição feita pelo líder fica salva e registrada no histórico antes de aprovar
   const ant = DB.contratos[idx].status;
   DB.contratos[idx].status = "Aguardando Assinaturas";
   DB.contratos[idx].historico = [...(DB.contratos[idx].historico || []), {
@@ -2027,7 +2024,7 @@ function aprovarComoLider() {
   DB.contratos[idx].atualizadoPor = STATE.nomeUsuario;
   registrarAuditoria("Aprovação do Líder", "Contratos", id, ant, "Aguardando Assinaturas", "Aprovado pelo líder; encaminhado ao DP para assinaturas.");
   syncContrato(DB.contratos[idx]);
-  fecharModal("modalAprovacaoLider");
+  fecharModal("modalContratoDoc");
   renderContratos();
   mostrarToast("Contrato aprovado! Encaminhado ao DP para assinaturas.", "ok");
 }
