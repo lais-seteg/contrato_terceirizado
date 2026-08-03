@@ -1546,14 +1546,32 @@ function confirmarExportarContratosPDF() {
 const PDF_COR = {
   azulEscuro:  [10, 36, 89],
   azulMedio:   [58, 101, 176],
+  azulClaro:   [90, 141, 208],
   laranja:     [255, 130, 0],
   verde:       [108, 194, 74],
   vermelho:    [255, 93, 93],
+  amarelo:     [200, 168, 0],
+  roxo:        [155, 89, 182],
+  teal:        [26, 188, 156],
   branco:      [255, 255, 255],
   offWhite:    [243, 246, 251],
   cinzaClaro:  [215, 225, 238],
   cinzaMedio:  [130, 150, 175],
   cinzaEscuro: [45, 60, 85],
+};
+
+// Mesma paleta semântica de status já usada na interface (STATUS_CLASS em
+// style.css) — dá pra reconhecer o status pela cor tanto na tela quanto no
+// relatório em PDF.
+const PDF_COR_STATUS = {
+  "Pendente":                      PDF_COR.amarelo,
+  "Em Elaboração":                 PDF_COR.azulMedio,
+  "Aguardando Aprovação do Líder": PDF_COR.azulClaro,
+  "Aguardando Assinaturas":        PDF_COR.roxo,
+  "Pendente de Ajuste":            PDF_COR.amarelo,
+  "Finalizado":                    PDF_COR.teal,
+  "Reprovado":                     PDF_COR.vermelho,
+  "Cancelado":                     PDF_COR.cinzaMedio,
 };
 const PDF_PG = { w: 210, h: 297, ml: 14, mr: 14, cw: 210 - 14 - 14 };
 let _pdfPagina = 0;
@@ -1701,6 +1719,50 @@ function pdfTabela(doc, y, headers, rows, titulo, colWidths, marca, rodapeTexto)
   return y + 4;
 }
 
+// Gráfico de barras horizontais — rótulo à esquerda, trilha cinza-clara de
+// fundo, barra colorida proporcional ao valor (escala 0-max), valor à
+// direita. "dados": [{label, valor, valorLabel?, cor?}]. "opts.max" define
+// a escala (senão usa o maior valor da lista); "opts.cor" é a cor padrão
+// das barras quando o item não tem "cor" própria.
+function pdfGraficoBarras(doc, y, dados, opts) {
+  opts = opts || {};
+  const cor    = opts.cor || PDF_COR.azulMedio;
+  const max    = opts.max || Math.max(...dados.map(d => d.valor), 1);
+  const labelW = opts.labelW || 46;
+  const valueW = opts.valueW || 22;
+  const barH   = 5.5;
+  const rowH   = 9;
+  const trackX = PDF_PG.ml + labelW;
+  const trackW = PDF_PG.cw - labelW - valueW;
+
+  dados.forEach(d => {
+    y = pdfCheckY(doc, y, rowH, opts.titulo, opts.marca, opts.rodapeTexto);
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7.5);
+    pdfFc(doc, PDF_COR.cinzaEscuro, "text");
+    const labelLinha = doc.splitTextToSize(pdfSan(d.label), labelW - 3)[0];
+    doc.text(labelLinha, PDF_PG.ml, y + barH / 2 + 1.3);
+
+    pdfFc(doc, PDF_COR.offWhite);
+    doc.roundedRect(trackX, y, trackW, barH, 1.2, 1.2, "F");
+
+    const pct = Math.max(0, Math.min(1, max > 0 ? d.valor / max : 0));
+    if (pct > 0) {
+      pdfFc(doc, d.cor || cor);
+      doc.roundedRect(trackX, y, Math.max(trackW * pct, 2.5), barH, 1.2, 1.2, "F");
+    }
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(7.5);
+    pdfFc(doc, PDF_COR.cinzaEscuro, "text");
+    doc.text(pdfSan(d.valorLabel != null ? d.valorLabel : String(d.valor)), trackX + trackW + 3, y + barH / 2 + 1.3);
+
+    y += rowH;
+  });
+  return y + 3;
+}
+
 function pdfPgCapa(doc, qtdContratos, valorTotal, filtros) {
   filtros = filtros || [];
   const isFiltrado = filtros.length > 0;
@@ -1836,6 +1898,13 @@ function gerarRelatorioContratosPDF(lista, filtros) {
   const prazoCumprido = avaliacoesDaLista.length
     ? Math.round(avaliacoesDaLista.filter(a => a.prazo === "Totalmente").length / avaliacoesDaLista.length * 100)
     : null;
+  const mediaCriterio = (campo) => {
+    const vals = avaliacoesDaLista.map(a => NOTA_QUALITATIVA[a[campo]]).filter(n => n !== undefined);
+    return vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : null;
+  };
+  const mediaCampo         = mediaCriterio("nivelCampo");
+  const mediaRelatorio     = mediaCriterio("nivelRelatorio");
+  const mediaRelacionamento = mediaCriterio("relacionamento");
 
   pdfPgCapa(doc, lista.length, valorTotal, filtros);
 
@@ -1866,14 +1935,42 @@ function gerarRelatorioContratosPDF(lista, filtros) {
   pdfKpiBox(doc, PDF_PG.ml, y, boxW, 20, "Avaliados", `${avaliacoesDaLista.length} de ${lista.length}`, PDF_COR.azulMedio);
   pdfKpiBox(doc, PDF_PG.ml + boxW + 4, y, boxW, 20, "Nota Média Geral", notaMedia!==null ? notaMedia.toFixed(1)+" / 5" : "Sem avaliações", PDF_COR.verde);
   pdfKpiBox(doc, PDF_PG.ml + (boxW + 4) * 2, y, boxW, 20, "Prazo Cumprido", prazoCumprido!==null ? prazoCumprido+"%" : "Sem avaliações", PDF_COR.laranja);
-  y += 28;
+  y += 26;
+
+  if (avaliacoesDaLista.length) {
+    y = pdfCheckY(doc, y, 40, titulo);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8);
+    pdfFc(doc, PDF_COR.cinzaMedio, "text");
+    doc.text("NOTAS MÉDIAS POR CRITÉRIO", PDF_PG.ml, y);
+    y += 5;
+    y = pdfGraficoBarras(doc, y, [
+      { label: "Campo",         valor: mediaCampo||0,          valorLabel: mediaCampo!==null ? mediaCampo.toFixed(1)+"/5" : "-", cor: PDF_COR.azulMedio },
+      { label: "Relatório",     valor: mediaRelatorio||0,      valorLabel: mediaRelatorio!==null ? mediaRelatorio.toFixed(1)+"/5" : "-", cor: PDF_COR.roxo },
+      { label: "Relacionamento", valor: mediaRelacionamento||0, valorLabel: mediaRelacionamento!==null ? mediaRelacionamento.toFixed(1)+"/5" : "-", cor: PDF_COR.teal },
+    ], { max: 5, titulo });
+    y += 3;
+  }
 
   y = pdfCheckY(doc, y, 30, titulo);
   y = pdfSecao(doc, y, "Distribuição por Status", PDF_COR.azulMedio);
   const statusCounts = {};
   lista.forEach(c => { const s = c.status||"-"; statusCounts[s] = (statusCounts[s]||0)+1; });
-  const statusRows = Object.entries(statusCounts).map(([s,n]) => [s, String(n), Math.round(n/lista.length*100)+"%"]);
-  y = pdfTabela(doc, y, ["Status","Quantidade","%"], statusRows, titulo, [100, 41, 41]);
+  const statusDados = Object.entries(statusCounts)
+    .sort((a,b) => b[1]-a[1])
+    .map(([s,n]) => ({ label: s, valor: n, valorLabel: `${n} (${Math.round(n/lista.length*100)}%)`, cor: PDF_COR_STATUS[s]||PDF_COR.cinzaMedio }));
+  y = pdfGraficoBarras(doc, y, statusDados, { titulo });
+
+  const tipoCounts = {};
+  lista.forEach(c => { const t = c.cTipoContratacao||"-"; tipoCounts[t] = (tipoCounts[t]||0)+1; });
+  if (Object.keys(tipoCounts).length > 1) {
+    y = pdfCheckY(doc, y, 30, titulo);
+    y = pdfSecao(doc, y, "Distribuição por Tipo de Contratação", PDF_COR.laranja);
+    const tipoDados = Object.entries(tipoCounts)
+      .sort((a,b) => b[1]-a[1])
+      .map(([t,n]) => ({ label: t, valor: n, valorLabel: `${n} (${Math.round(n/lista.length*100)}%)` }));
+    y = pdfGraficoBarras(doc, y, tipoDados, { titulo, cor: PDF_COR.laranja });
+  }
 
   if (avaliacoesDaLista.length) {
     y = pdfCheckY(doc, y, 30, titulo);
