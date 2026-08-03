@@ -1877,7 +1877,7 @@ function gerarRelatorioContratosPDF(lista, filtros) {
 
   if (avaliacoesDaLista.length) {
     y = pdfCheckY(doc, y, 30, titulo);
-    y = pdfSecao(doc, y, "Desempenho por Contrato", PDF_COR.verde);
+    y = pdfSecao(doc, y, "Avaliações por Contrato", PDF_COR.verde);
     const avalRows = avaliacoesDaLista.map(a => {
       const c = lista.find(x => x.id === a.contratoId);
       return [a.contratoId||"-", (c && c.cTercNome) || a.avaliado || "-", a.nivelCampo||"-", a.nivelRelatorio||"-", a.prazo||"-", a.relacionamento||"-"];
@@ -1911,7 +1911,7 @@ function gerarRelatorioContratosPDF(lista, filtros) {
 
   if (linhasTerceirizados.length) {
     y = pdfCheckY(doc, y, 30, titulo);
-    y = pdfSecao(doc, y, "Desempenho por Terceirizado", PDF_COR.azulMedio);
+    y = pdfSecao(doc, y, "Resumo de Desempenho por Terceirizado", PDF_COR.azulMedio);
     y = pdfTabela(doc, y, ["Terceirizado","Contratos","Avaliações","Nota Média","Prazo Cumprido"], linhasTerceirizados, titulo, [52, 30, 30, 35, 35]);
   }
 
