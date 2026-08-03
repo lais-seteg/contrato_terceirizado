@@ -544,12 +544,20 @@ function podeEditar(item) {
   return item && item.criadoPor === STATE.nomeUsuario && ["Pendente","Pendente de Ajuste"].includes(item.status);
 }
 
-// Enquanto o DP está elaborando o contrato ("Em Elaboração"), o líder não tem
-// acesso — só volta a aparecer para ele quando é encaminhado de volta
-// ("Aguardando Aprovação do Líder" em diante) ou quando ele mesmo o criou
-// ("Pendente"/"Pendente de Ajuste").
+// A solicitação (a linha do contrato) fica sempre visível para quem criou,
+// em qualquer status — o líder acompanha o andamento do próprio pedido o
+// tempo todo. Só o CONTRATO GERADO (o documento em si) fica bloqueado
+// enquanto o DP elabora: ver documentoVisivelParaLider() abaixo.
 function visivelParaLider(c) {
-  return c.criadoPor === STATE.nomeUsuario && c.status !== "Em Elaboração";
+  return c.criadoPor === STATE.nomeUsuario;
+}
+
+// O documento do contrato só pode ser aberto pelo líder depois que o DP
+// encaminha ("Aguardando Aprovação do Líder" em diante) — enquanto
+// "Pendente" ou "Em Elaboração", a solicitação aparece normalmente na
+// lista, mas o contrato em si ainda não fica acessível para ele.
+function documentoVisivelParaLider(c) {
+  return !["Pendente","Em Elaboração"].includes(c.status);
 }
 function podeExcluir()  { return STATE.perfil === "gestao"; }
 function podeAnalisar() { return STATE.perfil !== "solicitante"; }
@@ -1231,7 +1239,6 @@ function salvarObs() {
 function verDetalhesContrato(id) {
   const item = DB.contratos.find(c=>c.id===id);
   if (!item) return;
-  if (STATE.perfil==="solicitante" && !visivelParaLider(item)) { mostrarToast("Este contrato ainda está em elaboração pelo DP.","err"); return; }
   document.getElementById("modalDetalhesTitulo").textContent = "Contrato · " + item.id;
   document.getElementById("modalDetalhesBody").innerHTML = gerarHTMLDetalhes(item);
   document.getElementById("modalDetalhes").dataset.currentId = id;
@@ -1432,7 +1439,7 @@ function renderContratos() {
       <td>${statusBadge(c.status)}</td>
       <td class="col-acoes"><div class="table-actions">
         <button class="btn-icon" title="Visualizar" onclick="verDetalhesContrato('${c.id}')">👁</button>
-        ${["Em Elaboração","Aguardando Aprovação do Líder","Aguardando Assinaturas","Finalizado"].includes(c.status)
+        ${(STATE.perfil!=="solicitante" || documentoVisivelParaLider(c)) && ["Em Elaboração","Aguardando Aprovação do Líder","Aguardando Assinaturas","Finalizado"].includes(c.status)
           ? (c.cContratoHtml
             ? `<button class="btn-icon btn-icon-green" title="Ver / Baixar Contrato Gerado" onclick="abrirGerarContrato('${c.id}')">📄</button>`
             : `<button class="btn-icon btn-icon-teal" title="Gerar Contrato" onclick="abrirGerarContrato('${c.id}')">📄</button>`)
@@ -1460,7 +1467,7 @@ function renderContratos() {
 // ══════════════════════════════════════════════════════
 
 // Mesma regra de visibilidade da tabela de Contratos: líder só vê os
-// próprios (e nunca os que estão "Em Elaboração").
+// próprios (em qualquer status — a solicitação sempre aparece pra quem criou).
 function contratosVisiveisParaRelatorio() {
   return DB.contratos.filter(c => STATE.perfil !== "solicitante" || visivelParaLider(c));
 }
@@ -1922,7 +1929,7 @@ function cgFill(valor, placeholder) {
 function abrirGerarContrato(id) {
   const item = DB.contratos.find(c => c.id === id);
   if (!item) return;
-  if (STATE.perfil==="solicitante" && !visivelParaLider(item)) { mostrarToast("Este contrato ainda está em elaboração pelo DP.","err"); return; }
+  if (STATE.perfil==="solicitante" && !documentoVisivelParaLider(item)) { mostrarToast("Este contrato ainda está em elaboração pelo DP.","err"); return; }
   document.getElementById("modalContratoDoc").dataset.currentId = id;
   abrirModal("modalContratoDoc");
   const jaGerado = !!item.cContratoHtml;
