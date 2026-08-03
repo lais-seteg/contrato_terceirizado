@@ -1877,12 +1877,42 @@ function gerarRelatorioContratosPDF(lista, filtros) {
 
   if (avaliacoesDaLista.length) {
     y = pdfCheckY(doc, y, 30, titulo);
-    y = pdfSecao(doc, y, "Avaliações de Desempenho", PDF_COR.verde);
+    y = pdfSecao(doc, y, "Desempenho por Contrato", PDF_COR.verde);
     const avalRows = avaliacoesDaLista.map(a => {
       const c = lista.find(x => x.id === a.contratoId);
       return [a.contratoId||"-", (c && c.cTercNome) || a.avaliado || "-", a.nivelCampo||"-", a.nivelRelatorio||"-", a.prazo||"-", a.relacionamento||"-"];
     });
     y = pdfTabela(doc, y, ["Nº","Terceirizado","Campo","Relatório","Prazo","Relacionamento"], avalRows, titulo, [20, 42, 30, 30, 30, 30]);
+  }
+
+  // Desempenho por Terceirizado: agrupa os contratos da lista por
+  // terceirizado (id quando existe, senão o nome) e cruza com as
+  // avaliações dos contratos daquele grupo — não usa aval.avaliadoId
+  // porque esse campo é só local/sessão (excluído do sync com o Supabase,
+  // ver _EXCL_AVAL), não sobrevive a um recarregamento da página.
+  const porTerceirizado = new Map();
+  lista.forEach(c => {
+    const chave = c.cTerceirizadoId || c.cTercNome || "-";
+    if (!porTerceirizado.has(chave)) porTerceirizado.set(chave, { nome: c.cTercNome || "-", contratos: [] });
+    porTerceirizado.get(chave).contratos.push(c);
+  });
+  const linhasTerceirizados = [...porTerceirizado.values()].map(grp => {
+    const idsContratos = grp.contratos.map(c => c.id);
+    const avals = DB.avaliacoes.filter(a => idsContratos.includes(a.contratoId));
+    const notas = avals.flatMap(a => [a.nivelCampo, a.nivelRelatorio, a.relacionamento]).map(v => NOTA_QUALITATIVA[v]).filter(n => n !== undefined);
+    const media = notas.length ? notas.reduce((a,b)=>a+b,0)/notas.length : null;
+    const prazoPct = avals.length ? Math.round(avals.filter(a => a.prazo === "Totalmente").length / avals.length * 100) : null;
+    return [
+      grp.nome, String(grp.contratos.length), String(avals.length),
+      media!==null ? media.toFixed(1)+" / 5" : "-",
+      prazoPct!==null ? prazoPct+"%" : "-"
+    ];
+  }).sort((a,b) => a[0].localeCompare(b[0], "pt-BR"));
+
+  if (linhasTerceirizados.length) {
+    y = pdfCheckY(doc, y, 30, titulo);
+    y = pdfSecao(doc, y, "Desempenho por Terceirizado", PDF_COR.azulMedio);
+    y = pdfTabela(doc, y, ["Terceirizado","Contratos","Avaliações","Nota Média","Prazo Cumprido"], linhasTerceirizados, titulo, [52, 30, 30, 35, 35]);
   }
 
   const comInfo = lista.filter(c => c.cOutrasInfo && c.cOutrasInfo.trim());
