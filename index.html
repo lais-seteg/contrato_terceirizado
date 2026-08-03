@@ -482,21 +482,21 @@
           <div class="form-section-block" id="secaoDadosContratoLegal">
             <h4 class="form-subtitle">📄 Dados do Contrato <span style="font-weight:400;font-size:.72rem;color:var(--text-secondary)">(usados para gerar o Contrato de Prestação de Serviços automaticamente)</span></h4>
             <div class="form-grid">
-              <div class="form-group"><label class="form-label">Número do Contrato</label><input id="cNumeroContrato" class="form-control" placeholder="Ex: 04/2025" /></div>
-              <div class="form-group"><label class="form-label">Projeto / Local</label><input id="cProjeto" class="form-control" placeholder="Ex: IBITU – CG1/CG2" /></div>
-              <div class="form-group"><label class="form-label">Valor Total (R$)</label><input id="cValorTotal" class="form-control" placeholder="0,00" oninput="mascaraMoedaId('cValorTotal')" /></div>
+              <div class="form-group"><label class="form-label required">Número do Contrato</label><input id="cNumeroContrato" class="form-control" placeholder="Gerado automaticamente" readonly /></div>
+              <div class="form-group"><label class="form-label required">Projeto / Local</label><input id="cProjeto" class="form-control" placeholder="Ex: IBITU – CG1/CG2" /></div>
+              <div class="form-group"><label class="form-label required">Valor Total (R$)</label><input id="cValorTotal" class="form-control" placeholder="0,00" oninput="mascaraMoedaId('cValorTotal')" /></div>
               <div class="form-group">
-                <label class="form-label">Início da Vigência</label>
+                <label class="form-label required">Início da Vigência</label>
                 <input id="cDataInicio" type="text" maxlength="10" placeholder="00/00/0000" class="form-control" oninput="mascaraDataId('cDataInicio')" />
               </div>
               <div class="form-group">
-                <label class="form-label">Término da Vigência</label>
+                <label class="form-label required">Término da Vigência</label>
                 <input id="cDataFim" type="text" maxlength="10" placeholder="00/00/0000" class="form-control" oninput="mascaraDataId('cDataFim')" />
               </div>
               <div class="form-group full-width">
                 <span class="modal-hint">A data de início deve anteceder as atividades de campo, pois documentos obrigatórios (ASO, treinamentos e demais documentos de SST) somente poderão ser emitidos após o início da vigência contratual.</span>
               </div>
-              <div class="form-group full-width"><label class="form-label">Objeto do Contrato</label><textarea id="cObjeto" class="form-control" rows="3" placeholder="Descreva os serviços específicos a serem prestados..."></textarea></div>
+              <div class="form-group full-width"><label class="form-label required">Escopo do Contrato</label><textarea id="cObjeto" class="form-control" rows="3" placeholder="Descreva os serviços específicos a serem prestados..."></textarea></div>
 
               <div class="form-group full-width">
                 <label class="form-label required">Necessidade de ART</label>

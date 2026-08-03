@@ -355,6 +355,7 @@ body::before{content:'';position:fixed;inset:0;background:rgba(6,13,31,.92);z-in
 .form-label.required::after{content:' *';color:var(--orange)}
 .form-control{background:var(--bg-input);border:1px solid var(--border-color);border-radius:var(--radius-sm);color:var(--text-primary);padding:.48rem .65rem;font-family:var(--font);font-size:.84rem;transition:var(--transition);width:100%}
 .form-control:focus{outline:none;border-color:var(--blue-light);box-shadow:0 0 0 2px rgba(90,141,208,.22)}
+.form-control[readonly]{background:var(--bg-secondary);color:var(--text-secondary);cursor:default}
 .form-control::placeholder{color:var(--text-muted);opacity:.6}
 .modal-hint,.form-hint{font-size:.7rem;color:var(--text-muted);margin-top:.3rem;font-style:italic}
 .contrato-doc-hint{font-size:.8rem;font-weight:600;color:var(--text-primary);background:rgba(255,130,0,.12);border:1px solid rgba(255,130,0,.35);border-left:3px solid var(--orange);border-radius:var(--radius-sm);padding:.55rem .75rem;margin-bottom:.6rem;line-height:1.45}

@@ -81,7 +81,7 @@ const CAMPOS_CONTRATO = [
   "cEmailEmpresa","cTelEmpresa","cEndEmpresa","cNumeroContrato","cEmpresaContratante",
   "cTipoContratacao","cTipoOutro","cDataInicio","cDataFim","cCentroCusto","cProjeto",
   "cUnidade","cValorMensal","cValorTotal","cObjeto","cObjetoOutro","cArt",
-  "cEscopo","cCronograma",
+  "cCronograma",
   "cCargo","cCargoOutro","cSetor",
   "cObjetivoContrato","cObjetivoContratoOutro","cNaturezaContrato","cNaturezaContratoOutro",
   "cCondicoesPagamento",
@@ -645,12 +645,30 @@ function abrirFormNovoContrato() {
   document.getElementById("modalSelecionarTipo").classList.add("active");
 }
 
+// Número do contrato gerado pelo sistema: sequencial dentro do mês/ano da
+// criação + mês e últimos 2 dígitos do ano (ex.: "01/0726" = 1º contrato
+// criado em julho/2026). Mesma lógica de gerarId() (conta os já existentes
+// no DB carregado) — sem contador atômico no backend, mas é o mesmo padrão
+// já usado para CTR-/TER-/AVL-/AUD- em todo o sistema.
+function gerarNumeroContrato(dataRef) {
+  const ref  = dataRef ? new Date(dataRef) : new Date();
+  const mes  = String(ref.getMonth()+1).padStart(2,"0");
+  const ano2 = String(ref.getFullYear()).slice(-2);
+  const doMes = DB.contratos.filter(c => {
+    if (!c.criadoEm) return false;
+    const d = new Date(c.criadoEm);
+    return d.getMonth()===ref.getMonth() && d.getFullYear()===ref.getFullYear();
+  }).length;
+  return `${String(doMes+1).padStart(2,"0")}/${mes}${ano2}`;
+}
+
 function selecionarTipoContrato(tipo) {
   document.getElementById("modalSelecionarTipo").classList.remove("active");
   limparFormContrato();
   document.getElementById("formContratoTitulo").textContent = "Novo Contrato";
   document.getElementById("listaContratos").classList.add("hidden");
   document.getElementById("formContrato").classList.remove("hidden");
+  document.getElementById("cNumeroContrato").value = gerarNumeroContrato();
   const sel = document.getElementById("cTipoContratacao");
   sel.value = tipo;
   atualizarSecaoTerceirizado();
@@ -1051,6 +1069,12 @@ function salvarContrato() {
 
 function validarContrato(item, dataSolicitacao) {
   if (!item.cTipoContratacao)     return "Tipo de contratação não selecionado.";
+  if (!item.cNumeroContrato)      return "Número do contrato não foi gerado — abra novamente o formulário.";
+  if (!item.cProjeto)             return "Informe o projeto/local.";
+  if (!item.cValorTotal)          return "Informe o valor total do contrato.";
+  if (!item.cDataInicio)          return "Informe o início da vigência.";
+  if (!item.cDataFim)             return "Informe o término da vigência.";
+  if (!item.cObjeto)              return "Informe o escopo do contrato.";
   if (!item.cTercNome)            return "Informe o nome completo do terceirizado.";
   if (!item.cTercCpf)             return "Informe o CPF do terceirizado.";
   if (!item.cTercTelefone)        return "Informe o telefone do terceirizado.";
@@ -1082,6 +1106,12 @@ function editarContrato(id) {
   });
   document.getElementById("cId").value    = item.id;
   document.getElementById("cStatus").value = item.status;
+  // Contratos antigos (de antes do número virar obrigatório/automático)
+  // podem não ter cNumeroContrato — gera agora, usando a data de criação
+  // original do contrato como referência.
+  if (!document.getElementById("cNumeroContrato").value) {
+    document.getElementById("cNumeroContrato").value = gerarNumeroContrato(item.criadoEm);
+  }
   // Campos de data são texto dd/mm/aaaa na tela, mas ficam em ISO no item —
   // o loop genérico acima já colocou o ISO cru no campo; sobrescreve aqui.
   document.getElementById("cDataInicio").value = dataISOparaBR(item.cDataInicio);
@@ -1284,7 +1314,7 @@ function gerarHTMLDetalhes(item) {
     ${det("Nº Contrato",item.cNumeroContrato)}${det("Projeto",item.cProjeto)}${det("Início",formatarData(item.cDataInicio))}${det("Término",formatarData(item.cDataFim))}${det("Valor Total",item.cValorTotal?formatarMoeda(item.cValorTotal):"-")}
     ${det("Necessidade de ART",item.cArt)}${det("Cargo",item.cCargo==="Outro"?item.cCargoOutro:item.cCargo)}${det("Setor",item.cSetor)}
     ${det("Objeto do Contrato (classificação)",item.cObjetivoContrato==="Outro"?item.cObjetivoContratoOutro:item.cObjetivoContrato)}${det("Tipo de Contrato",item.cNaturezaContrato==="Outro"?item.cNaturezaContratoOutro:item.cNaturezaContrato)}
-    ${det("Objeto",item.cObjeto,"full")}
+    ${det("Escopo do Contrato",item.cObjeto,"full")}
     ${det("Cronograma",item.cCronograma,"full")}${det("Dados para pagamento",item.cCondicoesPagamento,"full")}${det("Outras informações",item.cOutrasInfo,"full")}
     <div class="detail-section-title">B · Terceirizado / Prestador</div>
     ${det("Nome",item.cTercNome)}${det("CPF",item.cTercCpf)}${det("Telefone",item.cTercTelefone)}
@@ -1838,11 +1868,11 @@ function gerarPrintArea(item) {
         <div class="pf"><div class="pfl">Tipo</div><div class="pfv">${esc(item.cTipoContratacao||"-")}</div></div>
       </div></div>
       <div class="ps"><div class="psh">B · Dados do Contrato</div><div class="pg">
-        <div class="pf"><div class="pfl">Objeto</div><div class="pfv">${esc(item.cObjeto||"-")}</div></div>
+        <div class="pf"><div class="pfl">Nº do Contrato</div><div class="pfv">${esc(item.cNumeroContrato||"-")}</div></div>
         <div class="pf"><div class="pfl">Início</div><div class="pfv">${formatarData(item.cDataInicio)}</div></div>
         <div class="pf"><div class="pfl">Término</div><div class="pfv">${formatarData(item.cDataFim)}</div></div>
         <div class="pf"><div class="pfl">Valor Total</div><div class="pfv">${item.cValorTotal?formatarMoeda(item.cValorTotal):"-"}</div></div>
-        <div class="pf pfw"><div class="pfl">Escopo</div><div class="pfv">${esc(item.cEscopo||"-")}</div></div>
+        <div class="pf pfw"><div class="pfl">Escopo do Contrato</div><div class="pfv">${esc(item.cObjeto||"-")}</div></div>
       </div></div>
       <div class="ps"><div class="psh">C · Terceirizado / Prestador</div><div class="pg">
         <div class="pf"><div class="pfl">Nome</div><div class="pfv">${esc(item.cTercNome||"-")}</div></div>
@@ -2582,7 +2612,7 @@ function abrirFormAval(contratoId) {
   if (contratoId) {
     const c = DB.contratos.find(x=>x.id===contratoId);
     if (c) {
-      document.getElementById("aProjeto").value = c.cProjeto || c.cEscopo?.substring(0,60) || "";
+      document.getElementById("aProjeto").value = c.cProjeto || c.cObjeto?.substring(0,60) || "";
       document.getElementById("aCliente").value = c.cEmpresaContratante || "";
       if (c.cTerceirizadoId) {
         setTimeout(() => {
