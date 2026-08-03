@@ -9,7 +9,7 @@
        impede exfiltração de dados para hosts externos via fetch/imagem,
        carregamento de scripts de fora do jsdelivr e embutir a página em
        iframe de terceiros). -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://hqyoszdilauarrhxpgjg.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none';" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://hqyoszdilauarrhxpgjg.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none';" />
   <title>Contratação de Terceirizados · Seteg</title>
   <link rel="icon" type="image/png" href="images/favicon.png" />
   <link rel="stylesheet" href="style.css" />
@@ -143,6 +143,10 @@
     <section id="secao-contratos" class="secao">
       <div class="sec-header">
         <h2>Contratos</h2>
+        <div class="sec-header-right">
+          <button class="btn btn-ghost btn-sm" id="btnExportarContratosCSV" title="Exportar em CSV os contratos com o filtro atual">⬇️ CSV</button>
+          <button class="btn btn-ghost btn-sm" id="btnAbrirExportarContratosPDF" title="Exportar relatório em PDF (com opção de filtros)">📄 PDF</button>
+        </div>
         <button id="btnNovoContrato" class="btn btn-primary" style="display:none">+ Novo Contrato</button>
       </div>
 
@@ -1093,6 +1097,39 @@
   </div>
 </div>
 
+<!-- Modal Exportar Relatório de Contratos em PDF -->
+<div id="modalExportarContratosPDF" class="modal-overlay">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <h2>Exportar Relatório em PDF</h2>
+      <button class="modal-close" onclick="fecharModal('modalExportarContratosPDF')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group" style="margin-bottom:.8rem">
+        <label class="form-label">Status</label>
+        <select id="pdfFiltroStatusC" class="form-control"></select>
+      </div>
+      <div class="form-group" style="margin-bottom:.8rem">
+        <label class="form-label">Tipo de contratação</label>
+        <select id="pdfFiltroTipoC" class="form-control"></select>
+      </div>
+      <div class="form-group" style="margin-bottom:.8rem">
+        <label class="form-label">Setor</label>
+        <select id="pdfFiltroSetorC" class="form-control"></select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Líder responsável</label>
+        <select id="pdfFiltroLiderC" class="form-control"></select>
+      </div>
+      <p class="modal-hint">Deixe tudo em "Todos" para incluir todos os contratos visíveis para você no relatório.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="fecharModal('modalExportarContratosPDF')">Cancelar</button>
+      <button class="btn btn-primary" id="btnConfirmarExportarContratosPDF">Gerar PDF</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal Visualizar Terceirizado -->
 <div id="modalVerTerc" class="modal-overlay">
   <div class="modal modal-lg">
@@ -1217,6 +1254,9 @@
 <div id="printArea" class="print-area"></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.0"
         integrity="sha384-De+l/Df7qym5QBDVocD3+gW1S7IjR3epf+6KbRDjB3FCCzM/LqVTwqckT6FhFar8"
+        crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"
+        integrity="sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk"
         crossorigin="anonymous"></script>
 <script src="config.js"></script>
 <script src="script.js"></script>

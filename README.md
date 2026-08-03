@@ -1,6 +1,6 @@
 # Contratação de Terceirizados · Seteg
 
-Sistema interno do Portal RH da Seteg para gerenciar a contratação de prestadores de serviço e despachantes terceirizados: solicitação pelo líder, elaboração do contrato pelo DP/RH, aprovação e assinatura, geração automática do documento legal, e cadastro público (sem login) para o terceirizado preencher seus próprios dados.
+Sistema interno do Portal RH da Seteg para gerenciar a contratação de prestadores de serviço e despachantes terceirizados: solicitação pelo líder, elaboração do contrato pelo DP/RH, aprovação e assinatura, geração automática do documento legal, cadastro público (sem login) para o terceirizado preencher seus próprios dados, e relatório de contratos exportável em CSV e PDF.
 
 ## Stack
 

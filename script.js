@@ -437,6 +437,11 @@ function registrarListeners() {
   document.getElementById("nextC").addEventListener("click", () => { STATE.filtros.contratos.pagina++; renderContratos(); });
   document.getElementById("perPageC").addEventListener("change", () => { STATE.filtros.contratos.pagina=1; renderContratos(); });
 
+  // ── Relatório de Contratos (CSV/PDF) ──
+  document.getElementById("btnExportarContratosCSV").addEventListener("click", exportarRelatorioContratosCSV);
+  document.getElementById("btnAbrirExportarContratosPDF").addEventListener("click", abrirModalExportarContratosPDF);
+  document.getElementById("btnConfirmarExportarContratosPDF").addEventListener("click", confirmarExportarContratosPDF);
+
   // ── Terceirizados ──
   document.getElementById("btnNovoTerc").addEventListener("click", abrirFormNovoTerc);
   document.getElementById("btnFecharTerc").addEventListener("click", fecharFormTerc);
@@ -1418,6 +1423,394 @@ function renderContratos() {
   document.getElementById("pageC").textContent = f.pagina;
   document.getElementById("prevC").disabled = f.pagina<=1;
   document.getElementById("nextC").disabled = f.pagina>=totalPag;
+}
+
+// ══════════════════════════════════════════════════════
+//  RELATÓRIO DE CONTRATOS — CSV e PDF
+// ══════════════════════════════════════════════════════
+
+// Mesma regra de visibilidade da tabela de Contratos: líder só vê os
+// próprios (e nunca os que estão "Em Elaboração").
+function contratosVisiveisParaRelatorio() {
+  return DB.contratos.filter(c => STATE.perfil !== "solicitante" || visivelParaLider(c));
+}
+
+// CSV com o filtro que já está aplicado na tela (status/tipo/busca) — BOM +
+// vírgula como separador, campos entre aspas (abre corretamente no Excel,
+// acentos preservados por causa do BOM em UTF-8).
+function exportarRelatorioContratosCSV() {
+  const f = STATE.filtros.contratos;
+  const lista = contratosVisiveisParaRelatorio().filter(c => {
+    const txt = `${c.id} ${c.cProjeto} ${c.cTercNome} ${c.criadoPor}`.toLowerCase();
+    return (!f.status||c.status===f.status)&&(!f.tipo||c.cTipoContratacao===f.tipo)&&(!f.busca||txt.includes(f.busca));
+  });
+  if (!lista.length) { mostrarToast("Nenhum contrato para exportar com o filtro atual.","err"); return; }
+
+  const cab = ["Nº","Projeto","Prestador/Terceirizado","Tipo de Contratação","Líder Responsável","Setor","Status","Início da Vigência","Término da Vigência","Valor Total","Criado em"];
+  const linhas = lista.map(c => [
+    c.id, c.cProjeto||"-", c.cTercNome||"-", c.cTipoContratacao||"-", c.criadoPor||"-", c.cSetor||"-",
+    c.status||"-", formatarData(c.cDataInicio), formatarData(c.cDataFim),
+    c.cValorTotal ? formatarMoeda(c.cValorTotal) : "-", formatarData(c.criadoEm)
+  ]);
+  const csvEscape = v => `"${String(v??"").replace(/"/g,'""')}"`;
+  const csv = "﻿" + [cab, ...linhas].map(linha => linha.map(csvEscape).join(",")).join("\n");
+
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url  = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `relatorio_contratos_seteg_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function abrirModalExportarContratosPDF() {
+  const base = contratosVisiveisParaRelatorio();
+
+  const opcoes = (valores, todosLabel) =>
+    `<option value="">${todosLabel}</option>` +
+    [...new Set(valores.filter(Boolean))].sort().map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join("");
+
+  document.getElementById("pdfFiltroStatusC").innerHTML = opcoes(base.map(c=>c.status), "Todos os status");
+  document.getElementById("pdfFiltroTipoC").innerHTML   = opcoes(base.map(c=>c.cTipoContratacao), "Todos os tipos");
+  document.getElementById("pdfFiltroSetorC").innerHTML  = opcoes(base.map(c=>c.cSetor), "Todos os setores");
+  document.getElementById("pdfFiltroLiderC").innerHTML  = opcoes(base.map(c=>c.criadoPor), "Todos os líderes");
+
+  abrirModal("modalExportarContratosPDF");
+}
+
+function confirmarExportarContratosPDF() {
+  const status = document.getElementById("pdfFiltroStatusC").value;
+  const tipo   = document.getElementById("pdfFiltroTipoC").value;
+  const setor  = document.getElementById("pdfFiltroSetorC").value;
+  const lider  = document.getElementById("pdfFiltroLiderC").value;
+
+  let lista = contratosVisiveisParaRelatorio();
+  const filtros = [];
+  if (status) { lista = lista.filter(c => c.status === status);            filtros.push("Status: " + status); }
+  if (tipo)   { lista = lista.filter(c => c.cTipoContratacao === tipo);    filtros.push("Tipo de Contratação: " + tipo); }
+  if (setor)  { lista = lista.filter(c => c.cSetor === setor);             filtros.push("Setor: " + setor); }
+  if (lider)  { lista = lista.filter(c => c.criadoPor === lider);          filtros.push("Líder Responsável: " + lider); }
+
+  fecharModal("modalExportarContratosPDF");
+  gerarRelatorioContratosPDF(lista, filtros);
+}
+
+// ─── Identidade visual do PDF (paleta Seteg — mesmo modelo usado no
+// relatório de gastos do card_novo): barra de cabeçalho/rodapé azul-escura
+// com friso laranja, seções com tarja lateral colorida, KPIs em cartão com
+// borda de cor, tabela com cabeçalho escuro e zebrado, capa e página final
+// com fundo cheio e círculos decorativos. ───
+const PDF_COR = {
+  azulEscuro:  [10, 36, 89],
+  azulMedio:   [58, 101, 176],
+  laranja:     [255, 130, 0],
+  verde:       [108, 194, 74],
+  vermelho:    [255, 93, 93],
+  branco:      [255, 255, 255],
+  offWhite:    [243, 246, 251],
+  cinzaClaro:  [215, 225, 238],
+  cinzaMedio:  [130, 150, 175],
+  cinzaEscuro: [45, 60, 85],
+};
+const PDF_PG = { w: 210, h: 297, ml: 14, mr: 14, cw: 210 - 14 - 14 };
+let _pdfPagina = 0;
+
+// Só normaliza tipografia "esperta" (aspas curvas, travessão, reticências)
+// que fica fora do Latin-1 e a fonte padrão do jsPDF não desenha — acentos
+// do português (á é í ó ú ã õ â ê ô ç...) fazem parte do Latin-1 e são
+// preservados normalmente.
+function pdfSan(v) {
+  if (v == null) return "";
+  return String(v)
+    .replace(/[–—―−]/g, "-")
+    .replace(/[‘’ʼ`]/g, "'")
+    .replace(/[“”«»]/g, '"')
+    .replace(/…/g, "...")
+    .replace(/[^\x00-\xFF]/g, "");
+}
+
+function pdfFc(doc, c, tipo) {
+  if (tipo === "draw") doc.setDrawColor(c[0], c[1], c[2]);
+  else if (tipo === "text") doc.setTextColor(c[0], c[1], c[2]);
+  else doc.setFillColor(c[0], c[1], c[2]);
+}
+
+function pdfCabecalho(doc, titulo, marca) {
+  _pdfPagina++;
+  pdfFc(doc, PDF_COR.azulEscuro);
+  doc.rect(0, 0, PDF_PG.w, 11, "F");
+  pdfFc(doc, PDF_COR.laranja);
+  doc.rect(0, 0, 3, 11, "F");
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(6);
+  pdfFc(doc, [170, 190, 215], "text");
+  doc.text(marca || "SETEG - RELATORIO DE CONTRATOS", PDF_PG.ml + 4, 7);
+  doc.text(pdfSan(titulo).toUpperCase(), PDF_PG.w / 2, 7, { align: "center" });
+  doc.text("Pag. " + _pdfPagina, PDF_PG.w - PDF_PG.mr, 7, { align: "right" });
+}
+
+function pdfRodape(doc, texto) {
+  pdfFc(doc, PDF_COR.azulEscuro);
+  doc.rect(0, PDF_PG.h - 9, PDF_PG.w, 9, "F");
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(6);
+  pdfFc(doc, [100, 130, 165], "text");
+  doc.text(pdfSan(texto) || "Seteg Solucoes Geologicas e Ambientais - Relatorio de Contratos de Terceirizados",
+    PDF_PG.w / 2, PDF_PG.h - 3.5, { align: "center" });
+}
+
+function pdfNovaPagina(doc, titulo, marca, rodapeTexto) {
+  doc.addPage();
+  pdfCabecalho(doc, titulo, marca);
+  pdfRodape(doc, rodapeTexto);
+  return 17;
+}
+
+function pdfCheckY(doc, y, needed, titulo, marca, rodapeTexto) {
+  return (y + needed > PDF_PG.h - 14) ? pdfNovaPagina(doc, titulo, marca, rodapeTexto) : y;
+}
+
+function pdfSecao(doc, y, label, cor) {
+  cor = cor || PDF_COR.azulMedio;
+  pdfFc(doc, cor);
+  doc.roundedRect(PDF_PG.ml, y, 3.5, 7, 1, 1, "F");
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  pdfFc(doc, cor, "text");
+  doc.text(pdfSan(label).toUpperCase(), PDF_PG.ml + 7, y + 5.2);
+  pdfFc(doc, cor, "draw");
+  doc.setLineWidth(0.2);
+  doc.line(PDF_PG.ml, y + 8.2, PDF_PG.w - PDF_PG.mr, y + 8.2);
+  return y + 13;
+}
+
+function pdfKpiBox(doc, x, y, w, h, label, valor, cor) {
+  pdfFc(doc, PDF_COR.offWhite);
+  doc.roundedRect(x, y, w, h, 2.5, 2.5, "F");
+  pdfFc(doc, cor);
+  doc.roundedRect(x, y, 3, h, 1.5, 1.5, "F");
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(6.5);
+  pdfFc(doc, PDF_COR.cinzaMedio, "text");
+  doc.text(pdfSan(label).toUpperCase(), x + 6, y + 6);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(14);
+  pdfFc(doc, cor, "text");
+  doc.text(pdfSan(valor), x + 6, y + 15);
+}
+
+// Tabela genérica com paginação automática e quebra de texto por célula.
+function pdfTabela(doc, y, headers, rows, titulo, colWidths, marca, rodapeTexto) {
+  const fontSize = 7;
+  const lineH = fontSize * 0.61;
+  const hdrH  = 8;
+  const pad   = 2;
+  const totalW = PDF_PG.cw;
+  const cw = colWidths ? colWidths.slice() : headers.map(() => Math.floor(totalW / headers.length));
+
+  function cellLines(cell, ci) {
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(fontSize);
+    return doc.splitTextToSize(pdfSan(cell != null ? cell : "-"), cw[ci] - pad * 2);
+  }
+  function calcRowH(row) {
+    let maxL = 1;
+    row.forEach((cell, ci) => { const n = cellLines(cell, ci).length; if (n > maxL) maxL = n; });
+    return Math.max(6, maxL * lineH + 4);
+  }
+  function drawHeader(y) {
+    pdfFc(doc, PDF_COR.azulEscuro);
+    doc.roundedRect(PDF_PG.ml, y, totalW, hdrH, 1.5, 1.5, "F");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(6.5);
+    pdfFc(doc, [195, 215, 235], "text");
+    let x = PDF_PG.ml;
+    headers.forEach((h, i) => { doc.text(pdfSan(h).toUpperCase(), x + cw[i] / 2, y + 5.5, { align: "center" }); x += cw[i]; });
+    return y + hdrH;
+  }
+
+  y = pdfCheckY(doc, y, hdrH + 12, titulo, marca, rodapeTexto);
+  y = drawHeader(y);
+
+  rows.forEach((row) => {
+    const rh = calcRowH(row);
+    if (y + rh > PDF_PG.h - 14) { y = pdfNovaPagina(doc, titulo, marca, rodapeTexto); y = drawHeader(y); }
+
+    pdfFc(doc, PDF_COR.branco);
+    doc.rect(PDF_PG.ml, y, totalW, rh, "F");
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(fontSize);
+    pdfFc(doc, PDF_COR.cinzaEscuro, "text");
+    let x = PDF_PG.ml;
+    row.forEach((cell, ci) => {
+      const lines = cellLines(cell, ci);
+      const firstY = y + rh / 2 - (lines.length - 1) * lineH / 2;
+      lines.forEach((line, li) => doc.text(line, x + cw[ci] / 2, firstY + li * lineH, { align: "center" }));
+      x += cw[ci];
+    });
+
+    pdfFc(doc, PDF_COR.cinzaClaro, "draw");
+    doc.setLineWidth(0.1);
+    doc.line(PDF_PG.ml, y + rh, PDF_PG.ml + totalW, y + rh);
+    y += rh;
+  });
+  return y + 4;
+}
+
+function pdfPgCapa(doc, qtdContratos, valorTotal, filtros) {
+  filtros = filtros || [];
+  const isFiltrado = filtros.length > 0;
+
+  _pdfPagina++;
+  pdfFc(doc, PDF_COR.azulEscuro);
+  doc.rect(0, 0, PDF_PG.w, PDF_PG.h, "F");
+  pdfFc(doc, [12, 40, 95]);
+  doc.circle(188, 55, 50, "F");
+  pdfFc(doc, [5, 22, 58]);
+  doc.circle(22, 245, 55, "F");
+  pdfFc(doc, PDF_COR.laranja);
+  doc.rect(0, 95, 5, 100, "F");
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(42);
+  pdfFc(doc, PDF_COR.branco, "text");
+  doc.text("SETEG", PDF_PG.w / 2, 74, { align: "center" });
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(11);
+  pdfFc(doc, [175, 200, 225], "text");
+  doc.text("Solucoes Geologicas e Ambientais", PDF_PG.w / 2, 83, { align: "center" });
+
+  pdfFc(doc, PDF_COR.laranja, "draw");
+  doc.setLineWidth(1.2);
+  doc.line(50, 90, 160, 90);
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(24);
+  pdfFc(doc, PDF_COR.branco, "text");
+  doc.text("RELATORIO DE CONTRATOS", PDF_PG.w / 2, 122, { align: "center" });
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(11);
+  pdfFc(doc, [175, 200, 225], "text");
+  doc.text("Contratacao de Terceirizados", PDF_PG.w / 2, 133, { align: "center" });
+
+  pdfFc(doc, isFiltrado ? PDF_COR.laranja : PDF_COR.verde);
+  doc.roundedRect(PDF_PG.w / 2 - 28, 148, 56, 9, 2.5, 2.5, "F");
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(7.5);
+  pdfFc(doc, PDF_COR.branco, "text");
+  doc.text(isFiltrado ? "RELATORIO FILTRADO" : "RELATORIO GERAL", PDF_PG.w / 2, 154, { align: "center" });
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(9);
+  pdfFc(doc, [230, 210, 20], "text");
+  doc.text(`${qtdContratos} contrato${qtdContratos===1?"":"s"}  -  ${pdfSan(formatarMoeda(valorTotal))}`, PDF_PG.w / 2, 168, { align: "center" });
+
+  let cy = 178;
+  if (isFiltrado) {
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8);
+    pdfFc(doc, [195, 215, 235], "text");
+    doc.text("Filtros aplicados:", PDF_PG.w / 2, cy, { align: "center" });
+    cy += 7;
+    filtros.forEach(f => {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      pdfFc(doc, [230, 210, 20], "text");
+      doc.text(pdfSan(f), PDF_PG.w / 2, cy, { align: "center" });
+      cy += 5.5;
+    });
+  }
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(7.5);
+  pdfFc(doc, [120, 148, 178], "text");
+  doc.text("Gerado em: " + formatarDataHora(new Date().toISOString()), PDF_PG.w / 2, 240, { align: "center" });
+
+  pdfFc(doc, [4, 14, 44]);
+  doc.rect(0, PDF_PG.h - 16, PDF_PG.w, 16, "F");
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(7);
+  pdfFc(doc, [90, 130, 170], "text");
+  doc.text("Seteg Solucoes Geologicas e Ambientais Ltda", PDF_PG.w / 2, PDF_PG.h - 8, { align: "center" });
+  doc.setFontSize(6);
+  pdfFc(doc, [65, 100, 140], "text");
+  doc.text("Documento de uso interno. Gerado automaticamente.", PDF_PG.w / 2, PDF_PG.h - 3.5, { align: "center" });
+}
+
+function pdfPgObrigada(doc) {
+  doc.addPage();
+  _pdfPagina++;
+  pdfFc(doc, PDF_COR.azulEscuro);
+  doc.rect(0, 0, PDF_PG.w, PDF_PG.h, "F");
+  pdfFc(doc, [12, 40, 95]);
+  doc.circle(188, 55, 50, "F");
+  pdfFc(doc, [5, 22, 58]);
+  doc.circle(22, 245, 55, "F");
+  pdfFc(doc, PDF_COR.laranja);
+  doc.rect(0, 100, 5, 97, "F");
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(52);
+  pdfFc(doc, PDF_COR.branco, "text");
+  doc.text("Obrigado", PDF_PG.w / 2, 148, { align: "center" });
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(11);
+  pdfFc(doc, [175, 200, 225], "text");
+  doc.text("Contratacao de Terceirizados - Seteg", PDF_PG.w / 2, 163, { align: "center" });
+}
+
+// Gera o PDF a partir de uma lista já filtrada (ou de todos os contratos
+// visíveis, quando nenhum filtro é escolhido no modal de exportação).
+// "filtros" é só a lista de textos exibidos na capa (ex: "Status: Finalizado").
+function gerarRelatorioContratosPDF(lista, filtros) {
+  if (!window.jspdf || !window.jspdf.jsPDF) {
+    mostrarToast("Biblioteca de PDF ainda carregando — tente de novo em instantes.","err");
+    return;
+  }
+  if (!lista.length) { mostrarToast("Nenhum contrato encontrado com esse filtro.","err"); return; }
+
+  _pdfPagina = 0;
+  const doc = new window.jspdf.jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  const titulo = "Relatorio de Contratos";
+  const valorTotal = lista.reduce((acc, c) => {
+    const v = parseFloat(String(c.cValorTotal||"0").replace(/\./g,"").replace(",","."))||0;
+    return acc + v;
+  }, 0);
+  const vencendo30d = lista.filter(c => { const d = diasAteVencer(c.cDataFim); return d!==null && d>=0 && d<=30; }).length;
+
+  pdfPgCapa(doc, lista.length, valorTotal, filtros);
+
+  doc.addPage();
+  pdfCabecalho(doc, titulo);
+  pdfRodape(doc);
+  let y = 20;
+
+  const boxW = (PDF_PG.cw - 8) / 3;
+  pdfKpiBox(doc, PDF_PG.ml, y, boxW, 20, "Contratos", String(lista.length), PDF_COR.azulMedio);
+  pdfKpiBox(doc, PDF_PG.ml + boxW + 4, y, boxW, 20, "Valor Total", formatarMoeda(valorTotal), PDF_COR.laranja);
+  pdfKpiBox(doc, PDF_PG.ml + (boxW + 4) * 2, y, boxW, 20, "Vencendo em 30 dias", String(vencendo30d), PDF_COR.vermelho);
+  y += 28;
+
+  y = pdfSecao(doc, y, "Contratos", PDF_COR.azulMedio);
+
+  const headers = ["Nº","Terceirizado","Tipo","Líder","Status","Valor"];
+  const colWidths = [22, 42, 30, 32, 42, 14];
+  const rows = lista.map(c => [
+    c.id, c.cTercNome||"-", c.cTipoContratacao||"-", c.criadoPor||"-", c.status||"-",
+    c.cValorTotal ? formatarMoeda(c.cValorTotal) : "-"
+  ]);
+  pdfTabela(doc, y, headers, rows, titulo, colWidths);
+
+  pdfPgObrigada(doc);
+
+  const dateStr = new Date().toISOString().slice(0,10);
+  const sufixo = filtros && filtros.length ? "filtrado" : "geral";
+  doc.save(`relatorio_contratos_seteg_${sufixo}_${dateStr}.pdf`);
 }
 
 function imprimirContrato() {
