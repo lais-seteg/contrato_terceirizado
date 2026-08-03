@@ -1575,9 +1575,9 @@ function pdfCabecalho(doc, titulo, marca) {
   doc.setFont("helvetica", "normal");
   doc.setFontSize(6);
   pdfFc(doc, [170, 190, 215], "text");
-  doc.text(marca || "SETEG - RELATORIO DE CONTRATOS", PDF_PG.ml + 4, 7);
+  doc.text(marca || "SETEG - RELATÓRIO DE CONTRATOS", PDF_PG.ml + 4, 7);
   doc.text(pdfSan(titulo).toUpperCase(), PDF_PG.w / 2, 7, { align: "center" });
-  doc.text("Pag. " + _pdfPagina, PDF_PG.w - PDF_PG.mr, 7, { align: "right" });
+  doc.text("Pág. " + _pdfPagina, PDF_PG.w - PDF_PG.mr, 7, { align: "right" });
 }
 
 function pdfRodape(doc, texto) {
@@ -1586,7 +1586,7 @@ function pdfRodape(doc, texto) {
   doc.setFont("helvetica", "normal");
   doc.setFontSize(6);
   pdfFc(doc, [100, 130, 165], "text");
-  doc.text(pdfSan(texto) || "Seteg Solucoes Geologicas e Ambientais - Relatorio de Contratos de Terceirizados",
+  doc.text(pdfSan(texto) || "Seteg Soluções Geológicas e Ambientais - Relatório de Contratos de Terceirizados",
     PDF_PG.w / 2, PDF_PG.h - 3.5, { align: "center" });
 }
 
@@ -1711,7 +1711,7 @@ function pdfPgCapa(doc, qtdContratos, valorTotal, filtros) {
   doc.setFont("helvetica", "normal");
   doc.setFontSize(11);
   pdfFc(doc, [175, 200, 225], "text");
-  doc.text("Solucoes Geologicas e Ambientais", PDF_PG.w / 2, 83, { align: "center" });
+  doc.text("Soluções Geológicas e Ambientais", PDF_PG.w / 2, 83, { align: "center" });
 
   pdfFc(doc, PDF_COR.laranja, "draw");
   doc.setLineWidth(1.2);
@@ -1720,19 +1720,19 @@ function pdfPgCapa(doc, qtdContratos, valorTotal, filtros) {
   doc.setFont("helvetica", "bold");
   doc.setFontSize(24);
   pdfFc(doc, PDF_COR.branco, "text");
-  doc.text("RELATORIO DE CONTRATOS", PDF_PG.w / 2, 122, { align: "center" });
+  doc.text("RELATÓRIO DE CONTRATOS", PDF_PG.w / 2, 122, { align: "center" });
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(11);
   pdfFc(doc, [175, 200, 225], "text");
-  doc.text("Contratacao de Terceirizados", PDF_PG.w / 2, 133, { align: "center" });
+  doc.text("Contratação de Terceirizados", PDF_PG.w / 2, 133, { align: "center" });
 
   pdfFc(doc, isFiltrado ? PDF_COR.laranja : PDF_COR.verde);
   doc.roundedRect(PDF_PG.w / 2 - 28, 148, 56, 9, 2.5, 2.5, "F");
   doc.setFont("helvetica", "bold");
   doc.setFontSize(7.5);
   pdfFc(doc, PDF_COR.branco, "text");
-  doc.text(isFiltrado ? "RELATORIO FILTRADO" : "RELATORIO GERAL", PDF_PG.w / 2, 154, { align: "center" });
+  doc.text(isFiltrado ? "RELATÓRIO FILTRADO" : "RELATÓRIO GERAL", PDF_PG.w / 2, 154, { align: "center" });
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(9);
@@ -1765,7 +1765,7 @@ function pdfPgCapa(doc, qtdContratos, valorTotal, filtros) {
   doc.setFont("helvetica", "normal");
   doc.setFontSize(7);
   pdfFc(doc, [90, 130, 170], "text");
-  doc.text("Seteg Solucoes Geologicas e Ambientais Ltda", PDF_PG.w / 2, PDF_PG.h - 8, { align: "center" });
+  doc.text("Seteg Soluções Geológicas e Ambientais Ltda", PDF_PG.w / 2, PDF_PG.h - 8, { align: "center" });
   doc.setFontSize(6);
   pdfFc(doc, [65, 100, 140], "text");
   doc.text("Documento de uso interno. Gerado automaticamente.", PDF_PG.w / 2, PDF_PG.h - 3.5, { align: "center" });
@@ -1791,7 +1791,7 @@ function pdfPgObrigada(doc) {
   doc.setFont("helvetica", "normal");
   doc.setFontSize(11);
   pdfFc(doc, [175, 200, 225], "text");
-  doc.text("Contratacao de Terceirizados - Seteg", PDF_PG.w / 2, 163, { align: "center" });
+  doc.text("Contratação de Terceirizados - Seteg", PDF_PG.w / 2, 163, { align: "center" });
 }
 
 // Gera o PDF a partir de uma lista já filtrada (ou de todos os contratos
@@ -1806,7 +1806,7 @@ function gerarRelatorioContratosPDF(lista, filtros) {
 
   _pdfPagina = 0;
   const doc = new window.jspdf.jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-  const titulo = "Relatorio de Contratos";
+  const titulo = "Relatório de Contratos";
   const valorTotal = lista.reduce((acc, c) => {
     const v = parseFloat(String(c.cValorTotal||"0").replace(/\./g,"").replace(",","."))||0;
     return acc + v;
