@@ -343,30 +343,16 @@ grant execute on function autenticar_usuario(text) to anon;
 -- Perfis: 'gestao' (acesso total, único que pode excluir registros),
 -- 'gestao-pessoas' (analisa/aprova/finaliza contratos) e
 -- 'solicitante' (líder: só vê e edita os próprios contratos).
+--
+-- ⚠ Os hashes reais NÃO ficam neste arquivo — este repositório é
+-- PÚBLICO no GitHub, e codigo_hash é o hash do código de acesso de
+-- cada pessoa. Gere o hash de cada código (SHA-256, mesma função
+-- _sha256 do script.js) e rode o INSERT direto no SQL Editor do
+-- Supabase, fora do controle de versão. Modelo:
+--
+-- INSERT INTO usuarios (nome, perfil, codigo_hash, ativo) VALUES
+--   ('Nome da pessoa', 'gestao' | 'gestao-pessoas' | 'solicitante', '<hash_sha256_do_codigo>', true);
 -- ══════════════════════════════════════════════════════════════
-
-INSERT INTO usuarios (nome, perfil, codigo_hash, ativo) VALUES
-  ('Gestão', 'gestao', '7ac0c61f5bc6cc81f594ba9e8ff8dd089d1bd9ab305c3c4e6fd83d7737261780', true),
-  ('Gestão de Pessoas', 'gestao-pessoas', '6bb8f12bdc6d3b7e67b43533234828d0db34ec1fdc4703611160c7a0c6071672', true),
-  ('Kevilla', 'gestao-pessoas', '2c2dd866510a9ba893eff4507d0057b20c65d40fbfbafeec37874383f2473200', true),
-  ('Gustavo Toledo', 'solicitante', '5babe2bb9b258764f5a137ec81acb2595c19191cc561630e4db3624943a1c2dc', true),
-  ('Hugo', 'solicitante', 'b188ba88571ab19dbd5fe7736e56b358b5f77f4cd7c3f44001156ca2d3258ad7', true),
-  ('Haddad', 'solicitante', '18addf76ca945f0d96a52441030f38dae4063eaa1f16a7ea6b2a68832a566ce7', true),
-  ('Matheus Fontenelle', 'solicitante', '4f6ce99c10299ca85296c3490642c67f8575a40eab76a098f578bec48540cdfe', true),
-  ('Lizabeth Silva', 'solicitante', '063eab07404238e31e0739053bd2960aeeca8d7876b3524ffc26ebdae112e298', true),
-  ('Juliana Vicente', 'solicitante', '6bfa719228a6232ccfa3702d33333688f2053d10f5f50e45c8c3419efc708610', true),
-  ('Marcelo Holderbaum', 'solicitante', '3e5c77a4e0c86fc38b307fb6931e6914337fa3d593dda106ac3638a01f543894', true),
-  ('Carina Rodrigues', 'solicitante', 'b222e1bfda9c0c3fe251af14966b26b44bf229f3bb1d1a3801432dbfe4b9542b', true),
-  ('Fernando Sousa', 'solicitante', 'e3cfaa159e474729771ab20e1083f0d8b7a8dd478a42e3e2d8d33f9f2af989f8', true),
-  ('Henrique Lima', 'solicitante', '544c7c687f316ac8f45f009d53900797d1379cdf4be62ea88ea60becac78e0b0', true),
-  ('Laize Rodrigues', 'solicitante', 'e2b97720058b75a99154ba0cee3972160d0e83367575ab5f5e96caddd5c0dbd8', true),
-  ('Tiago Soares', 'solicitante', '752bfb205821ba068134494ff20675098ecc9d27e5c3c46fb09f065745883b87', true),
-  ('Juliana Aquino', 'solicitante', 'ff06ae8e3139add29c3fed7a75f2774c0ccb7a71dec248c25283654c3b50dd0c', true),
-  ('Gyrliane Sales', 'solicitante', '80853fb8dc58230bf3fb320dfad4b420709915cae0ff89ecacc7f5716d4aa9e1', true),
-  ('Ricardo Silveira', 'solicitante', '728bb360e15e94ff012a8ab0fb358f14c5a485665098f9a072aff5c3313147f1', true),
-  ('Nadia Vieira', 'solicitante', '20a627e30ef62b980d30b48eb6d4075918b97c8884afb42733075ba067934d0f', true),
-  ('Mariângela Ciodaro', 'solicitante', '02225f972456a8baca9b3715946b9efe19843afb0b4a87ee36fccc8545865c70', true),
-  ('Eveline Mesquita', 'solicitante', '31e028fe84bd7b32f2a9c09a7c2270b92920fe90f474b0b121bf342f89fcafd9', true);
 
 -- Verificação rápida (opcional): deve retornar 21 linhas
 -- select nome, perfil, ativo from usuarios order by perfil, nome;
