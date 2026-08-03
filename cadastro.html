@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://hqyoszdilauarrhxpgjg.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none';" />
   <title>Cadastro de Prestador de Serviço · Seteg</title>
   <link rel="icon" type="image/png" href="images/favicon.png" />
   <link rel="stylesheet" href="style.css" />
@@ -181,6 +182,73 @@
       text-align: center;
       margin-top: .8rem;
       line-height: 1.5;
+    }
+
+    /* ─── Documentação obrigatória — callout de e-mail + checklist ─── */
+    .cad-doc-intro {
+      font-size: .82rem;
+      color: #2E4268;
+      margin: 0 0 .85rem;
+      line-height: 1.5;
+    }
+    .cad-doc-email-box {
+      display: flex;
+      align-items: center;
+      gap: .6rem;
+      background: #FFF6EC;
+      border: 1px solid #FFD9A8;
+      border-radius: 8px;
+      padding: .7rem .9rem;
+      margin-bottom: 1rem;
+    }
+    .cad-doc-email-icon { font-size: 1.05rem; flex-shrink: 0; }
+    .cad-doc-email-link {
+      font-size: .85rem;
+      font-weight: 700;
+      color: #CC6600;
+      text-decoration: none;
+      word-break: break-all;
+      flex: 1;
+      min-width: 0;
+    }
+    .cad-doc-email-link:hover { text-decoration: underline; }
+    .cad-doc-email-copy {
+      flex-shrink: 0;
+      font-size: .72rem;
+      font-weight: 700;
+      color: #CC6600;
+      background: #fff;
+      border: 1px solid #FFD9A8;
+      border-radius: 6px;
+      padding: .32rem .65rem;
+      cursor: pointer;
+      transition: all .18s ease;
+      font-family: var(--font);
+    }
+    .cad-doc-email-copy:hover { background: #FFEEDA; }
+    .cad-doc-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: .5rem;
+    }
+    .cad-doc-list li {
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+      font-size: .78rem;
+      color: #2E4268;
+      background: #F5F7FA;
+      border: 1px solid #E1E8F0;
+      border-radius: 7px;
+      padding: .55rem .7rem;
+    }
+    .cad-doc-list-icon { font-size: .95rem; flex-shrink: 0; }
+    @media (max-width: 600px) {
+      .cad-doc-list { grid-template-columns: 1fr; }
+      .cad-doc-email-box { flex-wrap: wrap; }
     }
 
     /* ─── Estado de sucesso ─── */
@@ -519,10 +587,14 @@
         </div>
         <div class="form-group">
           <label class="form-label">Registro Profissional / Conselho</label>
-          <input id="tRegistro" class="form-control" placeholder="Ex: CRBio 12345-6" />
+          <select id="tRegistro" class="form-control">
+            <option value="">Selecione</option>
+            <option>CREA</option>
+            <option>CRBIO</option>
+          </select>
         </div>
         <div class="form-group">
-          <label class="form-label">CRBio Secundário</label>
+          <label class="form-label">Número do registro profissional</label>
           <input id="tCrbio2" class="form-control" />
         </div>
         <div class="form-group">
@@ -588,9 +660,8 @@
         </div>
         <div class="form-group">
           <label class="form-label required">Emissão de</label>
-          <select id="tEmissao" class="form-control">
-            <option value="">Selecione</option>
-            <option>Nota fiscal</option>
+          <select id="tEmissao" class="form-control" disabled>
+            <option selected>Nota fiscal</option>
           </select>
         </div>
         <div class="form-group">
@@ -668,13 +739,17 @@
         <div class="cad-section-num">6</div>
         <span class="cad-section-title">Documentação obrigatória</span>
       </div>
-      <p class="cad-hint">Além deste formulário, envie separadamente (e-mail ou WhatsApp) para a
-        pessoa responsável pela contratação os seguintes documentos:</p>
-      <ul class="cad-hint" style="margin:.4rem 0 0 1.1rem">
-        <li>Documento oficial com foto (CNH, RG ou similar)</li>
-        <li>Comprovante de residência</li>
-        <li>Cartão CNPJ (quando aplicável)</li>
-        <li>Currículo</li>
+      <p class="cad-doc-intro">Além deste formulário, envie os documentos abaixo por e-mail para a Gestão de Pessoas:</p>
+      <div class="cad-doc-email-box">
+        <span class="cad-doc-email-icon">✉️</span>
+        <a href="mailto:gestao.pessoas@setegce.com?subject=Documentos%20-%20Cadastro%20de%20Prestador%20de%20Servi%C3%A7o" class="cad-doc-email-link" id="cadDocEmailLink">gestao.pessoas@setegce.com</a>
+        <button type="button" class="cad-doc-email-copy" id="btnCopiarEmailDoc">Copiar</button>
+      </div>
+      <ul class="cad-doc-list">
+        <li><span class="cad-doc-list-icon">🪪</span>Documento oficial com foto (CNH, RG ou similar)</li>
+        <li><span class="cad-doc-list-icon">🏠</span>Comprovante de residência</li>
+        <li><span class="cad-doc-list-icon">🏢</span>Cartão CNPJ (quando aplicável)</li>
+        <li><span class="cad-doc-list-icon">📄</span>Currículo</li>
       </ul>
     </div>
 
@@ -695,11 +770,15 @@
 
 <div id="toast" class="toast"></div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.0"
+        integrity="sha384-De+l/Df7qym5QBDVocD3+gW1S7IjR3epf+6KbRDjB3FCCzM/LqVTwqckT6FhFar8"
+        crossorigin="anonymous"></script>
+<script src="config.js"></script>
 <script>
-  const SUPA_URL = 'https://hqyoszdilauarrhxpgjg.supabase.co';
-  const SUPA_KEY = 'sb_publishable_4gHAO6N33CaLCKgVzPa6Dw_YMP5LXo4';
-  const supa = supabase.createClient(SUPA_URL, SUPA_KEY);
+  if (!window.SUPABASE_URL || !window.SUPABASE_KEY) {
+    throw new Error("config.js não encontrado ou incompleto — defina window.SUPABASE_URL e window.SUPABASE_KEY.");
+  }
+  const supa = supabase.createClient(window.SUPABASE_URL, window.SUPABASE_KEY);
 
   // Preenchido quando o acesso vem de um link de solicitação específico
   // (?ctr=CTR-000X&tk=<token>) — ver validarLinkContrato(). Nesse caso o
@@ -774,6 +853,13 @@
     clearTimeout(t._timer);
     t._timer = setTimeout(() => t.classList.remove('show'), 4500);
   }
+
+  document.getElementById('btnCopiarEmailDoc').addEventListener('click', () => {
+    const email = 'gestao.pessoas@setegce.com';
+    navigator.clipboard.writeText(email)
+      .then(() => mostrarToast('E-mail copiado.', 'ok'))
+      .catch(() => mostrarToast('Copie o e-mail manualmente: ' + email, 'err'));
+  });
 
   function mascaraCpf(el) {
     let s = el.value.replace(/\D/g, '').slice(0, 11);

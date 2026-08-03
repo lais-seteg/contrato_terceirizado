@@ -233,19 +233,23 @@ create index idx_auditoria_data          on auditoria (data desc);
 create index idx_auditoria_registro_id   on auditoria (registro_id);
 
 -- ══════════════════════════════════════════════════════════════
--- RLS — o app não usa Supabase Auth: o login é validado no cliente
--- comparando o hash do código digitado com usuarios.codigo_hash, e
--- todas as chamadas usam a mesma chave publishable (anon). Por isso
--- as políticas abaixo liberam CRUD para "anon" nas 4 tabelas
--- operacionais (igual ao comportamento que o app já tinha) e
--- restringem "usuarios" a leitura (necessária para o login).
+-- RLS — o app não usa Supabase Auth: todas as chamadas usam a mesma
+-- chave publishable (anon). Por isso as políticas abaixo liberam CRUD
+-- para "anon" só nas tabelas/operações que o app realmente usa
+-- (conferido em script.js) — nada de "usuarios" (login passa pela
+-- função autenticar_usuario, ver seção seguinte) e "auditoria" só
+-- aceita select+insert (o app nunca chama update/delete nela — vira
+-- log append-only).
 --
--- ⚠ Aviso de segurança: com esse modelo, qualquer pessoa de posse da
--- chave publishable (que fica exposta no script.js do navegador)
--- consegue ler/gravar essas tabelas diretamente, inclusive o hash de
--- código de todo mundo em "usuarios". Limitação conhecida da
--- arquitetura atual (sem backend próprio) — não é algo novo deste
--- script.
+-- ⚠ Aviso de segurança residual: como o app não usa Supabase Auth,
+-- estas policies não conseguem diferenciar QUEM está autenticado —
+-- qualquer pessoa de posse da chave publishable (exposta no
+-- script.js/cadastro.html do navegador) ainda consegue ler/gravar
+-- contratos/terceirizados/avaliações diretamente pela API do Supabase,
+-- inclusive dados pessoais dos terceirizados (CPF, RG, dados
+-- bancários). Migrar para Supabase Auth (JWT real) é a única forma de
+-- fechar esse ponto por completo — ver aviso de segurança na
+-- documentação/memória do projeto.
 -- ══════════════════════════════════════════════════════════════
 
 alter table usuarios      enable row level security;
@@ -254,8 +258,10 @@ alter table contratos     enable row level security;
 alter table avaliacoes    enable row level security;
 alter table auditoria     enable row level security;
 
-create policy "anon select usuarios" on usuarios
-  for select to anon using (true);
+-- "usuarios" não tem NENHUMA policy para anon — RLS bloqueia
+-- select/insert/update/delete por padrão. O login só funciona através
+-- da função autenticar_usuario() (SECURITY DEFINER, definida abaixo),
+-- que nunca devolve codigo_hash e tem limite de tentativas por IP.
 
 create policy "anon crud terceirizados" on terceirizados
   for all to anon using (true) with check (true);
@@ -266,8 +272,71 @@ create policy "anon crud contratos" on contratos
 create policy "anon crud avaliacoes" on avaliacoes
   for all to anon using (true) with check (true);
 
-create policy "anon crud auditoria" on auditoria
-  for all to anon using (true) with check (true);
+create policy "anon select auditoria" on auditoria
+  for select to anon using (true);
+
+create policy "anon insert auditoria" on auditoria
+  for insert to anon with check (true);
+
+-- ──────────────────────────────────────────────────────────────
+-- Login seguro: tabela de controle de tentativas (só IP + resultado,
+-- nunca o código/hash) e função SECURITY DEFINER que autentica sem
+-- nunca expor a tabela usuarios nem a coluna codigo_hash para o
+-- cliente. Ver migracao_2026-08-03_seguranca_login_rpc.sql para o
+-- histórico/motivação completa.
+-- ──────────────────────────────────────────────────────────────
+create table if not exists login_attempts (
+  id        bigint generated always as identity primary key,
+  ip        text not null,
+  sucesso   boolean not null,
+  criado_em timestamptz not null default now()
+);
+create index if not exists idx_login_attempts_ip_tempo on login_attempts (ip, criado_em desc);
+alter table login_attempts enable row level security;
+-- Sem policy para anon — só a função abaixo acessa esta tabela.
+
+create or replace function autenticar_usuario(p_hash text)
+returns table (nome text, perfil text, setor text, gestor text)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_ip      text;
+  v_falhas  int;
+  v_usuario record;
+begin
+  v_ip := coalesce(
+    nullif(split_part(current_setting('request.headers', true)::json ->> 'x-forwarded-for', ',', 1), ''),
+    'desconhecido'
+  );
+
+  select count(*) into v_falhas
+  from login_attempts
+  where ip = v_ip and sucesso = false and criado_em > now() - interval '15 minutes';
+
+  if v_falhas >= 10 then
+    raise exception 'Muitas tentativas de login deste endereço. Aguarde 15 minutos e tente novamente.';
+  end if;
+
+  select u.nome, u.perfil, u.setor, u.gestor
+  into v_usuario
+  from usuarios u
+  where u.codigo_hash = p_hash and u.ativo = true
+  limit 1;
+
+  insert into login_attempts (ip, sucesso) values (v_ip, v_usuario.nome is not null);
+
+  if v_usuario.nome is null then
+    return;
+  end if;
+
+  return query select v_usuario.nome, v_usuario.perfil, v_usuario.setor, v_usuario.gestor;
+end;
+$$;
+
+revoke all on function autenticar_usuario(text) from public;
+grant execute on function autenticar_usuario(text) to anon;
 
 -- ══════════════════════════════════════════════════════════════
 -- SEED — usuários e senhas de acesso

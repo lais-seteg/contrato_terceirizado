@@ -1,0 +1,33 @@
+# config.js contém a chave PUBLISHABLE (anon) do Supabase — feita para ser
+# pública; a segurança real vem das políticas RLS no banco, não do sigilo
+# desta chave. Como o deploy é direto deste repositório pelo Vercel/Netlify
+# (sem etapa de build que injete variáveis de ambiente), config.js PRECISA
+# continuar versionado — se for ignorado aqui, o site publicado quebra por
+# falta da chave. Não adicionar "config.js" a este arquivo sem antes montar
+# um passo de build que gere o arquivo a partir de variáveis de ambiente.
+
+# Claude Code
+.claude/
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editores
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Logs
+*.log
+npm-debug.log*
+
+# Node (caso venha a usar futuramente)
+node_modules/
+
+# Arquivos temporários/backup
+*.tmp
+*.bak
+*~

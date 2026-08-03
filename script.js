@@ -5,24 +5,26 @@
 const SESSION_KEY = "seteg_ter_sessao";
 
 // ══════════════════════════════════════════════════════
-//  SUPABASE
+//  SUPABASE — URL/chave vêm de config.js (carregado antes deste
+//  arquivo em index.html), não ficam mais hardcoded aqui.
 // ══════════════════════════════════════════════════════
-const SUPA_URL = 'https://hqyoszdilauarrhxpgjg.supabase.co';
-const SUPA_KEY = 'sb_publishable_4gHAO6N33CaLCKgVzPa6Dw_YMP5LXo4';
-const supa     = supabase.createClient(SUPA_URL, SUPA_KEY);
+if (!window.SUPABASE_URL || !window.SUPABASE_KEY) {
+  throw new Error("config.js não encontrado ou incompleto — defina window.SUPABASE_URL e window.SUPABASE_KEY.");
+}
+const supa = supabase.createClient(window.SUPABASE_URL, window.SUPABASE_KEY);
 
 let DB = { contratos:[], terceirizados:[], avaliacoes:[], auditoria:[] };
 let STATE = {
   perfil: "solicitante",
   nomeUsuario: "",
+  setor: "",
   secaoAtiva: "dashboard",
   filtros: {
     contratos:     { status: "", tipo: "", busca: "", pagina: 1 },
     terceirizados: { tipo: "", busca: "", pagina: 1 },
     avaliacoes:    { pagina: 1 },
     auditoria:     { busca: "", pagina: 1 }
-  },
-  financeiro: { ano: new Date().getFullYear(), mes: new Date().getMonth() }
+  }
 };
 let entregas = [];
 
@@ -31,32 +33,29 @@ const STATUS_BTNS = {
   "gestao": [
     { status:"Em Elaboração",                  icon:"✎", label:"Em Elaboração",                  cls:"btn-status-warn" },
     { status:"Aguardando Aprovação do Líder",   icon:"👁", label:"Aguardando Aprovação do Líder",   cls:"btn-status-warn" },
-    { status:"Aguardando Pagamento",            icon:"💰", label:"Aguardando Pagamento",            cls:"btn-status-warn" },
-    { status:"Aprovado",   icon:"✓", label:"Aprovado",   cls:"btn-status-ok"   },
     { status:"Reprovado",  icon:"✗", label:"Reprovado",  cls:"btn-status-err"  },
     { status:"Pendente de Ajuste", icon:"⚠", label:"Pendente de Ajuste", cls:"btn-status-warn" },
     { status:"Finalizado", icon:"✔", label:"Finalizado", cls:"btn-status-final" },
+    { status:"Cancelado", icon:"🚫", label:"Cancelado", cls:"btn-status-err" },
   ],
   "gestao-pessoas": [
     { status:"Em Elaboração",                  icon:"✎", label:"Em Elaboração",                  cls:"btn-status-warn" },
     { status:"Aguardando Aprovação do Líder",   icon:"👁", label:"Aguardando Aprovação do Líder",   cls:"btn-status-warn" },
-    { status:"Aguardando Pagamento",            icon:"💰", label:"Aguardando Pagamento",            cls:"btn-status-warn" },
-    { status:"Aprovado",   icon:"✓", label:"Aprovado",   cls:"btn-status-ok"   },
     { status:"Finalizado", icon:"✔", label:"Finalizado", cls:"btn-status-final" },
     { status:"Pendente de Ajuste", icon:"⚠", label:"Pendente de Ajuste", cls:"btn-status-warn" },
+    { status:"Cancelado", icon:"🚫", label:"Cancelado", cls:"btn-status-err" },
   ]
 };
 
 // Fluxo: Líder cria (Pendente) → terceirizado responde pelo link (Em Elaboração,
 // automático) → DP confirma documentos e gera o contrato → botão "Encaminhar para
 // Líder" (Aguardando Aprovação do Líder) → líder aprova com scroll obrigatório
-// (Aguardando Assinaturas, automático) → DP assina e encaminha ao financeiro
-// (Aguardando Pagamento, stampa cDataEncaminhadoFinanceiro p/ alerta de 10 dias)
-// → financeiro paga e dá o OK (Aprovado) → Finalizado
+// (Aguardando Assinaturas, automático) → DP marca "Contrato Assinado" → Finalizado
+// direto (o financeiro não participa do fluxo do sistema).
 const STATUS_POR_PERFIL = {
   solicitante:      ["Pendente"],
-  "gestao-pessoas": ["Em Elaboração","Aguardando Aprovação do Líder","Aguardando Pagamento","Aprovado","Finalizado","Pendente de Ajuste"],
-  gestao:           ["Em Elaboração","Aguardando Aprovação do Líder","Aguardando Pagamento","Aprovado","Reprovado","Pendente de Ajuste","Finalizado"]
+  "gestao-pessoas": ["Em Elaboração","Aguardando Aprovação do Líder","Finalizado","Pendente de Ajuste"],
+  gestao:           ["Em Elaboração","Aguardando Aprovação do Líder","Reprovado","Pendente de Ajuste","Finalizado"]
 };
 
 const STATUS_CLASS = {
@@ -82,7 +81,7 @@ const CAMPOS_CONTRATO = [
   "cEmailEmpresa","cTelEmpresa","cEndEmpresa","cNumeroContrato","cEmpresaContratante",
   "cTipoContratacao","cTipoOutro","cDataInicio","cDataFim","cCentroCusto","cProjeto",
   "cUnidade","cValorMensal","cValorTotal","cObjeto","cObjetoOutro","cArt",
-  "cEscopo","cCronograma","cDataEncaminhadoFinanceiro",
+  "cEscopo","cCronograma",
   "cCargo","cCargoOutro","cSetor",
   "cObjetivoContrato","cObjetivoContratoOutro","cNaturezaContrato","cNaturezaContratoOutro",
   "cCondicoesPagamento",
@@ -110,7 +109,7 @@ const TERC_LABELS = {
   tEstadoCivil:"Estado Civil",
   tTelefone:"Telefone",tEstado:"Estado",tCidade:"Cidade",tEndereco:"Endereço",
   tGraduacao:"Graduação",tNivelFormacao:"Nível Formação",tAreaExpertise:"Área",
-  tCursosExtras:"Cursos",tLattes:"Lattes",tRegistro:"Registro",tCrbio2:"CRBio2",
+  tCursosExtras:"Cursos",tLattes:"Lattes",tRegistro:"Conselho",tCrbio2:"Nº Registro",
   tCtf:"CTF",tCnh:"CNH",tExpDirecao:"Exp. Direção",tPossuiCnpj:"Possui CNPJ",
   tCnpj:"CNPJ",tComprovante:"Comprovante",tEmissao:"Emissão",tFormaPgto:"Forma Pgto",
   tParcelas:"Parcelas",
@@ -150,6 +149,7 @@ async function init() {
     if (sessao && sessao.nomeUsuario) {
       STATE.perfil = sessao.perfil;
       STATE.nomeUsuario = sessao.nomeUsuario;
+      STATE.setor = sessao.setor || "";
       await mostrarApp();
       return;
     }
@@ -312,6 +312,7 @@ async function validarLogin() {
   if (!codigo) return;
   btnEntrar.disabled = true;
   btnEntrar.textContent = "Verificando…";
+  document.getElementById("loginErro").textContent = "Código inválido. Tente novamente.";
   document.getElementById("loginErro").classList.add("hidden");
   document.getElementById("loginErroCon").classList.add("hidden");
   try {
@@ -320,14 +321,23 @@ async function validarLogin() {
     const timeoutPromise = new Promise((_, rej) =>
       setTimeout(() => rej(new Error("timeout")), TIMEOUT_MS)
     );
-    const queryPromise = supa
-      .from('usuarios')
-      .select('nome, perfil, iniciais, label, setor, gestor')
-      .eq('codigo_hash', hash)
-      .eq('ativo', true)
-      .limit(1);
+    // Login passa pela função autenticar_usuario() (SECURITY DEFINER no
+    // Supabase) — nunca faz select direto na tabela usuarios, que não
+    // expõe mais nenhuma linha para a chave anon (ver
+    // migracao_2026-08-03_seguranca_login_rpc.sql). A função também
+    // aplica limite de tentativas por IP, retornando erro nesse caso.
+    const queryPromise = supa.rpc('autenticar_usuario', { p_hash: hash });
     const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
-    if (error || !data || data.length === 0) {
+    if (error) {
+      const bloqueado = /muitas tentativas/i.test(error.message || "");
+      const elErro = document.getElementById("loginErro");
+      elErro.textContent = bloqueado ? error.message : "Código inválido. Tente novamente.";
+      elErro.classList.remove("hidden");
+      document.getElementById("inputCodigo").select();
+      return;
+    }
+    if (!data || data.length === 0) {
+      document.getElementById("loginErro").textContent = "Código inválido. Tente novamente.";
       document.getElementById("loginErro").classList.remove("hidden");
       document.getElementById("inputCodigo").select();
       return;
@@ -335,7 +345,8 @@ async function validarLogin() {
     const usuario = data[0];
     STATE.perfil      = usuario.perfil;
     STATE.nomeUsuario = usuario.nome;
-    sessionStorage.setItem(SESSION_KEY, JSON.stringify({ perfil: usuario.perfil, nomeUsuario: usuario.nome }));
+    STATE.setor       = usuario.setor || "";
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify({ perfil: usuario.perfil, nomeUsuario: usuario.nome, setor: usuario.setor || "" }));
     await mostrarApp();
   } catch(e) {
     if (e.message === "timeout") {
@@ -353,6 +364,7 @@ function sair() {
   sessionStorage.removeItem(SESSION_KEY);
   STATE.perfil = "solicitante";
   STATE.nomeUsuario = "";
+  STATE.setor = "";
   mostrarLogin();
 }
 
@@ -439,10 +451,6 @@ function registrarListeners() {
   document.getElementById("prevT").addEventListener("click", () => { STATE.filtros.terceirizados.pagina--; renderTerceirizados(); });
   document.getElementById("nextT").addEventListener("click", () => { STATE.filtros.terceirizados.pagina++; renderTerceirizados(); });
 
-  // ── Financeiro ──
-  document.getElementById("btnFinMesAnterior").addEventListener("click", () => mudarMesFinanceiro(-1));
-  document.getElementById("btnFinMesSeguinte").addEventListener("click", () => mudarMesFinanceiro(1));
-
   // ── Avaliações ──
   document.getElementById("btnNovaAval").addEventListener("click", () => abrirFormAval(null));
   document.getElementById("btnFecharAval").addEventListener("click", fecharFormAval);
@@ -496,14 +504,19 @@ function registrarListeners() {
 // ══════════════════════════════════════════════════════
 //  PERMISSÕES
 // ══════════════════════════════════════════════════════
+const PERFIL_LABEL = { gestao: "Gestão", "gestao-pessoas": "Gestão de Pessoas", solicitante: "Líder" };
+
 function aplicarPermissoes() {
   const p = STATE.perfil;
-  const label = p==="gestao" ? "Gestão" : p==="gestao-pessoas" ? "Gestão de Pessoas" : STATE.nomeUsuario;
-  document.getElementById("perfilBadge").textContent = label;
-  const initials = p==="gestao" ? "G" : p==="gestao-pessoas" ? "GP"
-    : STATE.nomeUsuario.split(" ").filter(Boolean).map(w=>w[0]).join("").substring(0,2).toUpperCase();
+  const label = PERFIL_LABEL[p] || p;
   const av = document.getElementById("sidebarAvatar");
-  if (av) av.textContent = initials;
+  if (av) av.textContent = (STATE.nomeUsuario || "?").charAt(0).toUpperCase();
+  const elNome = document.getElementById("sidebarNome");
+  if (elNome) elNome.textContent = STATE.nomeUsuario;
+  const elPerfil = document.getElementById("sidebarPerfil");
+  if (elPerfil) elPerfil.textContent = "Perfil: " + label;
+  const elSetor = document.getElementById("sidebarSetor");
+  if (elSetor) elSetor.textContent = STATE.setor ? "Setor: " + STATE.setor : "";
   document.querySelectorAll(".perm-gp-gestao").forEach(el => el.classList.toggle("hidden", p==="solicitante"));
   document.querySelectorAll(".campo-interno").forEach(el => el.classList.toggle("hidden", p==="solicitante"));
   document.querySelectorAll(".campo-gestao").forEach(el => el.classList.toggle("hidden", p!=="gestao"));
@@ -525,6 +538,14 @@ function podeEditar(item) {
   if (STATE.perfil !== "solicitante") return true;
   // Líder pode editar somente os próprios contratos em "Pendente" ou "Pendente de Ajuste" (retornado para ajuste)
   return item && item.criadoPor === STATE.nomeUsuario && ["Pendente","Pendente de Ajuste"].includes(item.status);
+}
+
+// Enquanto o DP está elaborando o contrato ("Em Elaboração"), o líder não tem
+// acesso — só volta a aparecer para ele quando é encaminhado de volta
+// ("Aguardando Aprovação do Líder" em diante) ou quando ele mesmo o criou
+// ("Pendente"/"Pendente de Ajuste").
+function visivelParaLider(c) {
+  return c.criadoPor === STATE.nomeUsuario && c.status !== "Em Elaboração";
 }
 function podeExcluir()  { return STATE.perfil === "gestao"; }
 function podeAnalisar() { return STATE.perfil !== "solicitante"; }
@@ -553,7 +574,6 @@ function irParaSecao(secao) {
     case "terceirizados": renderTerceirizados(); break;
     case "avaliacoes":    renderAvaliacoes();    break;
     case "alertas":       renderAlertas();       break;
-    case "financeiro":    renderCalendarioFinanceiro(); break;
   }
 }
 
@@ -562,14 +582,14 @@ function irParaSecao(secao) {
 // ══════════════════════════════════════════════════════
 function renderDashboard() {
   const meus = STATE.perfil === "solicitante"
-    ? DB.contratos.filter(c => c.criadoPor === STATE.nomeUsuario)
+    ? DB.contratos.filter(visivelParaLider)
     : DB.contratos;
 
-  document.getElementById("kpiAtivos").textContent     = meus.filter(c=>!["Reprovado","Finalizado"].includes(c.status)).length;
-  document.getElementById("kpiAprovados").textContent  = meus.filter(c=>c.status==="Aprovado").length;
-  document.getElementById("kpiVencendo").textContent   = meus.filter(c=>{const d=diasAteVencer(c.cDataFim);return d!==null&&d>=0&&d<=30;}).length;
-  document.getElementById("kpiPendencias").textContent = meus.filter(c=>["Pendente","Pendente de Ajuste"].includes(c.status)).length;
-  document.getElementById("kpiTercs").textContent      = DB.terceirizados.length;
+  document.getElementById("kpiAtivos").textContent      = meus.filter(c=>!["Reprovado","Finalizado","Cancelado"].includes(c.status)).length;
+  document.getElementById("kpiElaboracao").textContent  = meus.filter(c=>c.status==="Em Elaboração").length;
+  document.getElementById("kpiVencendo").textContent    = meus.filter(c=>{const d=diasAteVencer(c.cDataFim);return d!==null&&d>=0&&d<=30;}).length;
+  document.getElementById("kpiCancelados").textContent  = meus.filter(c=>c.status==="Cancelado").length;
+  document.getElementById("kpiTercs").textContent       = DB.terceirizados.length;
   document.getElementById("kpiAvalPendentes").textContent = meus.filter(c=>contratoAguardaAvaliacao(c)).length;
 
   const totalAlertas = gerarAlertas().length;
@@ -651,7 +671,7 @@ function limparFormContrato() {
   if (rp) rp.value = "";
   document.getElementById("secaoCTercDespachante").classList.add("hidden");
   document.getElementById("secaoCTercAuxiliar").classList.add("hidden");
-  document.querySelectorAll('#secaoCTercDespachante input[type="radio"], #secaoCTercAuxiliar input[type="radio"]').forEach(r => r.checked = false);
+  document.querySelectorAll('#secaoCTercDespachante input[type="radio"]:not([name="depEmissao"]), #secaoCTercAuxiliar input[type="radio"]:not([name="auxEmissao"])').forEach(r => r.checked = false);
   const grpExp = document.getElementById("grpAuxExpDirecao");
   if (grpExp) grpExp.style.display = "none";
   const grpDepParc = document.getElementById("grpDepParcelas");
@@ -941,7 +961,7 @@ function salvarContrato() {
   lerCamposContrato(item);
   if      (item.cTipoContratacao === "Despachante")     lerCamposDespachante(item);
   else if (item.cTipoContratacao === "Prestador de serviço") lerCamposAuxiliar(item);
-  item.entregas = entregas.map(({entrega,marco,data,valor,formaPagamento}) => ({entrega,marco,data,valor,formaPagamento}));
+  item.entregas = entregas.filter(e => e.entrega && e.entrega.trim()).map(({entrega,marco,data,valor,formaPagamento}) => ({entrega,marco,data,valor,formaPagamento}));
   item.id = item.cId || gerarId("CTR");
   // Solicitante sempre submete como "Pendente" (aguarda elaboração pelo DP/RH)
   item.status = STATE.perfil === "solicitante" ? "Pendente" : (item.cStatus || "Pendente");
@@ -1097,11 +1117,15 @@ function abrirAnalise(id) {
      </button>`
   ).join("");
 
+  const obsHint = document.getElementById("analiseObsHint");
   group.querySelectorAll(".btn-status").forEach(btn => {
     btn.addEventListener("click", () => {
       group.querySelectorAll(".btn-status").forEach(b => b.classList.remove("selected"));
       btn.classList.add("selected");
       document.getElementById("analiseStatusVal").value = btn.dataset.status;
+      obsHint.textContent = btn.dataset.status === "Cancelado"
+        ? "(obrigatório — informe o motivo do cancelamento)"
+        : "(opcional — se preenchida sem decisão, vai para Pendente de Ajuste)";
     });
   });
 
@@ -1117,6 +1141,7 @@ function salvarAnalise() {
   // Obs sem decisão explícita → entra como Pendente de Ajuste
   if (!novoStatus && obs) novoStatus = "Pendente de Ajuste";
   if (!novoStatus) { mostrarToast("Selecione uma decisão ou adicione uma observação.","err"); return; }
+  if (novoStatus === "Cancelado" && !obs) { mostrarToast("Informe o motivo do cancelamento.","err"); return; }
 
   let contratoAtualizado;
   DB.contratos = DB.contratos.map(c => {
@@ -1130,10 +1155,7 @@ function salvarAnalise() {
       obs: obs || `Decisão: ${novoStatus}.`
     }];
     registrarAuditoria("Mudança de Status","Contratos",id,ant,novoStatus,obs||"");
-    // Encaminhado ao financeiro agora: guarda a data para o alerta de prazo de
-    // pagamento (10 dias, ver gerarAlertas()).
-    const extra = novoStatus === "Aguardando Pagamento" ? { cDataEncaminhadoFinanceiro: new Date().toISOString() } : {};
-    contratoAtualizado = {...c, ...extra, status:novoStatus, historico, atualizadoEm:new Date().toISOString(), atualizadoPor:STATE.nomeUsuario};
+    contratoAtualizado = {...c, status:novoStatus, historico, atualizadoEm:new Date().toISOString(), atualizadoPor:STATE.nomeUsuario};
     return contratoAtualizado;
   });
   if (contratoAtualizado) syncContrato(contratoAtualizado);
@@ -1174,6 +1196,7 @@ function salvarObs() {
 function verDetalhesContrato(id) {
   const item = DB.contratos.find(c=>c.id===id);
   if (!item) return;
+  if (STATE.perfil==="solicitante" && !visivelParaLider(item)) { mostrarToast("Este contrato ainda está em elaboração pelo DP.","err"); return; }
   document.getElementById("modalDetalhesTitulo").textContent = "Contrato · " + item.id;
   document.getElementById("modalDetalhesBody").innerHTML = gerarHTMLDetalhes(item);
   document.getElementById("modalDetalhes").dataset.currentId = id;
@@ -1251,7 +1274,7 @@ function gerarHTMLDetalhes(item) {
 
   return `<div class="detail-grid">
     <div class="detail-section-title">Identificação</div>
-    ${det("Nº",item.id)}${det("Status",statusBadge(item.status))}${det("Tipo",item.cTipoContratacao)}${det("Criado em",formatarDataHora(item.criadoEm))}${det("Por",item.criadoPor)}
+    ${det("Nº",item.id)}<div class="detail-item"><span>Status</span><strong>${statusBadge(item.status)}</strong></div>${det("Tipo",item.cTipoContratacao)}${det("Criado em",formatarDataHora(item.criadoEm))}${det("Por",item.criadoPor)}
     <div class="detail-section-title">A · Contrato</div>
     ${det("Nº Contrato",item.cNumeroContrato)}${det("Projeto",item.cProjeto)}${det("Início",formatarData(item.cDataInicio))}${det("Término",formatarData(item.cDataFim))}${det("Valor Total",item.cValorTotal?formatarMoeda(item.cValorTotal):"-")}
     ${det("Necessidade de ART",item.cArt)}${det("Cargo",item.cCargo==="Outro"?item.cCargoOutro:item.cCargo)}${det("Setor",item.cSetor)}
@@ -1281,7 +1304,7 @@ function gerarHTMLDetalhes(item) {
 }
 
 function det(label, valor, extra) {
-  return `<div class="detail-item ${extra||""}"><span>${label}</span><strong>${valor||"-"}</strong></div>`;
+  return `<div class="detail-item ${extra||""}"><span>${label}</span><strong>${valor?esc(String(valor)):"-"}</strong></div>`;
 }
 
 function verDetalhesAvaliacao(id) {
@@ -1342,7 +1365,7 @@ function confirmarExcluir() {
 function renderContratos() {
   const f = STATE.filtros.contratos;
   let lista = DB.contratos.filter(c => {
-    if (STATE.perfil==="solicitante" && c.criadoPor!==STATE.nomeUsuario) return false;
+    if (STATE.perfil==="solicitante" && !visivelParaLider(c)) return false;
     const txt = `${c.id} ${c.cProjeto} ${c.cTercNome} ${c.criadoPor}`.toLowerCase();
     return (!f.status||c.status===f.status)&&(!f.tipo||c.cTipoContratacao===f.tipo)&&(!f.busca||txt.includes(f.busca));
   });
@@ -1374,7 +1397,7 @@ function renderContratos() {
       <td>${statusBadge(c.status)}</td>
       <td class="col-acoes"><div class="table-actions">
         <button class="btn-icon" title="Visualizar" onclick="verDetalhesContrato('${c.id}')">👁</button>
-        ${["Em Elaboração","Aguardando Aprovação do Líder","Aguardando Assinaturas","Aguardando Pagamento","Aprovado","Finalizado"].includes(c.status)
+        ${["Em Elaboração","Aguardando Aprovação do Líder","Aguardando Assinaturas","Finalizado"].includes(c.status)
           ? (c.cContratoHtml
             ? `<button class="btn-icon btn-icon-green" title="Ver / Baixar Contrato Gerado" onclick="abrirGerarContrato('${c.id}')">📄</button>`
             : `<button class="btn-icon btn-icon-teal" title="Gerar Contrato" onclick="abrirGerarContrato('${c.id}')">📄</button>`)
@@ -1476,6 +1499,7 @@ function cgFill(valor, placeholder) {
 function abrirGerarContrato(id) {
   const item = DB.contratos.find(c => c.id === id);
   if (!item) return;
+  if (STATE.perfil==="solicitante" && !visivelParaLider(item)) { mostrarToast("Este contrato ainda está em elaboração pelo DP.","err"); return; }
   document.getElementById("modalContratoDoc").dataset.currentId = id;
   abrirModal("modalContratoDoc");
   const jaGerado = !!item.cContratoHtml;
@@ -1517,7 +1541,7 @@ function abrirGerarContrato(id) {
     setTimeout(liberarSeChegouAoFim, 50);
   }
 
-  // DP confirma que coletou as assinaturas: encaminha direto ao financeiro.
+  // DP confirma que coletou as assinaturas: contrato vai direto para Finalizado.
   const btnAssinado = document.getElementById("btnContratoAssinado");
   if (btnAssinado) btnAssinado.classList.toggle("hidden", !(ehGestaoOuGP() && item.status === "Aguardando Assinaturas"));
 }
@@ -1546,27 +1570,26 @@ function encaminharParaLider() {
 }
 
 // Botão dedicado "✍️ Contrato Assinado" — DP confirma que coletou as
-// assinaturas e já encaminha direto para o financeiro efetuar o pagamento,
-// estampando a data usada no alerta/calendário de prazo de pagamento (10 dias).
+// assinaturas e o contrato já vai direto para Finalizado (o financeiro não
+// participa do fluxo do sistema).
 function contratoAssinado() {
   const id = document.getElementById("modalContratoDoc").dataset.currentId;
   const idx = DB.contratos.findIndex(c => c.id === id);
   if (idx < 0) return;
   salvarContratoDoc();
   const ant = DB.contratos[idx].status;
-  DB.contratos[idx].status = "Aguardando Pagamento";
-  DB.contratos[idx].cDataEncaminhadoFinanceiro = new Date().toISOString();
+  DB.contratos[idx].status = "Finalizado";
   DB.contratos[idx].historico = [...(DB.contratos[idx].historico || []), {
     data: new Date().toISOString(), usuario: STATE.nomeUsuario, perfil: STATE.perfil,
-    status: "Aguardando Pagamento", obs: "Contrato assinado; encaminhado ao financeiro para pagamento."
+    status: "Finalizado", obs: "Contrato assinado."
   }];
   DB.contratos[idx].atualizadoEm = new Date().toISOString();
   DB.contratos[idx].atualizadoPor = STATE.nomeUsuario;
-  registrarAuditoria("Contrato Assinado", "Contratos", id, ant, "Aguardando Pagamento", "Assinado e encaminhado ao financeiro.");
+  registrarAuditoria("Contrato Assinado", "Contratos", id, ant, "Finalizado", "Assinado e finalizado.");
   syncContrato(DB.contratos[idx]);
   fecharModal("modalContratoDoc");
   renderContratos();
-  mostrarToast("Contrato assinado! Encaminhado ao financeiro para pagamento.", "ok");
+  mostrarToast("Contrato assinado e finalizado!", "ok");
 }
 
 function regenerarContratoDoc() {
@@ -1907,7 +1930,7 @@ function montarContratoHTML(item) {
     ${clausula(43, `Todas as obrigações e deveres contidos neste Contrato, poderão ser exigidos judicialmente, mesmo após do final mesmo, sendo este um documento com todos os efeitos de um Título Executivo Extrajudicial.`)}
     ${clausula(44, `As Partes pactuam que o presente Contrato pode sofrer alterações em suas cláusulas por meio de Aditivo Contratual, firmado pelas Partes.`)}
     ${clausula(45, `Fica estabelecido que o relacionamento entre as Partes, visando resguardar responsabilidades e obrigações, será normalmente pela forma escrita, através de consultas e respostas.`)}
-    ${clausula(46, `O responsável pela contratação deverá alinhar previamente com o terceirizado os critérios de validação da entrega, bem como o prazo necessário para análise e aprovação técnica da demanda, garantindo ciência das etapas internas do processo. Após a validação técnica, o processo será encaminhado ao setor financeiro, que terá prazo de até 10 dias para efetivação do pagamento. Todo terceirizado deverá emitir nota fiscal para viabilização do pagamento pelos serviços prestados. Eventuais exceções deverão ser previamente alinhadas e aprovadas pela Gerência Administrativa/Financeira e pela Diretoria de Projetos.`)}
+    ${clausula(46, `O responsável pela contratação deverá alinhar previamente com o terceirizado os critérios de validação da entrega, bem como o prazo necessário para análise e aprovação técnica da demanda, garantindo ciência das etapas internas do processo. Todo terceirizado deverá emitir nota fiscal para viabilização do pagamento pelos serviços prestados. Eventuais exceções deverão ser previamente alinhadas e aprovadas pela Gerência Administrativa/Financeira e pela Diretoria de Projetos.`)}
 
     <p class="cg-p">E, por estarem justas e convencionadas, as Partes assinam o presente Contrato em 02 (duas) vias de igual teor, juntamente com 02 (duas) testemunhas instrumentárias.</p>
 
@@ -1954,8 +1977,8 @@ function atualizarEntregaData(i,el){
 
 function renderEntregas() {
   const tbody=document.getElementById("entregasBody");
-  const vazio=document.getElementById("entregasVazio");
   if(!tbody) return;
+  if(!entregas.length) entregas.push({entrega:"",marco:"",data:"",valor:"",formaPagamento:"",salvo:false});
   tbody.innerHTML="";
   entregas.forEach((e,i)=>{
     const tr=document.createElement("tr");
@@ -1966,7 +1989,6 @@ function renderEntregas() {
     }
     tbody.appendChild(tr);
   });
-  vazio.style.display=entregas.length?"none":"block";
   calcularTotalEntregas();
 }
 
@@ -2039,7 +2061,7 @@ function gerarHTMLDetalhesTerceirizado(t, hist) {
     <div class="detail-section-title">1 · Identificação</div>
     ${di("Nome",t.tNome)}${di("Tipo",t.tTipo)}${di("E-mail",t.tEmail)}${di("CPF",t.tCpf)}${di("RG",t.tRg)}${di("Nascimento",formatarData(t.tNascimento))}${di("Estado Civil",t.tEstadoCivil)}${di("Telefone",t.tTelefone)}${di("Estado",t.tEstado)}${di("Cidade",t.tCidade)}${diF("Endereço",t.tEndereco)}
     <div class="detail-section-title">2 · Formação e Expertise</div>
-    ${di("Graduação",t.tGraduacao)}${di("Nível Formação",t.tNivelFormacao)}${di("Área",t.tAreaExpertise)}${di("Cursos extras",t.tCursosExtras)}${di("Lattes",t.tLattes)}${di("Registro",t.tRegistro)}${di("CRBio2",t.tCrbio2)}${di("CTF",t.tCtf)}${di("CNH",t.tCnh)}${diF("Exp. Direção",t.tExpDirecao)}
+    ${di("Graduação",t.tGraduacao)}${di("Nível Formação",t.tNivelFormacao)}${di("Área",t.tAreaExpertise)}${di("Cursos extras",t.tCursosExtras)}${di("Lattes",t.tLattes)}${di("Conselho",t.tRegistro)}${di("Nº Registro",t.tCrbio2)}${di("CTF",t.tCtf)}${di("CNH",t.tCnh)}${diF("Exp. Direção",t.tExpDirecao)}
     <div class="detail-section-title">3 · Dados Financeiros</div>
     ${di("Possui CNPJ",t.tPossuiCnpj)}${di("CNPJ",t.tCnpj)}${di("Comprovante",t.tComprovante)}${di("Emissão",t.tEmissao)}${di("Forma Pgto",t.tFormaPgto)}${t.tFormaPgto==="Parcelado"?di("Parcelas",t.tParcelas):""}${diF("Dados Bancários",t.tDadosBancarios)}${di("Disponibilidade",t.tDisponibilidade)}
     <div class="detail-section-title">4 · Emergência</div>
@@ -2324,32 +2346,14 @@ function renderAvaliacoes(){
 // ══════════════════════════════════════════════════════
 //  ALERTAS
 // ══════════════════════════════════════════════════════
-// Prazo do financeiro: 10 dias corridos a partir do momento em que o DP
-// encaminha o contrato para pagamento (cDataEncaminhadoFinanceiro, timestamptz).
-function diasAtePrazoPagamento(dataEncaminhado){
-  if(!dataEncaminhado) return null;
-  const prazo=new Date(dataEncaminhado);
-  if(isNaN(prazo)) return null;
-  prazo.setDate(prazo.getDate()+10);
-  prazo.setHours(0,0,0,0);
-  const hoje=new Date();hoje.setHours(0,0,0,0);
-  return Math.round((prazo-hoje)/86400000);
-}
-
 function gerarAlertas(){
   const base = STATE.perfil==="solicitante"
-    ? DB.contratos.filter(c=>c.criadoPor===STATE.nomeUsuario)
+    ? DB.contratos.filter(visivelParaLider)
     : DB.contratos;
   const alertasVencimento = base
     .map(c => { const dias=diasAteVencer(c.cDataFim); return {titulo:`Contrato ${c.id} · ${c.cTercNome||c.cRazaoSocial}`,desc:"Vencimento do contrato",dias,tipo:dias<=7?"critico":dias<=15?"atencao":"aviso"}; })
     .filter(a => a.dias!==null && a.dias<=30);
-  // Alerta de prazo de pagamento (financeiro) — só para quem acompanha
-  // pagamento (DP/Gestão); o líder não tem ação nessa etapa.
-  const alertasPagamento = STATE.perfil==="solicitante" ? [] : DB.contratos
-    .filter(c => c.status==="Aguardando Pagamento")
-    .map(c => { const dias=diasAtePrazoPagamento(c.cDataEncaminhadoFinanceiro); return {titulo:`Contrato ${c.id} · ${c.cTercNome||c.cRazaoSocial}`,desc:"Prazo de pagamento (financeiro)",dias,tipo:dias<=3?"critico":dias<=10?"atencao":"aviso"}; })
-    .filter(a => a.dias!==null && a.dias<=10);
-  return [...alertasVencimento, ...alertasPagamento].sort((a,b)=>a.dias-b.dias);
+  return [...alertasVencimento].sort((a,b)=>a.dias-b.dias);
 }
 
 function renderAlertas(){
@@ -2358,101 +2362,6 @@ function renderAlertas(){
   const el=document.getElementById("listaAlertas");
   if(!alertas.length){el.innerHTML=`<div class="alertas-empty">✅ Nenhum vencimento próximo nos próximos 30 dias.</div>`;return;}
   el.innerHTML=alertas.map(a=>{const dl=a.dias<0?`Vencido há ${Math.abs(a.dias)} dia(s)`:a.dias===0?"Vence hoje!":`Vence em ${a.dias} dia(s)`;return`<div class="alerta-card alerta-${a.tipo}"><div class="alerta-titulo">${esc(a.titulo)}</div><div class="alerta-desc">${esc(a.desc)}</div><div class="alerta-meta">${dl}</div></div>`;}).join("");
-}
-
-// ══════════════════════════════════════════════════════
-//  FINANCEIRO — calendário de pagamentos
-// ══════════════════════════════════════════════════════
-// Junta os dois tipos de pagamento previsto: o prazo do financeiro (10 dias
-// a partir de quando o DP marca "Contrato Assinado") e as datas individuais
-// de cada entrega (contrato pode ter várias, com forma de pagamento própria).
-function gerarPagamentosFinanceiro(){
-  const eventos=[];
-  DB.contratos.forEach(c=>{
-    if(["Reprovado","Cancelado"].includes(c.status)) return; // não vão ser pagos
-    if(c.status==="Aguardando Pagamento" && c.cDataEncaminhadoFinanceiro){
-      const prazo=new Date(c.cDataEncaminhadoFinanceiro);
-      prazo.setDate(prazo.getDate()+10);
-      eventos.push({
-        data: prazo.toISOString().slice(0,10),
-        titulo: `${c.id} · ${c.cTercNome||"-"}`,
-        desc: "Prazo de pagamento (financeiro)",
-        valor: c.cValorTotal,
-        contratoId: c.id
-      });
-    }
-    (c.entregas||[]).forEach(e=>{
-      if(!e.data) return;
-      eventos.push({
-        data: e.data,
-        titulo: `${c.id} · ${e.entrega||"Entrega"}`,
-        desc: e.formaPagamento ? `Entrega — ${e.formaPagamento}` : "Entrega",
-        valor: e.valor,
-        contratoId: c.id
-      });
-    });
-  });
-  return eventos;
-}
-
-function mudarMesFinanceiro(delta){
-  STATE.financeiro.mes+=delta;
-  if(STATE.financeiro.mes<0){STATE.financeiro.mes=11;STATE.financeiro.ano--;}
-  if(STATE.financeiro.mes>11){STATE.financeiro.mes=0;STATE.financeiro.ano++;}
-  renderCalendarioFinanceiro();
-}
-
-function renderCalendarioFinanceiro(){
-  const grid=document.getElementById("finCalendarioGrid");
-  if(!grid) return;
-  const {ano,mes}=STATE.financeiro;
-  document.getElementById("finMesAtual").textContent=
-    new Date(ano,mes,1).toLocaleDateString("pt-BR",{month:"long",year:"numeric"});
-
-  const eventosDoMes=gerarPagamentosFinanceiro().filter(ev=>{
-    const d=new Date(ev.data+"T00:00:00");
-    return d.getFullYear()===ano && d.getMonth()===mes;
-  });
-  const porDia={};
-  eventosDoMes.forEach(ev=>{
-    const dia=+ev.data.slice(8,10);
-    (porDia[dia]=porDia[dia]||[]).push(ev);
-  });
-
-  const primeiroDiaSemana=new Date(ano,mes,1).getDay();
-  const totalDias=new Date(ano,mes+1,0).getDate();
-  const hoje=new Date();hoje.setHours(0,0,0,0);
-
-  let html=`<div class="fin-cal-semana">${["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"].map(d=>`<div>${d}</div>`).join("")}</div><div class="fin-cal-dias">`;
-  for(let i=0;i<primeiroDiaSemana;i++) html+=`<div class="fin-cal-dia fin-cal-vazio"></div>`;
-  for(let dia=1;dia<=totalDias;dia++){
-    const evs=porDia[dia]||[];
-    const ehHoje=new Date(ano,mes,dia).getTime()===hoje.getTime();
-    const total=evs.reduce((s,e)=>s+(parseFloat(String(e.valor||"0").replace(/\./g,"").replace(",","."))||0),0);
-    html+=`<div class="fin-cal-dia${ehHoje?" fin-cal-hoje":""}${evs.length?" fin-cal-tem-pagamento":""}">
-      <div class="fin-cal-num">${dia}</div>
-      ${evs.length?`<div class="fin-cal-eventos">
-        ${evs.slice(0,2).map(e=>`<div class="fin-cal-evento" title="${esc(e.titulo)} — ${esc(e.desc)}">${esc(e.titulo)}</div>`).join("")}
-        ${evs.length>2?`<div class="fin-cal-mais">+${evs.length-2}</div>`:""}
-        ${total?`<div class="fin-cal-total">${formatarMoeda(total)}</div>`:""}
-      </div>`:""}
-    </div>`;
-  }
-  html+="</div>";
-  grid.innerHTML=html;
-
-  const lista=document.getElementById("finListaPagamentos");
-  if(!eventosDoMes.length){
-    lista.innerHTML=`<div class="alertas-empty">✅ Nenhum pagamento previsto neste mês.</div>`;
-    return;
-  }
-  lista.innerHTML=eventosDoMes
-    .sort((a,b)=>a.data.localeCompare(b.data))
-    .map(e=>`<div class="alerta-card alerta-aviso">
-      <div class="alerta-titulo">${formatarData(e.data)} · ${esc(e.titulo)}</div>
-      <div class="alerta-desc">${esc(e.desc)}</div>
-      <div class="alerta-meta">${e.valor?formatarMoeda(e.valor):"-"}</div>
-    </div>`).join("");
 }
 
 // ══════════════════════════════════════════════════════

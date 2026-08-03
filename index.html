@@ -3,6 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- CSP: unsafe-inline em script/style é necessário porque a UI usa
+       onclick="..." e style="..." inline gerados via innerHTML em todo o
+       app (não bloqueia XSS por injeção de atributo/handler inline, mas
+       impede exfiltração de dados para hosts externos via fetch/imagem,
+       carregamento de scripts de fora do jsdelivr e embutir a página em
+       iframe de terceiros). -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://hqyoszdilauarrhxpgjg.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none';" />
   <title>Contratação de Terceirizados · Seteg</title>
   <link rel="icon" type="image/png" href="images/favicon.png" />
   <link rel="stylesheet" href="style.css" />
@@ -62,10 +69,6 @@
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         Terceirizados
       </button>
-      <button class="sidebar-btn perm-gp-gestao" data-secao="financeiro">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-        Financeiro
-      </button>
       <button class="sidebar-btn" data-secao="avaliacoes">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
         Avalia&#231;&#245;es
@@ -81,7 +84,9 @@
       <div class="sidebar-user">
         <div class="sidebar-avatar" id="sidebarAvatar">?</div>
         <div class="sidebar-user-info">
-          <strong id="perfilBadge">—</strong>
+          <strong id="sidebarNome">—</strong>
+          <span id="sidebarPerfil" class="sidebar-user-detail"></span>
+          <span id="sidebarSetor" class="sidebar-user-detail"></span>
         </div>
       </div>
       <div class="sidebar-actions">
@@ -108,9 +113,9 @@
       </div>
       <div class="kpi-row">
         <div class="kpi-card kpi-blue"><div class="kpi-icon-wrap kpi-bg-blue">📋</div><div><div class="kpi-label">Contratos Ativos</div><strong id="kpiAtivos" class="kpi-value">0</strong><div class="kpi-sub">Em andamento no momento</div></div></div>
-        <div class="kpi-card kpi-green"><div class="kpi-icon-wrap kpi-bg-green">✅</div><div><div class="kpi-label">Aprovados</div><strong id="kpiAprovados" class="kpi-value">0</strong><div class="kpi-sub">Contratos com status Aprovado</div></div></div>
+        <div class="kpi-card kpi-orange"><div class="kpi-icon-wrap kpi-bg-orange">🛠️</div><div><div class="kpi-label">Em Elaboração</div><strong id="kpiElaboracao" class="kpi-value">0</strong><div class="kpi-sub">Sendo preparados pelo DP</div></div></div>
         <div class="kpi-card kpi-yellow"><div class="kpi-icon-wrap kpi-bg-yellow">⏳</div><div><div class="kpi-label">Vencendo em 30d</div><strong id="kpiVencendo" class="kpi-value">0</strong><div class="kpi-sub">Vigência expira em até 30 dias</div></div></div>
-        <div class="kpi-card kpi-orange"><div class="kpi-icon-wrap kpi-bg-orange">⚠️</div><div><div class="kpi-label">Pendências</div><strong id="kpiPendencias" class="kpi-value">0</strong><div class="kpi-sub">Aguardando ajuste ou em fila</div></div></div>
+        <div class="kpi-card kpi-red"><div class="kpi-icon-wrap kpi-bg-red">🚫</div><div><div class="kpi-label">Cancelado</div><strong id="kpiCancelados" class="kpi-value">0</strong><div class="kpi-sub">Contratos cancelados</div></div></div>
         <div class="kpi-card kpi-purple"><div class="kpi-icon-wrap kpi-bg-purple">👤</div><div><div class="kpi-label">Terceirizados</div><strong id="kpiTercs" class="kpi-value">0</strong><div class="kpi-sub">Total cadastrado no sistema</div></div></div>
         <div class="kpi-card kpi-teal"><div class="kpi-icon-wrap kpi-bg-teal">⭐</div><div><div class="kpi-label">Aval. Pendentes</div><strong id="kpiAvalPendentes" class="kpi-value">0</strong><div class="kpi-sub">Contratos aguardando avaliação</div></div></div>
       </div>
@@ -233,7 +238,7 @@
                 <div class="avaliacao-corpo">
                   <label class="avaliacao-label required">Haverá emissão de</label>
                   <div class="radio-group">
-                    <label class="radio-pill"><input type="radio" name="depEmissao" value="Nota fiscal"><span class="radio-pill-label">Nota fiscal</span></label>
+                    <label class="radio-pill"><input type="radio" name="depEmissao" value="Nota fiscal" checked disabled><span class="radio-pill-label">Nota fiscal</span></label>
                   </div>
                 </div>
               </div>
@@ -363,7 +368,7 @@
                 <div class="avaliacao-corpo">
                   <label class="avaliacao-label required">Haverá emissão de</label>
                   <div class="radio-group">
-                    <label class="radio-pill"><input type="radio" name="auxEmissao" value="Nota fiscal"><span class="radio-pill-label">Nota fiscal</span></label>
+                    <label class="radio-pill"><input type="radio" name="auxEmissao" value="Nota fiscal" checked disabled><span class="radio-pill-label">Nota fiscal</span></label>
                   </div>
                 </div>
               </div>
@@ -580,7 +585,6 @@
                       <tr><td colspan="3" style="text-align:right;font-weight:600">Total</td><td id="totalEntregas" style="color:var(--green);font-weight:700">R$ 0,00</td><td colspan="2"></td></tr>
                     </tfoot>
                   </table>
-                  <div id="entregasVazio" class="table-empty" style="display:none"><div class="empty-state"><strong>Nenhuma entrega cadastrada.</strong></div></div>
                 </div>
                 <button type="button" class="btn btn-ghost" style="margin-top:.5rem" onclick="adicionarLinhaEntrega()">+ Adicionar entrega</button>
               </div>
@@ -594,7 +598,6 @@
                 <label class="form-label">Observações</label>
                 <div class="pendencia-aviso" style="color:var(--text-secondary);border-color:var(--border-color);background:var(--bg-secondary)">
                   O responsável pela contratação deverá alinhar previamente com o terceirizado os critérios de validação da entrega, bem como o prazo necessário para análise e aprovação técnica da demanda, garantindo ciência das etapas internas do processo.<br><br>
-                  Após a validação técnica, o processo será encaminhado ao setor financeiro, que terá prazo de até 10 dias para efetivação do pagamento.<br><br>
                   Todo terceirizado deverá emitir nota fiscal para viabilização do pagamento pelos serviços prestados.<br><br>
                   Eventuais exceções deverão ser previamente alinhadas e aprovadas pela Gerência Administrativa/Financeira e pela Diretoria de Projetos.
                 </div>
@@ -669,11 +672,8 @@
             <button class="filter-pill" data-status="Em Elaboração">Em Elaboração</button>
             <button class="filter-pill" data-status="Aguardando Aprovação do Líder">Aguardando Aprovação do Líder</button>
             <button class="filter-pill" data-status="Aguardando Assinaturas">Aguardando Assinaturas</button>
-            <button class="filter-pill" data-status="Aguardando Pagamento">Aguardando Pagamento</button>
-            <button class="filter-pill" data-status="Aprovado">Aprovado</button>
-            <button class="filter-pill" data-status="Reprovado">Reprovado</button>
             <button class="filter-pill" data-status="Pendente de Ajuste">Pendente de Ajuste</button>
-            <button class="filter-pill" data-status="Finalizado">Finalizado</button>
+            <button class="filter-pill" data-status="Cancelado">Cancelado</button>
           </div>
           <div class="filter-row">
             <select id="filtroTipoC" class="form-control filter-select"><option value="">Tipo</option><option>Consultor terceirizado</option><option>Prestador de serviço</option><option>Despachante</option><option>Serviço pontual</option><option>Campanha periódica</option></select>
@@ -775,8 +775,10 @@
               </div>
               <div class="form-group"><label class="form-label">Cursos extras</label><input id="tCursosExtras" class="form-control" /></div>
               <div class="form-group"><label class="form-label">Link Currículo Lattes</label><input id="tLattes" class="form-control" placeholder="URL ou 'Não possuo'" /></div>
-              <div class="form-group"><label class="form-label">Registro Profissional / Conselho</label><input id="tRegistro" class="form-control" placeholder="Ex: CRBio 12345-6" /></div>
-              <div class="form-group"><label class="form-label">CRBio Secundário</label><input id="tCrbio2" class="form-control" /></div>
+              <div class="form-group"><label class="form-label">Registro Profissional / Conselho</label>
+                <select id="tRegistro" class="form-control"><option value="">Selecione</option><option>CREA</option><option>CRBIO</option></select>
+              </div>
+              <div class="form-group"><label class="form-label">Número do registro profissional</label><input id="tCrbio2" class="form-control" /></div>
               <div class="form-group"><label class="form-label">Número do CTF</label><input id="tCtf" class="form-control" /></div>
               <div class="form-group"><label class="form-label">CNH (categoria/número)</label><input id="tCnh" class="form-control" placeholder="Não possuo" /></div>
               <div class="form-group full-width"><label class="form-label">Experiência com direção</label><textarea id="tExpDirecao" class="form-control" rows="2"></textarea></div>
@@ -793,7 +795,7 @@
                 <select id="tComprovante" class="form-control"><option value="">Selecione</option><option>Pessoa jurídica</option><option>Pessoa física</option></select>
               </div>
               <div class="form-group"><label class="form-label">Haverá emissão de</label>
-                <select id="tEmissao" class="form-control"><option value="">Selecione</option><option>Nota fiscal</option></select>
+                <select id="tEmissao" class="form-control" disabled><option selected>Nota fiscal</option></select>
               </div>
               <div class="form-group"><label class="form-label">Forma de pagamento</label>
                 <select id="tFormaPgto" class="form-control"><option value="">Selecione</option><option>Pix</option><option>Transferência bancária</option><option>Boleto</option><option>Parcelado</option></select>
@@ -1049,21 +1051,6 @@
       </div>
     </section>
 
-    <!-- ══════════ FINANCEIRO ══════════ -->
-    <section id="secao-financeiro" class="secao">
-      <div class="sec-header"><h2>Financeiro</h2></div>
-      <div class="fin-cal-controles">
-        <button class="btn-icon" id="btnFinMesAnterior">‹</button>
-        <span id="finMesAtual" class="fin-cal-mes"></span>
-        <button class="btn-icon" id="btnFinMesSeguinte">›</button>
-      </div>
-      <div class="alertas-scroll">
-        <div id="finCalendarioGrid" class="fin-cal"></div>
-        <h4 class="form-subtitle" style="margin-top:1rem">Pagamentos do mês</h4>
-        <div id="finListaPagamentos" class="alertas-grid"></div>
-      </div>
-    </section>
-
   </main>
 
   <footer class="app-footer">
@@ -1095,7 +1082,7 @@
       <input type="hidden" id="analiseStatusVal" value="" />
       <label class="form-label" style="margin-bottom:.5rem;display:block">Decisão</label>
       <div class="status-btn-group" id="statusBtnGroup"></div>
-      <label class="form-label label-spacing" style="display:block">Observação <span style="color:var(--text-muted);font-weight:400">(opcional — se preenchida sem decisão, vai para Pendente)</span></label>
+      <label class="form-label label-spacing" style="display:block">Observação <span id="analiseObsHint" style="color:var(--text-muted);font-weight:400">(opcional — se preenchida sem decisão, vai para Pendente de Ajuste)</span></label>
       <textarea id="analiseObs" class="form-control" rows="4" placeholder="Registre a análise, pendência ou decisão..."></textarea>
       <p class="modal-hint">Esta ação será registrada no histórico e na auditoria.</p>
     </div>
@@ -1228,7 +1215,10 @@
 
 
 <div id="printArea" class="print-area"></div>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.0"
+        integrity="sha384-De+l/Df7qym5QBDVocD3+gW1S7IjR3epf+6KbRDjB3FCCzM/LqVTwqckT6FhFar8"
+        crossorigin="anonymous"></script>
+<script src="config.js"></script>
 <script src="script.js"></script>
 </body>
 </html>

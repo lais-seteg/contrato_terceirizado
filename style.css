@@ -34,6 +34,7 @@
 [data-theme="light"] .modal-header h2,
 [data-theme="light"] .alerta-titulo,
 [data-theme="light"] .detail-item strong,
+[data-theme="light"] .sidebar-btn.active,
 [data-theme="light"] .login-title { color:var(--text-primary); }
 
 /* Logo: filtro para ficar legível no fundo claro */
@@ -79,6 +80,76 @@
 
 /* KPIs */
 [data-theme="light"] .kpi-card { background:#FFFFFF; }
+
+/* ─── Legibilidade das cores de status no modo claro ───
+   Os tons "vivos" da paleta (var(--green)/--orange/--yellow/--red/--teal/
+   --purple/--blue-light) foram calibrados para contraste sobre o fundo
+   escuro. Usados como cor de TEXTO sobre os cartões brancos do modo claro,
+   ficam com contraste baixo (quase ilegíveis). Aqui trocamos só a cor do
+   texto/ícone por uma variante mais escura da mesma família — fundos,
+   bordas e botões sólidos (branco sobre cor) não mudam. */
+[data-theme="light"] {
+  --green-text:#2E7D32; --teal-text:#00695C; --blue-light-text:#2E5C94;
+  --red-text:#C62828; --orange-text:#B35900; --purple-text:#7B1FA2; --yellow-text:#8A6D00;
+}
+[data-theme="light"] .st-aprovado,
+[data-theme="light"] .st-ok,
+[data-theme="light"] .btn-status-ok,
+[data-theme="light"] .btn-icon-green,
+[data-theme="light"] .total-value,
+[data-theme="light"] .td-valor,
+[data-theme="light"] .btn-salvar-entrega,
+[data-theme="light"] .upload-nome,
+[data-theme="light"] .perfil-badge,
+[data-theme="light"] .radio-pill[data-val="Excelente"] input:checked+.radio-pill-label,
+[data-theme="light"] .radio-pill[data-val="Totalmente"] input:checked+.radio-pill-label,
+[data-theme="light"] .tipo-sel-card[data-tipo="Prestador de serviço"] .tipo-sel-badge { color:var(--green-text); }
+
+[data-theme="light"] .st-reprovado,
+[data-theme="light"] .st-vencido,
+[data-theme="light"] .btn-status-err,
+[data-theme="light"] .btn-icon-danger,
+[data-theme="light"] .login-erro,
+[data-theme="light"] .radio-pill[data-val="Péssimo"] input:checked+.radio-pill-label,
+[data-theme="light"] .radio-pill[data-val="Não cumprido"] input:checked+.radio-pill-label { color:var(--red-text); }
+
+[data-theme="light"] .st-finalizado,
+[data-theme="light"] .st-aguar-pagamento,
+[data-theme="light"] .btn-status-final,
+[data-theme="light"] .btn-icon-teal,
+[data-theme="light"] .aval-info-banner,
+[data-theme="light"] .kpi-teal .kpi-value { color:var(--teal-text); }
+
+[data-theme="light"] .st-elaboracao,
+[data-theme="light"] .st-aguar-lider,
+[data-theme="light"] .st-analise,
+[data-theme="light"] .avaliacao-num,
+[data-theme="light"] .detail-section-title,
+[data-theme="light"] .tipo-sel-badge,
+[data-theme="light"] .kpi-blue .kpi-value,
+[data-theme="light"] .radio-pill input:checked+.radio-pill-label,
+[data-theme="light"] .radio-pill[data-val="Bom"] input:checked+.radio-pill-label { color:var(--blue-light-text); }
+
+[data-theme="light"] .st-aguar-gestao,
+[data-theme="light"] .btn-icon-orange,
+[data-theme="light"] .tipo-sel-card[data-tipo="Despachante"] .tipo-sel-badge,
+[data-theme="light"] .radio-pill[data-val="Ruim"] input:checked+.radio-pill-label,
+[data-theme="light"] .radio-pill[data-val="Parcialmente"] input:checked+.radio-pill-label,
+[data-theme="light"] .kpi-orange .kpi-value { color:var(--orange-text); }
+
+[data-theme="light"] .st-aguar-assinatura,
+[data-theme="light"] .st-encerrado,
+[data-theme="light"] .kpi-purple .kpi-value { color:var(--purple-text); }
+
+[data-theme="light"] .st-pendente,
+[data-theme="light"] .st-aguar-gp,
+[data-theme="light"] .kpi-yellow .kpi-value { color:var(--yellow-text); }
+
+[data-theme="light"] .kpi-red .kpi-value { color:var(--red-text); }
+
+[data-theme="light"] .st-em-fila,
+[data-theme="light"] .st-rascunho,
+[data-theme="light"] .st-cancelado { color:var(--text-secondary); }
 
 /* ═══════════════ BOTÃO TOGGLE DE TEMA ═══════════════ */
 .theme-toggle {
@@ -144,6 +215,7 @@ body::before{content:'';position:fixed;inset:0;background:rgba(6,13,31,.92);z-in
 .sidebar-user-info{display:flex;flex-direction:column;min-width:0}
 .sidebar-user-info strong{font-size:.74rem;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 [data-theme="light"] .sidebar-user-info strong{color:var(--text-primary)}
+.sidebar-user-detail{font-size:.62rem;color:var(--text-muted);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sidebar-actions{display:flex;align-items:center;gap:.3rem;flex-shrink:0}
 .btn-sair{background:rgba(255,93,93,.15);border:1px solid rgba(255,93,93,.35);color:#ff6b6b;border-radius:var(--radius-sm);padding:.28rem .42rem;font-size:.85rem;cursor:pointer;transition:var(--transition);flex-shrink:0;line-height:1}
 .btn-sair:hover{background:var(--red);color:#fff}
@@ -170,6 +242,7 @@ body::before{content:'';position:fixed;inset:0;background:rgba(6,13,31,.92);z-in
 .kpi-bg-orange{background:rgba(255,130,0,.15);border:1px solid rgba(255,130,0,.3)}
 .kpi-bg-purple{background:rgba(155,89,182,.15);border:1px solid rgba(155,89,182,.3)}
 .kpi-bg-teal{background:rgba(26,188,156,.14);border:1px solid rgba(26,188,156,.3)}
+.kpi-bg-red{background:rgba(255,93,93,.15);border:1px solid rgba(255,93,93,.35)}
 .kpi-label{font-size:.67rem;color:var(--text-secondary);font-weight:500;margin-bottom:.12rem;white-space:nowrap}
 .kpi-value{font-size:1.55rem;font-weight:800;line-height:1}
 .kpi-sub{font-size:.6rem;color:var(--text-muted);margin-top:.18rem;white-space:nowrap;opacity:.8}
@@ -179,6 +252,7 @@ body::before{content:'';position:fixed;inset:0;background:rgba(6,13,31,.92);z-in
 .kpi-orange .kpi-value{color:var(--orange)}
 .kpi-purple .kpi-value{color:var(--purple)}
 .kpi-teal .kpi-value{color:var(--teal)}
+.kpi-red .kpi-value{color:var(--red)}
 
 /* ─── DASHBOARD RECENTES ─────────────────────────── */
 .dash-recent-card{flex:1;display:flex;flex-direction:column;min-height:0;background:var(--bg-card);border:1px solid var(--border-color);border-radius:var(--radius-lg);box-shadow:var(--shadow-card);overflow:hidden}
@@ -360,27 +434,6 @@ body::before{content:'';position:fixed;inset:0;background:rgba(6,13,31,.92);z-in
 .alerta-desc{font-size:.74rem;color:var(--text-secondary);margin-bottom:.5rem}
 .alerta-meta{font-size:.68rem;color:var(--text-muted)}
 .alertas-empty{text-align:center;padding:3rem;color:var(--text-secondary);font-size:.85rem}
-
-/* ─── FINANCEIRO · CALENDÁRIO ────────────────────── */
-.fin-cal-controles{display:flex;align-items:center;justify-content:center;gap:1rem;margin-bottom:.75rem}
-.fin-cal-mes{font-size:.95rem;font-weight:700;color:#fff;text-transform:capitalize;min-width:11rem;text-align:center}
-.fin-cal-semana{display:grid;grid-template-columns:repeat(7,1fr);gap:.4rem;margin-bottom:.4rem}
-.fin-cal-semana div{text-align:center;font-size:.65rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.03em}
-.fin-cal-dias{display:grid;grid-template-columns:repeat(7,1fr);gap:.4rem}
-.fin-cal-dia{min-height:5.5rem;background:var(--bg-card);border:1px solid var(--border-color);border-radius:var(--radius-sm);padding:.35rem;display:flex;flex-direction:column;gap:.2rem;overflow:hidden}
-.fin-cal-dia.fin-cal-vazio{background:transparent;border-color:transparent}
-.fin-cal-dia.fin-cal-hoje{border-color:var(--blue-light);box-shadow:0 0 0 1px var(--blue-light) inset}
-.fin-cal-dia.fin-cal-tem-pagamento{border-left:3px solid var(--teal)}
-.fin-cal-num{font-size:.72rem;font-weight:700;color:var(--text-secondary)}
-.fin-cal-hoje .fin-cal-num{color:var(--blue-light)}
-.fin-cal-eventos{display:flex;flex-direction:column;gap:.15rem;overflow:hidden}
-.fin-cal-evento{font-size:.62rem;color:#fff;background:rgba(26,188,156,.15);border-radius:3px;padding:.1rem .3rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.fin-cal-mais{font-size:.6rem;color:var(--text-muted)}
-.fin-cal-total{font-size:.66rem;font-weight:700;color:var(--green);margin-top:auto}
-@media (max-width:900px){
-  .fin-cal-dia{min-height:3.6rem}
-  .fin-cal-evento{display:none}
-}
 
 /* ─── DETAIL MODAL ───────────────────────────────── */
 .detail-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:.55rem}
