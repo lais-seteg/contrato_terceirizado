@@ -81,7 +81,6 @@ const CAMPOS_CONTRATO = [
   "cEmailEmpresa","cTelEmpresa","cEndEmpresa","cNumeroContrato","cEmpresaContratante",
   "cTipoContratacao","cTipoOutro","cDataInicio","cDataFim","cCentroCusto","cProjeto",
   "cUnidade","cValorMensal","cValorTotal","cObjeto","cObjetoOutro","cArt",
-  "cCronograma",
   "cCargo","cCargoOutro","cSetor",
   "cObjetivoContrato","cObjetivoContratoOutro","cNaturezaContrato","cNaturezaContratoOutro",
   "cCondicoesPagamento",
@@ -1086,6 +1085,7 @@ function validarContrato(item, dataSolicitacao) {
   if (!item.cCargo)               return "Selecione o cargo.";
   if (item.cCargo === "Outro" && !item.cCargoOutro) return "Especifique o cargo.";
   if (!item.cSetor)               return "Informe o setor.";
+  if (!item.cCondicoesPagamento)  return "Informe os dados para pagamento.";
   if (item.cDataInicio && dataSolicitacao && item.cDataInicio < dataSolicitacao.slice(0,10)) {
     return "A data de início não pode ser anterior à data da solicitação.";
   }
@@ -1315,7 +1315,7 @@ function gerarHTMLDetalhes(item) {
     ${det("Necessidade de ART",item.cArt)}${det("Cargo",item.cCargo==="Outro"?item.cCargoOutro:item.cCargo)}${det("Setor",item.cSetor)}
     ${det("Objeto do Contrato (classificação)",item.cObjetivoContrato==="Outro"?item.cObjetivoContratoOutro:item.cObjetivoContrato)}${det("Tipo de Contrato",item.cNaturezaContrato==="Outro"?item.cNaturezaContratoOutro:item.cNaturezaContrato)}
     ${det("Escopo do Contrato",item.cObjeto,"full")}
-    ${det("Cronograma",item.cCronograma,"full")}${det("Dados para pagamento",item.cCondicoesPagamento,"full")}${det("Outras informações",item.cOutrasInfo,"full")}
+    ${det("Dados para pagamento",item.cCondicoesPagamento,"full")}${det("Outras informações",item.cOutrasInfo,"full")}
     <div class="detail-section-title">B · Terceirizado / Prestador</div>
     ${det("Nome",item.cTercNome)}${det("CPF",item.cTercCpf)}${det("Telefone",item.cTercTelefone)}
     ${STATE.perfil !== "solicitante" ? `

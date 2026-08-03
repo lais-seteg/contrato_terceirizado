@@ -123,6 +123,10 @@
       <div class="dash-recent-card">
         <div class="dash-recent-header">
           <h4 class="dash-recent-title">Solicitações Recentes</h4>
+          <div class="dash-recent-actions">
+            <button class="btn btn-ghost btn-sm" id="btnExportarContratosCSV" title="Exportar em CSV os contratos com o filtro atual">⬇️ CSV</button>
+            <button class="btn btn-ghost btn-sm" id="btnAbrirExportarContratosPDF" title="Exportar relatório em PDF (com opção de filtros)">📄 PDF</button>
+          </div>
         </div>
         <div class="table-scroll">
           <table class="art-table">
@@ -143,10 +147,6 @@
     <section id="secao-contratos" class="secao">
       <div class="sec-header">
         <h2>Contratos</h2>
-        <div class="sec-header-right">
-          <button class="btn btn-ghost btn-sm" id="btnExportarContratosCSV" title="Exportar em CSV os contratos com o filtro atual">⬇️ CSV</button>
-          <button class="btn btn-ghost btn-sm" id="btnAbrirExportarContratosPDF" title="Exportar relatório em PDF (com opção de filtros)">📄 PDF</button>
-        </div>
         <button id="btnNovoContrato" class="btn btn-primary" style="display:none">+ Novo Contrato</button>
       </div>
 
@@ -567,12 +567,7 @@
               </div>
 
               <div class="form-group full-width">
-                <label class="form-label">Cronograma</label>
-                <textarea id="cCronograma" class="form-control" rows="4" placeholder="Detalhe todas as datas previstas para execução das atividades..."></textarea>
-              </div>
-
-              <div class="form-group full-width">
-                <label class="form-label">Dados para pagamento</label>
+                <label class="form-label required">Dados para pagamento</label>
                 <textarea id="cCondicoesPagamento" class="form-control" rows="3" placeholder="Dados bancários ou chave Pix"></textarea>
                 <span class="modal-hint">Pagamentos somente poderão ser realizados em conta de titularidade do contratado.</span>
               </div>
