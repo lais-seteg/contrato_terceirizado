@@ -1483,12 +1483,17 @@ function exportarRelatorioContratosCSV() {
   });
   if (!lista.length) { mostrarToast("Nenhum contrato para exportar com o filtro atual.","err"); return; }
 
-  const cab = ["Nº","Projeto","Prestador/Terceirizado","Tipo de Contratação","Líder Responsável","Setor","Status","Início da Vigência","Término da Vigência","Valor Total","Criado em"];
-  const linhas = lista.map(c => [
-    c.id, c.cProjeto||"-", c.cTercNome||"-", c.cTipoContratacao||"-", c.criadoPor||"-", c.cSetor||"-",
-    c.status||"-", formatarData(c.cDataInicio), formatarData(c.cDataFim),
-    c.cValorTotal ? formatarMoeda(c.cValorTotal) : "-", formatarData(c.criadoEm)
-  ]);
+  const cab = ["Nº","Projeto","Prestador/Terceirizado","Tipo de Contratação","Líder Responsável","Setor","Status","Início da Vigência","Término da Vigência","Valor Total","Criado em","Informações Adicionais","Avaliação - Campo","Avaliação - Relatório","Avaliação - Prazo","Avaliação - Relacionamento","Avaliação - Observações"];
+  const linhas = lista.map(c => {
+    const aval = DB.avaliacoes.find(a => a.contratoId === c.id);
+    return [
+      c.id, c.cProjeto||"-", c.cTercNome||"-", c.cTipoContratacao||"-", c.criadoPor||"-", c.cSetor||"-",
+      c.status||"-", formatarData(c.cDataInicio), formatarData(c.cDataFim),
+      c.cValorTotal ? formatarMoeda(c.cValorTotal) : "-", formatarData(c.criadoEm),
+      c.cOutrasInfo||"-",
+      aval?.nivelCampo||"-", aval?.nivelRelatorio||"-", aval?.prazo||"-", aval?.relacionamento||"-", aval?.obs||"-"
+    ];
+  });
   const csvEscape = v => `"${String(v??"").replace(/"/g,'""')}"`;
   const csv = "﻿" + [cab, ...linhas].map(linha => linha.map(csvEscape).join(",")).join("\n");
 
@@ -1804,6 +1809,10 @@ function pdfPgObrigada(doc) {
 // Gera o PDF a partir de uma lista já filtrada (ou de todos os contratos
 // visíveis, quando nenhum filtro é escolhido no modal de exportação).
 // "filtros" é só a lista de textos exibidos na capa (ex: "Status: Finalizado").
+// Mapa qualitativo → nota (1-5) usado só para calcular a média geral de
+// desempenho no relatório — "Não se aplica" fica de fora da média.
+const NOTA_QUALITATIVA = { "Excelente":5, "Bom":4, "Intermediário":3, "Ruim":2, "Péssimo":1 };
+
 function gerarRelatorioContratosPDF(lista, filtros) {
   if (!window.jspdf || !window.jspdf.jsPDF) {
     mostrarToast("Biblioteca de PDF ainda carregando — tente de novo em instantes.","err");
@@ -1819,6 +1828,14 @@ function gerarRelatorioContratosPDF(lista, filtros) {
     return acc + v;
   }, 0);
   const vencendo30d = lista.filter(c => { const d = diasAteVencer(c.cDataFim); return d!==null && d>=0 && d<=30; }).length;
+  const avaliacoesDaLista = DB.avaliacoes.filter(a => lista.some(c => c.id === a.contratoId));
+  const notasGerais = avaliacoesDaLista
+    .flatMap(a => [a.nivelCampo, a.nivelRelatorio, a.relacionamento])
+    .map(v => NOTA_QUALITATIVA[v]).filter(n => n !== undefined);
+  const notaMedia = notasGerais.length ? notasGerais.reduce((a,b)=>a+b,0)/notasGerais.length : null;
+  const prazoCumprido = avaliacoesDaLista.length
+    ? Math.round(avaliacoesDaLista.filter(a => a.prazo === "Totalmente").length / avaliacoesDaLista.length * 100)
+    : null;
 
   pdfPgCapa(doc, lista.length, valorTotal, filtros);
 
@@ -1841,7 +1858,40 @@ function gerarRelatorioContratosPDF(lista, filtros) {
     c.id, c.cTercNome||"-", c.cTipoContratacao||"-", c.criadoPor||"-", c.status||"-",
     c.cValorTotal ? formatarMoeda(c.cValorTotal) : "-"
   ]);
-  pdfTabela(doc, y, headers, rows, titulo, colWidths);
+  y = pdfTabela(doc, y, headers, rows, titulo, colWidths);
+
+  // ─── Análise ───
+  y = pdfCheckY(doc, y, 40, titulo);
+  y = pdfSecao(doc, y, "Análise de Desempenho", PDF_COR.verde);
+  pdfKpiBox(doc, PDF_PG.ml, y, boxW, 20, "Avaliados", `${avaliacoesDaLista.length} de ${lista.length}`, PDF_COR.azulMedio);
+  pdfKpiBox(doc, PDF_PG.ml + boxW + 4, y, boxW, 20, "Nota Média Geral", notaMedia!==null ? notaMedia.toFixed(1)+" / 5" : "Sem avaliações", PDF_COR.verde);
+  pdfKpiBox(doc, PDF_PG.ml + (boxW + 4) * 2, y, boxW, 20, "Prazo Cumprido", prazoCumprido!==null ? prazoCumprido+"%" : "Sem avaliações", PDF_COR.laranja);
+  y += 28;
+
+  y = pdfCheckY(doc, y, 30, titulo);
+  y = pdfSecao(doc, y, "Distribuição por Status", PDF_COR.azulMedio);
+  const statusCounts = {};
+  lista.forEach(c => { const s = c.status||"-"; statusCounts[s] = (statusCounts[s]||0)+1; });
+  const statusRows = Object.entries(statusCounts).map(([s,n]) => [s, String(n), Math.round(n/lista.length*100)+"%"]);
+  y = pdfTabela(doc, y, ["Status","Quantidade","%"], statusRows, titulo, [100, 41, 41]);
+
+  if (avaliacoesDaLista.length) {
+    y = pdfCheckY(doc, y, 30, titulo);
+    y = pdfSecao(doc, y, "Avaliações de Desempenho", PDF_COR.verde);
+    const avalRows = avaliacoesDaLista.map(a => {
+      const c = lista.find(x => x.id === a.contratoId);
+      return [a.contratoId||"-", (c && c.cTercNome) || a.avaliado || "-", a.nivelCampo||"-", a.nivelRelatorio||"-", a.prazo||"-", a.relacionamento||"-"];
+    });
+    y = pdfTabela(doc, y, ["Nº","Terceirizado","Campo","Relatório","Prazo","Relacionamento"], avalRows, titulo, [20, 42, 30, 30, 30, 30]);
+  }
+
+  const comInfo = lista.filter(c => c.cOutrasInfo && c.cOutrasInfo.trim());
+  if (comInfo.length) {
+    y = pdfCheckY(doc, y, 30, titulo);
+    y = pdfSecao(doc, y, "Informações Adicionais", PDF_COR.laranja);
+    const infoRows = comInfo.map(c => [c.id, c.cOutrasInfo]);
+    pdfTabela(doc, y, ["Nº","Informações Adicionais"], infoRows, titulo, [22, 160]);
+  }
 
   pdfPgObrigada(doc);
 
