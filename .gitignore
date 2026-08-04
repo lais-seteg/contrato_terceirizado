@@ -32,7 +32,7 @@ node_modules/
 *.bak
 *~
 
-# Script de uso único que roda com a chave service_role do Supabase (nunca
-# pode ir para o Git — bypassa toda a RLS) e imprime os códigos de acesso
-# novos em texto puro no terminal de quem rodar. Ver migracao_auth_setup.mjs.
-migracao_auth_setup.mjs
+# Script SQL de uso único com os 21 códigos de acesso reais em texto
+# puro (preenchidos localmente antes de rodar no SQL Editor) — nunca
+# pode ir para o Git.
+configurar_login_usuarios.sql
