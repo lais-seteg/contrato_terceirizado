@@ -2,8 +2,6 @@
 //  CONTRATAÇÃO DE TERCEIRIZADOS · Seteg v3.1
 // ══════════════════════════════════════════════════════
 
-const SESSION_KEY = "seteg_ter_sessao";
-
 // ══════════════════════════════════════════════════════
 //  SUPABASE — URL/chave vêm de config.js (carregado antes deste
 //  arquivo em index.html), não ficam mais hardcoded aqui.
@@ -144,16 +142,38 @@ function toggleTheme() {
 // ══════════════════════════════════════════════════════
 async function init() {
   try {
-    const sessao = JSON.parse(sessionStorage.getItem(SESSION_KEY));
-    if (sessao && sessao.nomeUsuario) {
-      STATE.perfil = sessao.perfil;
-      STATE.nomeUsuario = sessao.nomeUsuario;
-      STATE.setor = sessao.setor || "";
-      await mostrarApp();
-      return;
+    const { data: { session } } = await supa.auth.getSession();
+    if (session) {
+      // Sessão do Supabase Auth já verificada pelo próprio SDK (JWT) —
+      // ainda assim confirma que a linha em "usuarios" continua existindo
+      // e ativa antes de liberar o app (ex.: usuário desativado depois de
+      // logar em outro dispositivo).
+      if (await carregarPerfilAtual()) {
+        await mostrarApp();
+        return;
+      }
+      await supa.auth.signOut();
     }
   } catch(e) {}
   mostrarLogin();
+}
+
+// Lê nome/perfil/setor da própria linha em "usuarios" (RLS: cada usuário
+// só vê auth_user_id = auth.uid()) e popula STATE. Retorna false se não
+// há sessão válida ou a linha não existe/foi desativada.
+async function carregarPerfilAtual() {
+  const { data: userData } = await supa.auth.getUser();
+  const uid = userData && userData.user && userData.user.id;
+  if (!uid) return false;
+  const { data, error } = await supa.from('usuarios')
+    .select('nome,perfil,setor')
+    .eq('auth_user_id', uid)
+    .maybeSingle();
+  if (error || !data) return false;
+  STATE.perfil = data.perfil;
+  STATE.nomeUsuario = data.nome;
+  STATE.setor = data.setor || "";
+  return true;
 }
 
 // ══════════════════════════════════════════════════════
@@ -320,38 +340,39 @@ async function validarLogin() {
     const timeoutPromise = new Promise((_, rej) =>
       setTimeout(() => rej(new Error("timeout")), TIMEOUT_MS)
     );
-    // Login passa pela função autenticar_usuario() (SECURITY DEFINER no
-    // Supabase) — nunca faz select direto na tabela usuarios, que não
-    // expõe mais nenhuma linha para a chave anon (ver
-    // migracao_2026-08-03_seguranca_login_rpc.sql). A função também
-    // aplica limite de tentativas por IP, retornando erro nesse caso.
-    const queryPromise = supa.rpc('autenticar_usuario', { p_hash: hash });
-    const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
-    if (error) {
-      const bloqueado = /muitas tentativas/i.test(error.message || "");
-      const elErro = document.getElementById("loginErro");
-      elErro.textContent = bloqueado ? error.message : "Código inválido. Tente novamente.";
-      elErro.classList.remove("hidden");
-      document.getElementById("inputCodigo").select();
-      return;
-    }
-    if (!data || data.length === 0) {
+    // Login em 2 passos, ambos cobertos pela migração
+    // migracao_2026-08_auth_rls.sql:
+    // 1) obter_email_login() (SECURITY DEFINER) resolve qual e-mail
+    //    sintético corresponde a este código — nunca expõe a tabela
+    //    usuarios, e aplica o mesmo limite de 10 tentativas/15min por IP
+    //    de antes.
+    // 2) A senha em si (o próprio código digitado) é validada pelo
+    //    Supabase Auth de verdade via signInWithPassword — substitui a
+    //    RPC autenticar_usuario(), que comparava hash manualmente.
+    const loginPromise = (async () => {
+      const { data: email, error } = await supa.rpc('obter_email_login', { p_hash: hash });
+      if (error) throw error;
+      if (!email) return false;
+      const { error: authError } = await supa.auth.signInWithPassword({ email, password: codigo });
+      if (authError) return false;
+      return await carregarPerfilAtual();
+    })();
+    const ok = await Promise.race([loginPromise, timeoutPromise]);
+    if (!ok) {
       document.getElementById("loginErro").textContent = "Código inválido. Tente novamente.";
       document.getElementById("loginErro").classList.remove("hidden");
       document.getElementById("inputCodigo").select();
       return;
     }
-    const usuario = data[0];
-    STATE.perfil      = usuario.perfil;
-    STATE.nomeUsuario = usuario.nome;
-    STATE.setor       = usuario.setor || "";
-    sessionStorage.setItem(SESSION_KEY, JSON.stringify({ perfil: usuario.perfil, nomeUsuario: usuario.nome, setor: usuario.setor || "" }));
     await mostrarApp();
   } catch(e) {
     if (e.message === "timeout") {
       document.getElementById("loginErroCon").classList.remove("hidden");
     } else {
-      document.getElementById("loginErro").classList.remove("hidden");
+      const bloqueado = /muitas tentativas/i.test(e.message || "");
+      const elErro = document.getElementById("loginErro");
+      elErro.textContent = bloqueado ? e.message : "Código inválido. Tente novamente.";
+      elErro.classList.remove("hidden");
     }
   } finally {
     btnEntrar.disabled = false;
@@ -359,8 +380,8 @@ async function validarLogin() {
   }
 }
 
-function sair() {
-  sessionStorage.removeItem(SESSION_KEY);
+async function sair() {
+  await supa.auth.signOut();
   STATE.perfil = "solicitante";
   STATE.nomeUsuario = "";
   STATE.setor = "";
@@ -2692,13 +2713,6 @@ function renderTerceirizados(){
   document.getElementById("infoT").textContent=`${lista.length} registros`;
   document.getElementById("pageT").textContent=f.pagina;
   document.getElementById("prevT").disabled=f.pagina<=1;document.getElementById("nextT").disabled=f.pagina>=totalPag;
-}
-
-function copiarLinkCadastro() {
-  const url = new URL('cadastro.html', window.location.href).href;
-  navigator.clipboard.writeText(url)
-    .then(() => mostrarToast('Link de cadastro copiado! Envie para o terceirizado.', 'ok'))
-    .catch(() => mostrarToast('Copie o link manualmente: ' + url, 'err'));
 }
 
 // ══════════════════════════════════════════════════════

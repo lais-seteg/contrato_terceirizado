@@ -17,7 +17,7 @@ O schema do banco (tabelas, RLS, função de login) já está aplicado no projet
 
 ## Configuração
 
-1. Aponte para um projeto [Supabase](https://supabase.com) já com o schema deste app (tabelas `usuarios`/`contratos`/`terceirizados`/`avaliacoes`/`auditoria`/`login_attempts`, RLS e a função `autenticar_usuario()` — ver "Segurança"). Recriar isso do zero exige um script próprio de schema, que não está neste repositório.
+1. Aponte para um projeto [Supabase](https://supabase.com) já com o schema deste app (tabelas `usuarios`/`contratos`/`terceirizados`/`avaliacoes`/`auditoria`/`login_attempts`, Supabase Auth configurado, RLS e as funções `obter_email_login()`/`validar_link_contrato()`/`enviar_cadastro_terceirizado()` — ver "Segurança"). Recriar isso do zero exige um script próprio de schema, que não está neste repositório.
 2. Copie `config.example.js` para `config.js` e preencha com a URL do projeto e a chave `anon`/`publishable` (Supabase Dashboard → Project Settings → API).
 3. Abra `index.html` num servidor estático (ou publique — ver "Deploy" abaixo).
 
@@ -37,10 +37,12 @@ Login é por código de acesso (sem e-mail/senha tradicional) — ver "Seguranç
 
 ## Segurança
 
-- O login não faz mais leitura direta da tabela `usuarios` pela chave `anon` — passa por uma função `autenticar_usuario()` no Postgres (`SECURITY DEFINER`) que nunca expõe o hash do código e aplica limite de tentativas por IP.
-- A tabela `auditoria` é somente-inserção (append-only) para a chave `anon` — não pode ser alterada/apagada pela API.
+- **Login via Supabase Auth real** (migração 2026-08): o código de acesso continua sendo o único campo pedido na tela, mas por baixo dos panos o app resolve um e-mail sintético a partir do código (RPC `obter_email_login()`, `SECURITY DEFINER`, com o mesmo limite de tentativas por IP de antes) e autentica de fato via `signInWithPassword` — a senha (o próprio código) fica protegida pelo Supabase Auth (bcrypt+salt), não mais por um hash SHA-256 comparado manualmente.
+- **RLS por perfil, imposta no banco**: `contratos`, `terceirizados` e `avaliacoes` exigem `authenticated` (JWT do Supabase Auth) para qualquer operação — a chave `anon` sozinha não lê nem grava mais nada nessas tabelas. As regras de quem pode criar/editar/excluir (que antes só existiam no JavaScript) agora são impostas por policies no Postgres.
+- **Cadastro externo (`cadastro.html`, sem login)** continua usando a chave `anon`, mas a validação do link (token/expiração/uso único) acontece dentro do banco, via as funções `SECURITY DEFINER` `validar_link_contrato()`/`enviar_cadastro_terceirizado()` — não existe mais cadastro sem link vinculado a uma solicitação real.
+- A tabela `auditoria` é somente-inserção (append-only) — não pode ser alterada/apagada pela API.
 - O SDK do Supabase é carregado via CDN com versão travada + [SRI](https://developer.mozilla.org/en-US/docs/Web/Security/Subresource_Integrity) (`integrity=`), protegendo contra adulteração do arquivo na CDN.
-- **Risco residual conhecido:** como o app não usa autenticação real do Supabase (Supabase Auth), as tabelas `contratos`, `terceirizados` e `avaliacoes` ainda aceitam leitura/escrita da chave `anon` sem verificação de identidade a nível de banco — o controle de quem pode editar/excluir existe hoje só na interface, não no banco. Fechar esse ponto por completo exigiria migrar o login para Supabase Auth.
+- **Risco residual conhecido:** a leitura (`SELECT`) de `contratos`/`terceirizados`/`avaliacoes` continua ampla entre os 3 perfis autenticados (preserva funcionalidades como busca de terceirizado por CPF) — um `solicitante` autenticado ainda consegue ler campos sensíveis de terceirizados (RG, dados bancários) via API direta, mesmo que a tela já esconda isso na exibição. Antes exigia só a chave `anon` (pública); agora exige ser um dos usuários autenticados de fato. Fechar esse ponto por completo exigiria uma view/coluna separada por perfil.
 
 ## Fluxo do contrato
 

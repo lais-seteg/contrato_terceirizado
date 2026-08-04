@@ -780,11 +780,12 @@
   }
   const supa = supabase.createClient(window.SUPABASE_URL, window.SUPABASE_KEY);
 
-  // Preenchido quando o acesso vem de um link de solicitação específico
-  // (?ctr=CTR-000X&tk=<token>) — ver validarLinkContrato(). Nesse caso o
-  // cadastro em "terceirizados" já existe (criado pelo líder com Nome/CPF/
-  // Telefone ao abrir a solicitação) — o envio faz UPDATE nesse registro,
-  // nunca um INSERT novo.
+  // Preenchido quando o link (?ctr=CTR-000X&tk=<token>) é validado com
+  // sucesso — ver validarLinkContrato(). Só guarda id+token: toda a
+  // validação (token/expiração/uso único) e a gravação em si acontecem
+  // dentro das RPCs validar_link_contrato()/enviar_cadastro_terceirizado()
+  // (migracao_2026-08_auth_rls.sql), não mais direto no client. Não existe
+  // mais cadastro sem link — sem ?ctr&tk a página só mostra "Link inválido".
   let contratoVinculado = null;
 
   // ── Utilitários ──────────────────────────────────────
@@ -795,48 +796,36 @@
     const params = new URLSearchParams(window.location.search);
     const ctr = params.get('ctr');
     const tk  = params.get('tk');
-    if (!ctr || !tk) return; // acesso genérico (link fixo da seção Terceirizados) — segue normal
-
     document.getElementById('cadForm').classList.add('hidden');
-    const { data: contrato, error } = await supa.from('contratos')
-      .select('id, c_link_token, c_link_expira_em, c_link_usado, c_tipo_contratacao, c_terceirizado_id, historico')
-      .eq('id', ctr)
-      .maybeSingle();
 
-    const invalido = error || !contrato
-      || contrato.c_link_token !== tk
-      || contrato.c_link_usado
-      || !contrato.c_link_expira_em
-      || new Date() >= new Date(contrato.c_link_expira_em);
-
-    if (invalido) {
+    if (!ctr || !tk) {
       document.getElementById('linkInvalidoBox').classList.remove('hidden');
       return;
     }
 
-    contratoVinculado = contrato;
+    const { data, error } = await supa.rpc('validar_link_contrato', { p_contrato_id: ctr, p_token: tk });
+    const linha = Array.isArray(data) ? data[0] : data;
+
+    if (error || !linha) {
+      document.getElementById('linkInvalidoBox').classList.remove('hidden');
+      return;
+    }
+
+    contratoVinculado = { id: ctr, token: tk };
     document.getElementById('cadForm').classList.remove('hidden');
-    if (contrato.c_tipo_contratacao) {
+    if (linha.tipo_contratacao) {
       const selTipo = document.getElementById('tTipo');
-      selTipo.value = contrato.c_tipo_contratacao;
+      selTipo.value = linha.tipo_contratacao;
       selTipo.disabled = true;
     }
 
     // Pré-preenche e trava Nome/CPF/Telefone já capturados pelo líder ao abrir
     // a solicitação — o terceirizado só completa o restante do cadastro.
-    if (contrato.c_terceirizado_id) {
-      const { data: terc } = await supa.from('terceirizados')
-        .select('t_nome, t_cpf, t_telefone')
-        .eq('id', contrato.c_terceirizado_id)
-        .maybeSingle();
-      if (terc) {
-        ['tNome','tCpf','tTelefone'].forEach((id, i) => {
-          const el = document.getElementById(id);
-          const val = [terc.t_nome, terc.t_cpf, terc.t_telefone][i];
-          if (el && val) { el.value = val; el.readOnly = true; }
-        });
-      }
-    }
+    ['tNome','tCpf','tTelefone'].forEach((id, i) => {
+      const el = document.getElementById(id);
+      const val = [linha.terc_nome, linha.terc_cpf, linha.terc_telefone][i];
+      if (el && val) { el.value = val; el.readOnly = true; }
+    });
   }
 
   function toggleCnhCategoria(val) {
@@ -893,14 +882,6 @@
     el.value = s;
   }
 
-  // ── Gerar próximo ID ──────────────────────────────────
-  async function gerarProximoId() {
-    const { data } = await supa.from('terceirizados').select('id');
-    if (!data || !data.length) return 'TER-0001';
-    const max = Math.max(...data.map(r => parseInt(r.id.replace(/\D/g, '')) || 0));
-    return 'TER-' + String(max + 1).padStart(4, '0');
-  }
-
   // ── Enviar formulário ─────────────────────────────────
   async function enviarCadastro() {
     const nome      = v('tNome');
@@ -935,13 +916,14 @@
     btn.disabled = true;
     btn.textContent = 'Enviando…';
 
-    try {
-      // Quando o acesso vem de um link de solicitação, o registro em
-      // "terceirizados" já existe (stub criado pelo líder com Nome/CPF/
-      // Telefone) — completa esse registro via UPDATE. Sem link (acesso
-      // genérico pela seção Terceirizados), cria um registro novo via INSERT.
-      const idExistente = contratoVinculado?.c_terceirizado_id || null;
+    if (!contratoVinculado) {
+      mostrarToast('Link inválido ou expirado. Recarregue a página pelo link que foi enviado.', 'err');
+      btn.disabled = false;
+      btn.textContent = 'Enviar Cadastro';
+      return;
+    }
 
+    try {
       const dadosPessoais = {
         t_nome:            nome,
         t_tipo:            tipo,
@@ -980,17 +962,16 @@
         t_outras_info:     v('tOutrasInfo')      || null
       };
 
-      let id, error;
-      if (idExistente) {
-        id = idExistente;
-        ({ error } = await supa.from('terceirizados')
-          .update({ ...dadosPessoais, atualizado_em: new Date().toISOString() })
-          .eq('id', idExistente));
-      } else {
-        id = await gerarProximoId();
-        ({ error } = await supa.from('terceirizados')
-          .insert({ id, ...dadosPessoais, criado_em: new Date().toISOString(), criado_por: 'Cadastro Externo' }));
-      }
+      // Revalida o token e grava tudo (dados pessoais + consumo do link +
+      // avanço de status para "Em Elaboração") dentro de uma única RPC no
+      // banco — ver enviar_cadastro_terceirizado() em
+      // migracao_2026-08_auth_rls.sql. Sem isso, um UPDATE feito direto
+      // pelo client (anon) não teria como provar que o token é válido.
+      const { error } = await supa.rpc('enviar_cadastro_terceirizado', {
+        p_contrato_id: contratoVinculado.id,
+        p_token: contratoVinculado.token,
+        p_dados: dadosPessoais
+      });
 
       if (error) {
         console.error(error);
@@ -1000,25 +981,8 @@
         return;
       }
 
-      // Consome o link (uso único) e avança o status para "Em Elaboração" —
-      // o terceirizado respondeu, agora é a vez do DP conferir os documentos
-      // e gerar o contrato.
-      if (contratoVinculado) {
-        const novoHistorico = [...(contratoVinculado.historico || []), {
-          data: new Date().toISOString(),
-          usuario: nome,
-          perfil: 'terceirizado',
-          status: 'Em Elaboração',
-          obs: 'Cadastro preenchido pelo terceirizado via link.'
-        }];
-        const { error: errCtr } = await supa.from('contratos')
-          .update({ c_link_usado: true, status: 'Em Elaboração', historico: novoHistorico })
-          .eq('id', contratoVinculado.id);
-        if (errCtr) console.error(errCtr);
-      }
-
       document.getElementById('cadForm').classList.add('hidden');
-      document.getElementById('successId').textContent = 'Protocolo: ' + id;
+      document.getElementById('successId').textContent = 'Protocolo: ' + contratoVinculado.id;
       document.getElementById('successBox').classList.remove('hidden');
       window.scrollTo({ top: 0, behavior: 'smooth' });
 
