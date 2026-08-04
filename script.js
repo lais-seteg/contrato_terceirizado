@@ -81,7 +81,6 @@ const CAMPOS_CONTRATO = [
   "cUnidade","cValorMensal","cValorTotal","cObjeto","cObjetoOutro","cArt",
   "cCargo","cCargoOutro","cSetor",
   "cObjetivoContrato","cObjetivoContratoOutro","cNaturezaContrato","cNaturezaContratoOutro",
-  "cCondicoesPagamento",
   "cDocIdentidade","cDocComprovanteResidencia","cDocCnpj","cDocCurriculo",
   "cTerceirizadoId","cTercNome","cTercEmail","cTercCpf","cTercRg","cTercNascimento",
   "cTercFuncao","cTercTelefone","cTercEstado","cTercMunicipio","cTercEndereco",
@@ -546,10 +545,11 @@ function aplicarPermissoes() {
   document.querySelectorAll(".campo-interno").forEach(el => el.classList.toggle("hidden", p==="solicitante"));
   document.querySelectorAll(".campo-gestao").forEach(el => el.classList.toggle("hidden", p!=="gestao"));
 
-  // Gestão só acompanha/dá seguimento às solicitações — não cria contrato novo
-  // (isso é papel do líder solicitante). DP (gestao-pessoas) continua podendo.
+  // Só o líder solicitante pode criar um contrato novo — Gestão e DP
+  // (gestao-pessoas) apenas acompanham/dão seguimento às solicitações já
+  // feitas por ele.
   const blocoNovo = document.getElementById("blocoNovoContrato");
-  if (blocoNovo) blocoNovo.classList.toggle("hidden", p==="gestao");
+  if (blocoNovo) blocoNovo.classList.toggle("hidden", p!=="solicitante");
 
   // Avaliações: visões diferentes por perfil
   const isGP = p !== "solicitante";
@@ -1114,7 +1114,6 @@ function validarContrato(item, dataSolicitacao) {
   if (!item.cCargo)               return "Selecione o cargo.";
   if (item.cCargo === "Outro" && !item.cCargoOutro) return "Especifique o cargo.";
   if (!item.cSetor)               return "Informe o setor.";
-  if (!item.cCondicoesPagamento)  return "Informe os dados para pagamento.";
   if (item.cDataInicio && dataSolicitacao && item.cDataInicio < dataSolicitacao.slice(0,10)) {
     return "A data de início não pode ser anterior à data da solicitação.";
   }
@@ -1343,7 +1342,7 @@ function gerarHTMLDetalhes(item) {
     ${det("Necessidade de ART",item.cArt)}${det("Cargo",item.cCargo==="Outro"?item.cCargoOutro:item.cCargo)}${det("Setor",item.cSetor)}
     ${det("Objeto do Contrato (classificação)",item.cObjetivoContrato==="Outro"?item.cObjetivoContratoOutro:item.cObjetivoContrato)}${det("Tipo de Contrato",item.cNaturezaContrato==="Outro"?item.cNaturezaContratoOutro:item.cNaturezaContrato)}
     ${det("Escopo do Contrato",item.cObjeto,"full")}
-    ${det("Dados para pagamento",item.cCondicoesPagamento,"full")}${det("Outras informações",item.cOutrasInfo,"full")}
+    ${det("Outras informações",item.cOutrasInfo,"full")}
     <div class="detail-section-title">B · Terceirizado / Prestador</div>
     ${det("Nome",item.cTercNome)}${det("CPF",item.cTercCpf)}${det("Telefone",item.cTercTelefone)}
     ${STATE.perfil !== "solicitante" ? `
