@@ -254,8 +254,11 @@ body::before{content:'';position:fixed;inset:0;background:rgba(6,13,31,.92);z-in
 .kpi-teal .kpi-value{color:var(--teal)}
 .kpi-red .kpi-value{color:var(--red)}
 
-/* ─── DASHBOARD GRÁFICOS ─────────────────────────── */
-.dash-charts-row{display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-bottom:.85rem;flex-shrink:0}
+/* ─── DASHBOARD ANÁLISES ─────────────────────────── */
+.dash-analises-header{display:flex;align-items:center;justify-content:space-between;gap:.65rem;margin-bottom:.6rem;flex-shrink:0}
+.dash-analises-header h3{font-size:.95rem;font-weight:700;color:var(--text-primary);margin:0}
+.dash-analises-actions{display:flex;align-items:center;gap:.4rem}
+.dash-charts-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:.6rem;margin-bottom:.85rem}
 .dash-chart-card{background:var(--bg-card);border:1px solid var(--border-color);border-radius:var(--radius-lg);box-shadow:var(--shadow-card);padding:.85rem 1rem}
 .dash-chart-title{font-size:.72rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.06em;margin:0 0 .75rem;display:flex;align-items:center;gap:.35rem}
 .dash-chart-title::before{content:'';display:block;width:3px;height:12px;border-radius:2px;background:var(--blue-light)}
@@ -266,14 +269,11 @@ body::before{content:'';position:fixed;inset:0;background:rgba(6,13,31,.92);z-in
 .dash-bar-fill{height:100%;border-radius:0 4px 4px 0;min-width:4px;transition:width .4s ease}
 .dash-bar-value{flex:0 0 auto;min-width:2rem;text-align:right;font-size:.78rem;font-weight:700;color:var(--text-primary);font-variant-numeric:tabular-nums}
 .dash-chart-empty{font-size:.78rem;color:var(--text-muted);text-align:center;padding:1rem 0}
-@media (max-width:900px){.dash-charts-row{grid-template-columns:1fr}}
-
-/* ─── DASHBOARD RECENTES ─────────────────────────── */
-.dash-recent-card{flex:1;display:flex;flex-direction:column;min-height:0;background:var(--bg-card);border:1px solid var(--border-color);border-radius:var(--radius-lg);box-shadow:var(--shadow-card);overflow:hidden}
-.dash-recent-header{display:flex;align-items:center;justify-content:space-between;gap:.65rem;padding:.65rem 1rem;border-bottom:1px solid var(--border-color);background:var(--bg-secondary);flex-shrink:0}
-.dash-recent-actions{display:flex;align-items:center;gap:.4rem}
-.dash-recent-title{font-size:.72rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.06em;display:flex;align-items:center;gap:.35rem}
-.dash-recent-title::before{content:'';display:block;width:3px;height:12px;border-radius:2px;background:var(--blue-light)}
+.dash-chart-caption{font-size:.68rem;color:var(--text-muted);margin-top:.5rem;text-align:right}
+.dash-chart-stats{display:flex;gap:1rem;margin-bottom:.75rem;flex-wrap:wrap}
+.dash-chart-stat{flex:1;min-width:110px}
+.dash-chart-stat-label{font-size:.66rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em}
+.dash-chart-stat-value{font-size:1.15rem;font-weight:700;color:var(--text-primary);font-variant-numeric:tabular-nums}
 
 /* ─── LISTA WRAPPERS ─────────────────────────────── */
 .lista-wrapper{display:flex;flex-direction:column;flex:1;min-height:0}

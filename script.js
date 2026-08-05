@@ -461,6 +461,10 @@ function registrarListeners() {
   document.getElementById("btnAbrirExportarContratosPDF").addEventListener("click", abrirModalExportarContratosPDF);
   document.getElementById("btnConfirmarExportarContratosPDF").addEventListener("click", confirmarExportarContratosPDF);
 
+  // ── Relatório de Análises (Dashboard) — CSV/PDF ──
+  document.getElementById("btnExportarAnalisesCSV").addEventListener("click", exportarAnalisesCSV);
+  document.getElementById("btnExportarAnalisesPDF").addEventListener("click", gerarRelatorioAnalisesPDF);
+
   // ── Terceirizados ──
   document.getElementById("btnNovoTerc").addEventListener("click", abrirFormNovoTerc);
   document.getElementById("btnFecharTerc").addEventListener("click", fecharFormTerc);
@@ -630,40 +634,7 @@ function renderDashboard() {
   badge.textContent = totalAlertas;
   badge.classList.toggle("hidden", totalAlertas===0);
 
-  renderSolicitacoesRecentes(meus);
   renderGraficosDashboard(meus);
-}
-
-function renderSolicitacoesRecentes(lista) {
-  const tbody = document.getElementById("dashTabelaRecentes");
-  const empty = document.getElementById("emptyDashRecentes");
-  if (!tbody) return;
-  const sorted = [...lista].sort((a,b)=>{
-    const da = a.atualizadoEm||a.criadoEm||"";
-    const db = b.atualizadoEm||b.criadoEm||"";
-    return db.localeCompare(da);
-  }).slice(0,30);
-  if (!sorted.length) {
-    tbody.innerHTML="";
-    empty.classList.add("visible");
-    return;
-  }
-  empty.classList.remove("visible");
-  tbody.innerHTML = sorted.map(c=>{
-    const acoes = [`<button class="btn-icon" title="Visualizar" onclick="verDetalhesContrato('${c.id}')">👁</button>`];
-    if (podeEditar(c)) acoes.push(`<button class="btn-icon btn-icon-orange" title="Editar" onclick="editarContrato('${c.id}')">✎</button>`);
-    if (podeAnalisar()) acoes.push(`<button class="btn-icon btn-icon-green" title="Atualizar Status" onclick="abrirAnalise('${c.id}')">⚙</button>`);
-    return `<tr>
-      <td><span style="color:var(--blue-light);font-weight:700">${esc(c.id)}</span></td>
-      <td>${esc(c.cTipoContratacao||"-")}</td>
-      <td>${esc(c.criadoPor||"-")}</td>
-      <td>${esc(c.cTercNome||c.cRazaoSocial||"-")}</td>
-      <td>${statusBadge(c.status)}</td>
-      <td style="white-space:nowrap">${formatarData(c.criadoEm)}</td>
-      <td style="white-space:nowrap">${c.atualizadoEm?formatarData(c.atualizadoEm):"-"}</td>
-      <td><div class="table-actions">${acoes.join("")}</div></td>
-    </tr>`;
-  }).join("");
 }
 
 // Mesma paleta semântica por status já usada nos badges (statusBadge/
@@ -681,6 +652,16 @@ const STATUS_COR_DASH = {
   "Cancelado":                     "var(--gray)",
 };
 
+// Escala de cor por nota (bom → ruim), mesma linguagem visual de "verde é
+// bom, vermelho é ruim" já usada nos KPIs e badges do sistema.
+const NOTA_COR_DASH = {
+  "Excelente":     "var(--green)",
+  "Bom":           "var(--teal)",
+  "Intermediário": "var(--yellow)",
+  "Ruim":          "var(--orange)",
+  "Péssimo":       "var(--red)",
+};
+
 function renderGraficosDashboard(lista) {
   renderGraficoBarrasDash(
     "graficoStatusContratos",
@@ -692,6 +673,24 @@ function renderGraficosDashboard(lista) {
     agruparContagem(lista, c => c.cTipoContratacao || "Não informado"),
     () => "var(--blue-light)"
   );
+  renderGraficoBarrasDash(
+    "graficoProjetoContratos",
+    agruparContagem(lista, c => c.cProjeto || "Sem projeto"),
+    () => "var(--blue)",
+    { topN: 8, legendaElId: "legendaProjetoContratos" }
+  );
+  renderGraficoBarrasDash(
+    "graficoProjetoTerceirizados",
+    contarDistintosPorGrupo(lista, c => c.cProjeto || "Sem projeto", c => c.cTerceirizadoId || c.cTercNome || null),
+    () => "var(--purple)",
+    { topN: 8, legendaElId: "legendaProjetoTerceirizados" }
+  );
+
+  const avaliacoesVisiveis = DB.avaliacoes.filter(a => lista.some(c => c.id === a.contratoId));
+  const { dados: dadosNotas, media } = distribuicaoNotasAvaliacoes(avaliacoesVisiveis);
+  document.getElementById("statNotaMediaGeral").textContent = media !== null ? media.toFixed(1) + " / 5" : "-";
+  document.getElementById("statAvaliacoesRegistradas").textContent = avaliacoesVisiveis.length;
+  renderGraficoBarrasDash("graficoNotasAvaliacoes", dadosNotas, label => NOTA_COR_DASH[label] || "var(--gray)");
 }
 
 function agruparContagem(lista, chaveFn) {
@@ -703,24 +702,72 @@ function agruparContagem(lista, chaveFn) {
   return [...mapa.entries()].sort((a, b) => b[1] - a[1]);
 }
 
+// Conta valores DISTINTOS de itemFn dentro de cada grupo de grupoFn — usado
+// para "quantos terceirizados diferentes atuam em cada projeto" (um mesmo
+// terceirizado pode ter mais de um contrato no mesmo projeto e não deve
+// contar duas vezes).
+function contarDistintosPorGrupo(lista, grupoFn, itemFn) {
+  const mapa = new Map();
+  lista.forEach(item => {
+    const chaveItem = itemFn(item);
+    if (!chaveItem) return;
+    const grupo = grupoFn(item);
+    if (!mapa.has(grupo)) mapa.set(grupo, new Set());
+    mapa.get(grupo).add(chaveItem);
+  });
+  return [...mapa.entries()].map(([grupo, set]) => [grupo, set.size]).sort((a, b) => b[1] - a[1]);
+}
+
+// Distribui as notas qualitativas das avaliações (Campo/Relatório/
+// Relacionamento) nas 5 categorias fixas, na ordem Excelente→Péssimo (escala
+// ordinal, não reordenada por contagem como as demais). "Não se aplica" e
+// valores ausentes ficam de fora, mesmo critério do relatório em PDF
+// (NOTA_QUALITATIVA).
+function distribuicaoNotasAvaliacoes(avaliacoes) {
+  const ordem = ["Excelente", "Bom", "Intermediário", "Ruim", "Péssimo"];
+  const contagem = new Map(ordem.map(k => [k, 0]));
+  const notas = [];
+  avaliacoes.forEach(a => {
+    [a.nivelCampo, a.nivelRelatorio, a.relacionamento].forEach(v => {
+      if (contagem.has(v)) {
+        contagem.set(v, contagem.get(v) + 1);
+        notas.push(NOTA_QUALITATIVA[v]);
+      }
+    });
+  });
+  const media = notas.length ? notas.reduce((a, b) => a + b, 0) / notas.length : null;
+  return { dados: ordem.map(k => [k, contagem.get(k)]), media };
+}
+
 // Barras horizontais simples em HTML/CSS (sem lib de gráfico), no mesmo
 // espírito do pdfGraficoBarras usado no relatório em PDF. Cada linha já
-// carrega o rótulo (nome do status/tipo) e o valor por extenso, então a
-// identificação nunca depende só da cor da barra.
-function renderGraficoBarrasDash(elId, dados, corFn) {
+// carrega o rótulo (nome do status/tipo/projeto) e o valor por extenso,
+// então a identificação nunca depende só da cor da barra.
+// opts.topN corta a lista às N primeiras (já ordenadas por valor) e
+// opts.legendaElId recebe um aviso de quantos itens ficaram de fora.
+function renderGraficoBarrasDash(elId, dados, corFn, opts) {
+  opts = opts || {};
   const el = document.getElementById(elId);
   if (!el) return;
-  if (!dados.length) {
+  const semDados = !dados.length || dados.every(([, valor]) => valor === 0);
+  if (semDados) {
     el.innerHTML = `<div class="dash-chart-empty">Sem dados ainda</div>`;
+    if (opts.legendaElId) { const leg = document.getElementById(opts.legendaElId); if (leg) leg.textContent = ""; }
     return;
   }
-  const max = Math.max(...dados.map(([, valor]) => valor));
-  el.innerHTML = dados.map(([label, valor]) => `
+  const totalGrupos = dados.length;
+  const exibidos = opts.topN ? dados.slice(0, opts.topN) : dados;
+  const max = Math.max(...exibidos.map(([, valor]) => valor));
+  el.innerHTML = exibidos.map(([label, valor]) => `
     <div class="dash-bar-row">
       <div class="dash-bar-label" title="${esc(label)}">${esc(label)}</div>
       <div class="dash-bar-track"><div class="dash-bar-fill" style="width:${Math.round(valor / max * 100)}%;background:${corFn(label)}"></div></div>
       <div class="dash-bar-value">${valor}</div>
     </div>`).join("");
+  if (opts.legendaElId) {
+    const leg = document.getElementById(opts.legendaElId);
+    if (leg) leg.textContent = totalGrupos > exibidos.length ? `Top ${exibidos.length} de ${totalGrupos} projetos` : "";
+  }
 }
 
 // ══════════════════════════════════════════════════════
@@ -1840,9 +1887,16 @@ function pdfGraficoBarras(doc, y, dados, opts) {
   return y + 3;
 }
 
-function pdfPgCapa(doc, qtdContratos, valorTotal, filtros) {
+// "opts" permite reaproveitar a mesma capa (fundo azul + círculos + friso
+// laranja) para relatórios diferentes do de Contratos — sem opts, o
+// comportamento é idêntico ao original (título/subtítulo/destaque de sempre).
+function pdfPgCapa(doc, qtdContratos, valorTotal, filtros, opts) {
   filtros = filtros || [];
+  opts = opts || {};
   const isFiltrado = filtros.length > 0;
+  const tituloPrincipal = opts.tituloPrincipal || "RELATÓRIO DE CONTRATOS";
+  const subtitulo = opts.subtitulo || "Contratação de Terceirizados";
+  const destaqueTexto = opts.destaqueTexto || `${qtdContratos} contrato${qtdContratos===1?"":"s"}  -  ${pdfSan(formatarMoeda(valorTotal))}`;
 
   _pdfPagina++;
   pdfFc(doc, PDF_COR.azulEscuro);
@@ -1871,12 +1925,12 @@ function pdfPgCapa(doc, qtdContratos, valorTotal, filtros) {
   doc.setFont("helvetica", "bold");
   doc.setFontSize(24);
   pdfFc(doc, PDF_COR.branco, "text");
-  doc.text("RELATÓRIO DE CONTRATOS", PDF_PG.w / 2, 122, { align: "center" });
+  doc.text(pdfSan(tituloPrincipal), PDF_PG.w / 2, 122, { align: "center" });
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(11);
   pdfFc(doc, [175, 200, 225], "text");
-  doc.text("Contratação de Terceirizados", PDF_PG.w / 2, 133, { align: "center" });
+  doc.text(pdfSan(subtitulo), PDF_PG.w / 2, 133, { align: "center" });
 
   pdfFc(doc, isFiltrado ? PDF_COR.laranja : PDF_COR.verde);
   doc.roundedRect(PDF_PG.w / 2 - 28, 148, 56, 9, 2.5, 2.5, "F");
@@ -1888,7 +1942,7 @@ function pdfPgCapa(doc, qtdContratos, valorTotal, filtros) {
   doc.setFont("helvetica", "bold");
   doc.setFontSize(9);
   pdfFc(doc, [230, 210, 20], "text");
-  doc.text(`${qtdContratos} contrato${qtdContratos===1?"":"s"}  -  ${pdfSan(formatarMoeda(valorTotal))}`, PDF_PG.w / 2, 168, { align: "center" });
+  doc.text(pdfSan(destaqueTexto), PDF_PG.w / 2, 168, { align: "center" });
 
   let cy = 178;
   if (isFiltrado) {
@@ -2102,6 +2156,137 @@ function gerarRelatorioContratosPDF(lista, filtros) {
   const dateStr = new Date().toISOString().slice(0,10);
   const sufixo = filtros && filtros.length ? "filtrado" : "geral";
   doc.save(`relatorio_contratos_seteg_${sufixo}_${dateStr}.pdf`);
+}
+
+// ══════════════════════════════════════════════════════
+//  RELATÓRIO DE ANÁLISES (Dashboard) — CSV e PDF
+// ══════════════════════════════════════════════════════
+
+// Multi-tabela num único CSV: uma seção por análise, separadas por linha em
+// branco — o Excel/Sheets abre normalmente, cada bloco lido como uma
+// "mini-tabela" própria.
+function exportarAnalisesCSV() {
+  const lista = contratosVisiveisParaRelatorio();
+  if (!lista.length) { mostrarToast("Nenhum contrato encontrado para gerar as análises.","err"); return; }
+
+  const avaliacoesVisiveis = DB.avaliacoes.filter(a => lista.some(c => c.id === a.contratoId));
+  const { dados: dadosNotas, media } = distribuicaoNotasAvaliacoes(avaliacoesVisiveis);
+
+  const linhas = [];
+  const addSecao = (titulo, cab, dados) => {
+    linhas.push([titulo]);
+    linhas.push(cab);
+    dados.forEach(l => linhas.push(l));
+    linhas.push([]);
+  };
+
+  addSecao("RESUMO", ["Indicador", "Valor"], [
+    ["Contratos visíveis", String(lista.length)],
+    ["Terceirizados no sistema", String(DB.terceirizados.length)],
+    ["Avaliações registradas", String(avaliacoesVisiveis.length)],
+    ["Nota média geral", media !== null ? media.toFixed(1) + " / 5" : "-"],
+  ]);
+  addSecao("CONTRATOS POR STATUS", ["Status", "Contratos"],
+    agruparContagem(lista, c => c.status || "Sem status").map(([s, n]) => [s, String(n)]));
+  addSecao("CONTRATOS POR TIPO DE CONTRATAÇÃO", ["Tipo", "Contratos"],
+    agruparContagem(lista, c => c.cTipoContratacao || "Não informado").map(([t, n]) => [t, String(n)]));
+  addSecao("CONTRATOS POR PROJETO", ["Projeto", "Contratos"],
+    agruparContagem(lista, c => c.cProjeto || "Sem projeto").map(([p, n]) => [p, String(n)]));
+  addSecao("TERCEIRIZADOS ATUANDO POR PROJETO", ["Projeto", "Terceirizados"],
+    contarDistintosPorGrupo(lista, c => c.cProjeto || "Sem projeto", c => c.cTerceirizadoId || c.cTercNome || null).map(([p, n]) => [p, String(n)]));
+  addSecao("AVALIAÇÕES POR NOTA", ["Nota", "Ocorrências"],
+    dadosNotas.map(([n, v]) => [n, String(v)]));
+
+  const csvEscape = v => `"${String(v ?? "").replace(/"/g, '""')}"`;
+  const csv = "﻿" + linhas.map(linha => linha.map(csvEscape).join(",")).join("\n");
+
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `analises_seteg_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// Mesmo motor de PDF do Relatório de Contratos (pdfCabecalho/pdfRodape/
+// pdfSecao/pdfKpiBox/pdfGraficoBarras/pdfPgCapa/pdfPgObrigada), só que sem
+// a listagem contrato a contrato — este relatório é só as análises
+// agregadas, espelhando exatamente o que aparece no Dashboard.
+function gerarRelatorioAnalisesPDF() {
+  if (!window.jspdf || !window.jspdf.jsPDF) {
+    mostrarToast("Biblioteca de PDF ainda carregando — tente de novo em instantes.","err");
+    return;
+  }
+  const lista = contratosVisiveisParaRelatorio();
+  if (!lista.length) { mostrarToast("Nenhum contrato encontrado para gerar as análises.","err"); return; }
+
+  const MARCA  = "SETEG - RELATÓRIO DE ANÁLISES";
+  const RODAPE = "Seteg Soluções Geológicas e Ambientais - Relatório de Análises de Terceirizados";
+
+  _pdfPagina = 0;
+  const doc = new window.jspdf.jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  const titulo = "Relatório de Análises";
+  const valorTotal = lista.reduce((acc, c) => {
+    const v = parseFloat(String(c.cValorTotal||"0").replace(/\./g,"").replace(",","."))||0;
+    return acc + v;
+  }, 0);
+
+  const avaliacoesVisiveis = DB.avaliacoes.filter(a => lista.some(c => c.id === a.contratoId));
+  const { dados: dadosNotas, media } = distribuicaoNotasAvaliacoes(avaliacoesVisiveis);
+
+  pdfPgCapa(doc, lista.length, valorTotal, [], {
+    tituloPrincipal: "RELATÓRIO DE ANÁLISES",
+    subtitulo: "Contratação de Terceirizados",
+    destaqueTexto: `${lista.length} contrato${lista.length===1?"":"s"}  -  ${DB.terceirizados.length} terceirizado${DB.terceirizados.length===1?"":"s"} no sistema`,
+  });
+
+  doc.addPage();
+  pdfCabecalho(doc, titulo, MARCA);
+  pdfRodape(doc, RODAPE);
+  let y = 20;
+
+  const boxW = (PDF_PG.cw - 8) / 3;
+  pdfKpiBox(doc, PDF_PG.ml, y, boxW, 20, "Contratos", String(lista.length), PDF_COR.azulMedio);
+  pdfKpiBox(doc, PDF_PG.ml + boxW + 4, y, boxW, 20, "Terceirizados", String(DB.terceirizados.length), PDF_COR.roxo);
+  pdfKpiBox(doc, PDF_PG.ml + (boxW + 4) * 2, y, boxW, 20, "Nota Média Geral", media!==null ? media.toFixed(1)+" / 5" : "Sem avaliações", PDF_COR.verde);
+  y += 28;
+
+  y = pdfSecao(doc, y, "Contratos por Status", PDF_COR.azulMedio);
+  const statusDados = agruparContagem(lista, c => c.status || "Sem status")
+    .map(([s, n]) => ({ label: s, valor: n, valorLabel: `${n} (${Math.round(n/lista.length*100)}%)`, cor: PDF_COR_STATUS[s]||PDF_COR.cinzaMedio }));
+  y = pdfGraficoBarras(doc, y, statusDados, { titulo, marca: MARCA, rodapeTexto: RODAPE });
+
+  y = pdfCheckY(doc, y, 30, titulo, MARCA, RODAPE);
+  y = pdfSecao(doc, y, "Contratos por Tipo de Contratação", PDF_COR.laranja);
+  const tipoDados = agruparContagem(lista, c => c.cTipoContratacao || "Não informado")
+    .map(([t, n]) => ({ label: t, valor: n, valorLabel: `${n} (${Math.round(n/lista.length*100)}%)` }));
+  y = pdfGraficoBarras(doc, y, tipoDados, { titulo, marca: MARCA, rodapeTexto: RODAPE, cor: PDF_COR.laranja });
+
+  y = pdfCheckY(doc, y, 30, titulo, MARCA, RODAPE);
+  y = pdfSecao(doc, y, "Contratos por Projeto", PDF_COR.azulMedio);
+  const projetoContratos = agruparContagem(lista, c => c.cProjeto || "Sem projeto")
+    .map(([p, n]) => ({ label: p, valor: n, valorLabel: String(n) }));
+  y = pdfGraficoBarras(doc, y, projetoContratos, { titulo, marca: MARCA, rodapeTexto: RODAPE });
+
+  y = pdfCheckY(doc, y, 30, titulo, MARCA, RODAPE);
+  y = pdfSecao(doc, y, "Terceirizados Atuando por Projeto", PDF_COR.roxo);
+  const projetoTerc = contarDistintosPorGrupo(lista, c => c.cProjeto || "Sem projeto", c => c.cTerceirizadoId || c.cTercNome || null)
+    .map(([p, n]) => ({ label: p, valor: n, valorLabel: String(n), cor: PDF_COR.roxo }));
+  y = pdfGraficoBarras(doc, y, projetoTerc, { titulo, marca: MARCA, rodapeTexto: RODAPE, cor: PDF_COR.roxo });
+
+  if (avaliacoesVisiveis.length) {
+    const NOTA_COR_PDF = { "Excelente": PDF_COR.verde, "Bom": PDF_COR.teal, "Intermediário": PDF_COR.amarelo, "Ruim": PDF_COR.laranja, "Péssimo": PDF_COR.vermelho };
+    y = pdfCheckY(doc, y, 30, titulo, MARCA, RODAPE);
+    y = pdfSecao(doc, y, "Avaliações por Nota", PDF_COR.verde);
+    const notasDados = dadosNotas.map(([n, v]) => ({ label: n, valor: v, valorLabel: String(v), cor: NOTA_COR_PDF[n] }));
+    y = pdfGraficoBarras(doc, y, notasDados, { titulo, marca: MARCA, rodapeTexto: RODAPE });
+  }
+
+  pdfPgObrigada(doc);
+
+  const dateStr = new Date().toISOString().slice(0,10);
+  doc.save(`analises_seteg_${dateStr}.pdf`);
 }
 
 function imprimirContrato() {

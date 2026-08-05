@@ -120,6 +120,14 @@
         <div class="kpi-card kpi-teal"><div class="kpi-icon-wrap kpi-bg-teal">⭐</div><div><div class="kpi-label">Aval. Pendentes</div><strong id="kpiAvalPendentes" class="kpi-value">0</strong><div class="kpi-sub">Contratos aguardando avaliação</div></div></div>
       </div>
 
+      <div class="dash-analises-header">
+        <h3>Análises</h3>
+        <div class="dash-analises-actions">
+          <button class="btn btn-ghost btn-sm" id="btnExportarAnalisesCSV" title="Exportar as análises em CSV">⬇️ CSV</button>
+          <button class="btn btn-ghost btn-sm" id="btnExportarAnalisesPDF" title="Exportar relatório de análises em PDF">📄 PDF</button>
+        </div>
+      </div>
+
       <div class="dash-charts-row">
         <div class="dash-chart-card">
           <h4 class="dash-chart-title">Contratos por Status</h4>
@@ -129,27 +137,29 @@
           <h4 class="dash-chart-title">Contratos por Tipo de Contratação</h4>
           <div id="graficoTipoContratos" class="dash-bar-chart"></div>
         </div>
-      </div>
-
-      <div class="dash-recent-card">
-        <div class="dash-recent-header">
-          <h4 class="dash-recent-title">Solicitações Recentes</h4>
-          <div class="dash-recent-actions">
-            <button class="btn btn-ghost btn-sm" id="btnExportarContratosCSV" title="Exportar em CSV os contratos com o filtro atual">⬇️ CSV</button>
-            <button class="btn btn-ghost btn-sm" id="btnAbrirExportarContratosPDF" title="Exportar relatório em PDF (com opção de filtros)">📄 PDF</button>
-          </div>
+        <div class="dash-chart-card">
+          <h4 class="dash-chart-title">Contratos por Projeto</h4>
+          <div id="graficoProjetoContratos" class="dash-bar-chart"></div>
+          <div id="legendaProjetoContratos" class="dash-chart-caption"></div>
         </div>
-        <div class="table-scroll">
-          <table class="art-table">
-            <thead>
-              <tr>
-                <th>Nº</th><th>Tipo</th><th>Solicitante</th><th>Prestador</th>
-                <th>Status</th><th>Criado em</th><th>Atualizado em</th><th class="col-acoes">Ações</th>
-              </tr>
-            </thead>
-            <tbody id="dashTabelaRecentes"></tbody>
-          </table>
-          <div id="emptyDashRecentes" class="table-empty"><div class="empty-state"><div class="empty-icon">📋</div><strong>Nenhuma solicitação ainda</strong></div></div>
+        <div class="dash-chart-card">
+          <h4 class="dash-chart-title">Terceirizados Atuando por Projeto</h4>
+          <div id="graficoProjetoTerceirizados" class="dash-bar-chart"></div>
+          <div id="legendaProjetoTerceirizados" class="dash-chart-caption"></div>
+        </div>
+        <div class="dash-chart-card">
+          <h4 class="dash-chart-title">Avaliações de Desempenho</h4>
+          <div class="dash-chart-stats">
+            <div class="dash-chart-stat">
+              <div class="dash-chart-stat-label">Nota média geral</div>
+              <div class="dash-chart-stat-value" id="statNotaMediaGeral">-</div>
+            </div>
+            <div class="dash-chart-stat">
+              <div class="dash-chart-stat-label">Avaliações registradas</div>
+              <div class="dash-chart-stat-value" id="statAvaliacoesRegistradas">0</div>
+            </div>
+          </div>
+          <div id="graficoNotasAvaliacoes" class="dash-bar-chart"></div>
         </div>
       </div>
     </section>
@@ -158,7 +168,11 @@
     <section id="secao-contratos" class="secao">
       <div class="sec-header">
         <h2>Contratos</h2>
-        <button id="btnNovoContrato" class="btn btn-primary" style="display:none">+ Novo Contrato</button>
+        <div class="sec-header-right">
+          <button class="btn btn-ghost btn-sm" id="btnExportarContratosCSV" title="Exportar em CSV os contratos com o filtro atual">⬇️ CSV</button>
+          <button class="btn btn-ghost btn-sm" id="btnAbrirExportarContratosPDF" title="Exportar relatório em PDF (com opção de filtros)">📄 PDF</button>
+          <button id="btnNovoContrato" class="btn btn-primary" style="display:none">+ Novo Contrato</button>
+        </div>
       </div>
 
       <!-- FORMULÁRIO CONTRATO -->
