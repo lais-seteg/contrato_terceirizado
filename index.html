@@ -906,6 +906,10 @@
     <section id="secao-avaliacoes" class="secao">
       <div class="sec-header">
         <h2>Avaliações de Prestadores</h2>
+        <div class="sec-header-right">
+          <!-- Gestão / GP podem criar manualmente; Solicitante avalia pelo botão no contrato -->
+          <button id="btnNovaAval" class="btn btn-primary perm-gp-gestao hidden">+ Nova Avaliação</button>
+        </div>
       </div>
 
       <!-- Formulário de Avaliação -->
@@ -1041,11 +1045,6 @@
 
       <!-- Vista Gestão / GP: tabela completa com respostas -->
       <div id="listaAvaliacoes" class="lista-wrapper">
-        <!-- Controles da lista -->
-        <div class="table-controls" style="display:flex;justify-content:flex-end;align-items:center">
-          <!-- Gestão / GP podem criar manualmente; Solicitante avalia pelo botão no contrato -->
-          <button id="btnNovaAval" class="btn btn-primary perm-gp-gestao hidden">+ Nova Avaliação</button>
-        </div>
         <!-- Visão para Gestão e Gestão de Pessoas -->
         <div id="avalViewGestao" class="lista-wrapper">
           <div class="table-wrapper">
