@@ -662,6 +662,15 @@ const NOTA_COR_DASH = {
   "Péssimo":       "var(--red)",
 };
 
+// Paleta categórica para gráficos sem semântica fixa (Tipo/Projeto) — mesma
+// ordem sempre, só a paleta de cor do próprio sistema (nunca um hue gerado
+// à parte), pra cada barra do gráfico ter uma cor própria e reconhecível.
+const PALETA_CATEGORICA_DASH = [
+  "var(--blue)", "var(--orange)", "var(--teal)", "var(--purple)",
+  "var(--green)", "var(--yellow)", "var(--blue-light)", "var(--red)",
+];
+const corCategorica = (_, idx) => PALETA_CATEGORICA_DASH[idx % PALETA_CATEGORICA_DASH.length];
+
 function renderGraficosDashboard(lista) {
   renderGraficoBarrasDash(
     "graficoStatusContratos",
@@ -671,18 +680,18 @@ function renderGraficosDashboard(lista) {
   renderGraficoBarrasDash(
     "graficoTipoContratos",
     agruparContagem(lista, c => c.cTipoContratacao || "Não informado"),
-    () => "var(--blue-light)"
+    corCategorica
   );
   renderGraficoBarrasDash(
     "graficoProjetoContratos",
     agruparContagem(lista, c => c.cProjeto || "Sem projeto"),
-    () => "var(--blue)",
+    corCategorica,
     { topN: 8, legendaElId: "legendaProjetoContratos" }
   );
   renderGraficoBarrasDash(
     "graficoProjetoTerceirizados",
     contarDistintosPorGrupo(lista, c => c.cProjeto || "Sem projeto", c => c.cTerceirizadoId || c.cTercNome || null),
-    () => "var(--purple)",
+    corCategorica,
     { topN: 8, legendaElId: "legendaProjetoTerceirizados" }
   );
 
@@ -804,10 +813,10 @@ function renderGraficoBarrasDash(elId, dados, corFn, opts) {
   const totalGrupos = dados.length;
   const exibidos = opts.topN ? dados.slice(0, opts.topN) : dados;
   const max = Math.max(...exibidos.map(([, valor]) => valor));
-  el.innerHTML = exibidos.map(([label, valor]) => `
+  el.innerHTML = exibidos.map(([label, valor], idx) => `
     <div class="dash-bar-row">
       <div class="dash-bar-label" title="${esc(label)}">${esc(label)}</div>
-      <div class="dash-bar-track"><div class="dash-bar-fill" style="width:${Math.round(valor / max * 100)}%;background:${corFn(label)}"></div></div>
+      <div class="dash-bar-track"><div class="dash-bar-fill" style="width:${Math.round(valor / max * 100)}%;background:${corFn(label, idx)}"></div></div>
       <div class="dash-bar-value">${valor}</div>
     </div>`).join("");
   if (opts.legendaElId) {
@@ -2307,23 +2316,31 @@ function gerarRelatorioAnalisesPDF() {
     .map(([s, n]) => ({ label: s, valor: n, valorLabel: `${n} (${Math.round(n/lista.length*100)}%)`, cor: PDF_COR_STATUS[s]||PDF_COR.cinzaMedio }));
   y = pdfGraficoBarras(doc, y, statusDados, { titulo, marca: MARCA, rodapeTexto: RODAPE });
 
+  // Mesma paleta categórica (por posição, não por nome) usada nos gráficos
+  // do Dashboard — consistência visual entre a tela e o PDF.
+  const PALETA_CATEGORICA_PDF = [
+    PDF_COR.azulMedio, PDF_COR.laranja, PDF_COR.teal, PDF_COR.roxo,
+    PDF_COR.verde, PDF_COR.amarelo, PDF_COR.azulClaro, PDF_COR.vermelho,
+  ];
+  const corCategoricaPdf = idx => PALETA_CATEGORICA_PDF[idx % PALETA_CATEGORICA_PDF.length];
+
   y = pdfCheckY(doc, y, 30, titulo, MARCA, RODAPE);
   y = pdfSecao(doc, y, "Contratos por Tipo de Contratação", PDF_COR.laranja);
   const tipoDados = agruparContagem(lista, c => c.cTipoContratacao || "Não informado")
-    .map(([t, n]) => ({ label: t, valor: n, valorLabel: `${n} (${Math.round(n/lista.length*100)}%)` }));
-  y = pdfGraficoBarras(doc, y, tipoDados, { titulo, marca: MARCA, rodapeTexto: RODAPE, cor: PDF_COR.laranja });
+    .map(([t, n], idx) => ({ label: t, valor: n, valorLabel: `${n} (${Math.round(n/lista.length*100)}%)`, cor: corCategoricaPdf(idx) }));
+  y = pdfGraficoBarras(doc, y, tipoDados, { titulo, marca: MARCA, rodapeTexto: RODAPE });
 
   y = pdfCheckY(doc, y, 30, titulo, MARCA, RODAPE);
   y = pdfSecao(doc, y, "Contratos por Projeto", PDF_COR.azulMedio);
   const projetoContratos = agruparContagem(lista, c => c.cProjeto || "Sem projeto")
-    .map(([p, n]) => ({ label: p, valor: n, valorLabel: String(n) }));
+    .map(([p, n], idx) => ({ label: p, valor: n, valorLabel: String(n), cor: corCategoricaPdf(idx) }));
   y = pdfGraficoBarras(doc, y, projetoContratos, { titulo, marca: MARCA, rodapeTexto: RODAPE });
 
   y = pdfCheckY(doc, y, 30, titulo, MARCA, RODAPE);
   y = pdfSecao(doc, y, "Terceirizados Atuando por Projeto", PDF_COR.roxo);
   const projetoTerc = contarDistintosPorGrupo(lista, c => c.cProjeto || "Sem projeto", c => c.cTerceirizadoId || c.cTercNome || null)
-    .map(([p, n]) => ({ label: p, valor: n, valorLabel: String(n), cor: PDF_COR.roxo }));
-  y = pdfGraficoBarras(doc, y, projetoTerc, { titulo, marca: MARCA, rodapeTexto: RODAPE, cor: PDF_COR.roxo });
+    .map(([p, n], idx) => ({ label: p, valor: n, valorLabel: String(n), cor: corCategoricaPdf(idx) }));
+  y = pdfGraficoBarras(doc, y, projetoTerc, { titulo, marca: MARCA, rodapeTexto: RODAPE });
 
   if (avaliacoesVisiveis.length) {
     const NOTA_COR_PDF = { "Excelente": PDF_COR.verde, "Bom": PDF_COR.teal, "Intermediário": PDF_COR.amarelo, "Ruim": PDF_COR.laranja, "Péssimo": PDF_COR.vermelho };
