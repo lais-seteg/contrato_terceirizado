@@ -691,6 +691,52 @@ function renderGraficosDashboard(lista) {
   document.getElementById("statNotaMediaGeral").textContent = media !== null ? media.toFixed(1) + " / 5" : "-";
   document.getElementById("statAvaliacoesRegistradas").textContent = avaliacoesVisiveis.length;
   renderGraficoBarrasDash("graficoNotasAvaliacoes", dadosNotas, label => NOTA_COR_DASH[label] || "var(--gray)");
+
+  const prazoCumprido = calcularPrazoCumprido(avaliacoesVisiveis);
+  renderTermometro("termometroNota", media !== null ? media / 5 * 100 : 0,
+    media !== null ? media.toFixed(1) + " / 5" : "-", corPorNota(media));
+  renderTermometro("termometroPrazo", prazoCumprido !== null ? prazoCumprido : 0,
+    prazoCumprido !== null ? prazoCumprido + "%" : "-", corPorPercentual(prazoCumprido));
+}
+
+// % de avaliações com prazo "Totalmente" cumprido — mesmo indicador já usado
+// no Relatório de Contratos em PDF.
+function calcularPrazoCumprido(avaliacoes) {
+  if (!avaliacoes.length) return null;
+  return Math.round(avaliacoes.filter(a => a.prazo === "Totalmente").length / avaliacoes.length * 100);
+}
+
+function corPorNota(media) {
+  if (media === null) return "var(--gray)";
+  if (media >= 4.5) return NOTA_COR_DASH["Excelente"];
+  if (media >= 3.5) return NOTA_COR_DASH["Bom"];
+  if (media >= 2.5) return NOTA_COR_DASH["Intermediário"];
+  if (media >= 1.5) return NOTA_COR_DASH["Ruim"];
+  return NOTA_COR_DASH["Péssimo"];
+}
+
+function corPorPercentual(pct) {
+  if (pct === null) return "var(--gray)";
+  if (pct >= 80) return "var(--green)";
+  if (pct >= 60) return "var(--teal)";
+  if (pct >= 40) return "var(--yellow)";
+  if (pct >= 20) return "var(--orange)";
+  return "var(--red)";
+}
+
+// Termômetro simples em HTML/CSS: preenche o tubo (0-100%) e colore
+// tubo+bulbo de acordo com a faixa do valor — mesma lógica de "cor por
+// severidade" já usada nos demais indicadores do Dashboard.
+function renderTermometro(prefixo, pct, valorTexto, cor) {
+  const fill  = document.getElementById(prefixo + "Fill");
+  const bulbo = document.getElementById(prefixo + "Bulbo");
+  const valor = document.getElementById(prefixo + "Valor");
+  if (!fill || !bulbo || !valor) return;
+  const p = Math.max(0, Math.min(100, pct));
+  fill.style.height = p + "%";
+  fill.style.background = cor;
+  bulbo.style.background = cor;
+  valor.textContent = valorTexto;
 }
 
 function agruparContagem(lista, chaveFn) {
@@ -2180,11 +2226,13 @@ function exportarAnalisesCSV() {
     linhas.push([]);
   };
 
+  const prazoCumprido = calcularPrazoCumprido(avaliacoesVisiveis);
   addSecao("RESUMO", ["Indicador", "Valor"], [
     ["Contratos visíveis", String(lista.length)],
     ["Terceirizados no sistema", String(DB.terceirizados.length)],
     ["Avaliações registradas", String(avaliacoesVisiveis.length)],
     ["Nota média geral", media !== null ? media.toFixed(1) + " / 5" : "-"],
+    ["Prazo cumprido", prazoCumprido !== null ? prazoCumprido + "%" : "-"],
   ]);
   addSecao("CONTRATOS POR STATUS", ["Status", "Contratos"],
     agruparContagem(lista, c => c.status || "Sem status").map(([s, n]) => [s, String(n)]));
@@ -2234,6 +2282,7 @@ function gerarRelatorioAnalisesPDF() {
 
   const avaliacoesVisiveis = DB.avaliacoes.filter(a => lista.some(c => c.id === a.contratoId));
   const { dados: dadosNotas, media } = distribuicaoNotasAvaliacoes(avaliacoesVisiveis);
+  const prazoCumprido = calcularPrazoCumprido(avaliacoesVisiveis);
 
   pdfPgCapa(doc, lista.length, valorTotal, [], {
     tituloPrincipal: "RELATÓRIO DE ANÁLISES",
@@ -2246,10 +2295,11 @@ function gerarRelatorioAnalisesPDF() {
   pdfRodape(doc, RODAPE);
   let y = 20;
 
-  const boxW = (PDF_PG.cw - 8) / 3;
+  const boxW = (PDF_PG.cw - 12) / 4;
   pdfKpiBox(doc, PDF_PG.ml, y, boxW, 20, "Contratos", String(lista.length), PDF_COR.azulMedio);
-  pdfKpiBox(doc, PDF_PG.ml + boxW + 4, y, boxW, 20, "Terceirizados", String(DB.terceirizados.length), PDF_COR.roxo);
+  pdfKpiBox(doc, PDF_PG.ml + (boxW + 4), y, boxW, 20, "Terceirizados", String(DB.terceirizados.length), PDF_COR.roxo);
   pdfKpiBox(doc, PDF_PG.ml + (boxW + 4) * 2, y, boxW, 20, "Nota Média Geral", media!==null ? media.toFixed(1)+" / 5" : "Sem avaliações", PDF_COR.verde);
+  pdfKpiBox(doc, PDF_PG.ml + (boxW + 4) * 3, y, boxW, 20, "Prazo Cumprido", prazoCumprido!==null ? prazoCumprido+"%" : "Sem avaliações", PDF_COR.laranja);
   y += 28;
 
   y = pdfSecao(doc, y, "Contratos por Status", PDF_COR.azulMedio);
