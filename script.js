@@ -3420,17 +3420,25 @@ function gerarAlertas(){
     ? DB.contratos.filter(visivelParaLider)
     : DB.contratos;
   const alertasVencimento = base
-    .map(c => { const dias=diasAteVencer(c.cDataFim); return {titulo:`Contrato ${c.id} · ${c.cTercNome||c.cRazaoSocial}`,desc:"Vencimento do contrato",dias,tipo:dias<=7?"critico":dias<=15?"atencao":"aviso"}; })
+    .map(c => { const dias=diasAteVencer(c.cDataFim); return {categoria:"vencimento",titulo:`Contrato ${c.id} · ${c.cTercNome||c.cRazaoSocial}`,desc:"Vencimento do contrato",dias,tipo:dias<=7?"critico":dias<=15?"atencao":"aviso"}; })
     .filter(a => a.dias!==null && a.dias<=30);
-  return [...alertasVencimento].sort((a,b)=>a.dias-b.dias);
+  const alertasAvaliacao = base
+    .filter(c => contratoAguardaAvaliacao(c))
+    .map(c => { const fim=diasAteVencer(c.cDataFim); const dias=fim===null?null:-fim; return {categoria:"avaliacao",titulo:`Contrato ${c.id} · ${c.cTercNome||c.cRazaoSocial}`,desc:"Avaliação pendente após o fim do contrato",dias,tipo:dias!==null&&dias>15?"critico":dias!==null&&dias>7?"atencao":"aviso"}; });
+  return [...alertasVencimento,...alertasAvaliacao].sort((a,b)=>(a.dias??0)-(b.dias??0));
 }
 
 function renderAlertas(){
   const alertas=gerarAlertas();
   const badge=document.getElementById("badgeAlertas");badge.textContent=alertas.length;badge.classList.toggle("hidden",alertas.length===0);
   const el=document.getElementById("listaAlertas");
-  if(!alertas.length){el.innerHTML=`<div class="alertas-empty">${svgIcon("checkCircle",16)} Nenhum vencimento próximo nos próximos 30 dias.</div>`;return;}
-  el.innerHTML=alertas.map(a=>{const dl=a.dias<0?`Vencido há ${Math.abs(a.dias)} dia(s)`:a.dias===0?"Vence hoje!":`Vence em ${a.dias} dia(s)`;return`<div class="alerta-card alerta-${a.tipo}"><div class="alerta-titulo">${esc(a.titulo)}</div><div class="alerta-desc">${esc(a.desc)}</div><div class="alerta-meta">${dl}</div></div>`;}).join("");
+  if(!alertas.length){el.innerHTML=`<div class="alertas-empty">${svgIcon("checkCircle",16)} Nenhum alerta no momento.</div>`;return;}
+  el.innerHTML=alertas.map(a=>{
+    const dl = a.categoria==="avaliacao"
+      ? (a.dias===null||a.dias<=0 ? "Avaliação pendente" : `Avaliação pendente há ${a.dias} dia(s)`)
+      : (a.dias<0?`Vencido há ${Math.abs(a.dias)} dia(s)`:a.dias===0?"Vence hoje!":`Vence em ${a.dias} dia(s)`);
+    return`<div class="alerta-card alerta-${a.tipo}"><div class="alerta-titulo">${esc(a.titulo)}</div><div class="alerta-desc">${esc(a.desc)}</div><div class="alerta-meta">${dl}</div></div>`;
+  }).join("");
 }
 
 // ══════════════════════════════════════════════════════
