@@ -755,6 +755,35 @@ function calcularPrazoCumprido(avaliacoes) {
   return Math.round(avaliacoes.filter(a => a.prazo === "Totalmente").length / avaliacoes.length * 100);
 }
 
+// Uma frase descritiva por terceirizado (contratos/projetos + avaliação de
+// desempenho), reaproveitada no Relatório de Análises em CSV e em PDF —
+// texto corrido em vez de só números de tabela.
+function gerarFrasesTerceirizados(lista) {
+  const porTerceirizado = new Map();
+  lista.forEach(c => {
+    const chave = c.cTerceirizadoId || c.cTercNome || "-";
+    if (!porTerceirizado.has(chave)) porTerceirizado.set(chave, { nome: c.cTercNome || "Terceirizado sem nome", projetos: new Set(), contratos: [] });
+    const grp = porTerceirizado.get(chave);
+    grp.contratos.push(c);
+    if (c.cProjeto) grp.projetos.add(c.cProjeto);
+  });
+  return [...porTerceirizado.values()]
+    .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
+    .map(grp => {
+      const idsContratos = grp.contratos.map(c => c.id);
+      const avals = DB.avaliacoes.filter(a => idsContratos.includes(a.contratoId));
+      const notas = avals.flatMap(a => [a.nivelCampo, a.nivelRelatorio, a.relacionamento]).map(v => NOTA_QUALITATIVA[v]).filter(n => n !== undefined);
+      const media = notas.length ? (notas.reduce((a, b) => a + b, 0) / notas.length).toFixed(1) : null;
+      const prazoPct = avals.length ? Math.round(avals.filter(a => a.prazo === "Totalmente").length / avals.length * 100) : null;
+      const projetosTxt = grp.projetos.size ? [...grp.projetos].join(", ") : "projeto não informado";
+      const contratosTxt = `${grp.contratos.length} contrato${grp.contratos.length === 1 ? "" : "s"}`;
+      if (!avals.length) {
+        return `${grp.nome}: atua em ${contratosTxt} (${projetosTxt}) — ainda sem avaliação de desempenho registrada.`;
+      }
+      return `${grp.nome}: atua em ${contratosTxt} (${projetosTxt}), com nota média de ${media}/5 e ${prazoPct}% de prazo cumprido, em ${avals.length} avaliaç${avals.length === 1 ? "ão" : "ões"} registrada${avals.length === 1 ? "" : "s"}.`;
+    });
+}
+
 function corPorNota(media) {
   if (media === null) return "var(--gray)";
   if (media >= 4.5) return NOTA_COR_DASH["Excelente"];
@@ -1989,6 +2018,46 @@ function pdfGraficoBarras(doc, y, dados, opts) {
   return y + 3;
 }
 
+// Parágrafo explicativo (texto corrido, cinza, menor) — usado para dar
+// contexto a cada seção do relatório antes do gráfico/tabela, em vez de
+// só números soltos.
+function pdfTextoExplicativo(doc, y, texto, opts) {
+  opts = opts || {};
+  const fontSize = 8;
+  const lineH = fontSize * 0.5;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(fontSize);
+  const linhas = doc.splitTextToSize(pdfSan(texto), PDF_PG.cw);
+  y = pdfCheckY(doc, y, linhas.length * lineH + 3, opts.titulo, opts.marca, opts.rodapeTexto);
+  pdfFc(doc, PDF_COR.cinzaMedio, "text");
+  linhas.forEach(linha => { doc.text(linha, PDF_PG.ml, y); y += lineH; });
+  return y + 3;
+}
+
+// Lista descritiva (um parágrafo por item, com marcador colorido) — usada
+// pra descrever cada terceirizado em texto corrido, em vez de só uma
+// tabela de números.
+function pdfListaDescritiva(doc, y, itens, opts) {
+  opts = opts || {};
+  const cor = opts.cor || PDF_COR.azulMedio;
+  const fontSize = 8;
+  const lineH = fontSize * 0.5;
+  const indent = 5;
+  itens.forEach(texto => {
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(fontSize);
+    const linhas = doc.splitTextToSize(pdfSan(texto), PDF_PG.cw - indent);
+    const altura = linhas.length * lineH + 2.5;
+    y = pdfCheckY(doc, y, altura, opts.titulo, opts.marca, opts.rodapeTexto);
+    pdfFc(doc, cor);
+    doc.circle(PDF_PG.ml + 1, y - 1.3, 1, "F");
+    pdfFc(doc, PDF_COR.cinzaEscuro, "text");
+    linhas.forEach((linha, li) => doc.text(linha, PDF_PG.ml + indent, y + li * lineH));
+    y += altura;
+  });
+  return y + 2;
+}
+
 // "opts" permite reaproveitar a mesma capa (fundo azul + círculos + friso
 // laranja) para relatórios diferentes do de Contratos — sem opts, o
 // comportamento é idêntico ao original (título/subtítulo/destaque de sempre).
@@ -2275,31 +2344,38 @@ function exportarAnalisesCSV() {
   const { dados: dadosNotas, media } = distribuicaoNotasAvaliacoes(avaliacoesVisiveis);
 
   const linhas = [];
-  const addSecao = (titulo, cab, dados) => {
+  const addSecao = (titulo, descricao, cab, dados) => {
     linhas.push([titulo]);
+    if (descricao) linhas.push([descricao]);
     linhas.push(cab);
     dados.forEach(l => linhas.push(l));
     linhas.push([]);
   };
 
   const prazoCumprido = calcularPrazoCumprido(avaliacoesVisiveis);
-  addSecao("RESUMO", ["Indicador", "Valor"], [
+  addSecao("RESUMO", "Números gerais do período visível neste relatório.", ["Indicador", "Valor"], [
     ["Contratos visíveis", String(lista.length)],
     ["Terceirizados no sistema", String(DB.terceirizados.length)],
     ["Avaliações registradas", String(avaliacoesVisiveis.length)],
     ["Nota média geral", media !== null ? media.toFixed(1) + " / 5" : "-"],
     ["Prazo cumprido", prazoCumprido !== null ? prazoCumprido + "%" : "-"],
   ]);
-  addSecao("CONTRATOS POR STATUS", ["Status", "Contratos"],
+  addSecao("CONTRATOS POR STATUS", "Quantos contratos estão em cada etapa do fluxo, do registro da solicitação até a finalização.", ["Status", "Contratos"],
     agruparContagem(lista, c => c.status || "Sem status").map(([s, n]) => [s, String(n)]));
-  addSecao("CONTRATOS POR TIPO DE CONTRATAÇÃO", ["Tipo", "Contratos"],
+  addSecao("CONTRATOS POR TIPO DE CONTRATAÇÃO", "Volume de contratos por tipo de contratação, indicando onde está concentrada a demanda.", ["Tipo", "Contratos"],
     agruparContagem(lista, c => c.cTipoContratacao || "Não informado").map(([t, n]) => [t, String(n)]));
-  addSecao("CONTRATOS POR PROJETO", ["Projeto", "Contratos"],
+  addSecao("CONTRATOS POR PROJETO", "Ranking dos projetos com mais contratos de terceirizados ativos.", ["Projeto", "Contratos"],
     agruparContagem(lista, c => c.cProjeto || "Sem projeto").map(([p, n]) => [p, String(n)]));
-  addSecao("TERCEIRIZADOS ATUANDO POR PROJETO", ["Projeto", "Terceirizados"],
+  addSecao("TERCEIRIZADOS ATUANDO POR PROJETO", "Quantidade de terceirizados distintos alocados em cada projeto (sem contar duas vezes o mesmo terceirizado com mais de um contrato no projeto).", ["Projeto", "Terceirizados"],
     contarDistintosPorGrupo(lista, c => c.cProjeto || "Sem projeto", c => c.cTerceirizadoId || c.cTercNome || null).map(([p, n]) => [p, String(n)]));
-  addSecao("AVALIAÇÕES POR NOTA", ["Nota", "Ocorrências"],
+  addSecao("AVALIAÇÕES POR NOTA", "Distribuição das avaliações de desempenho (Campo, Relatório, Relacionamento) por nota qualitativa, de Excelente a Péssimo.", ["Nota", "Ocorrências"],
     dadosNotas.map(([n, v]) => [n, String(v)]));
+
+  const frasesTerceirizados = gerarFrasesTerceirizados(lista);
+  if (frasesTerceirizados.length) {
+    addSecao("TERCEIRIZADOS E AVALIAÇÕES", "Resumo descritivo de cada terceirizado: em quantos contratos e projetos atua, e como está sua avaliação de desempenho até o momento.", ["Descrição"],
+      frasesTerceirizados.map(f => [f]));
+  }
 
   const csvEscape = v => `"${String(v ?? "").replace(/"/g, '""')}"`;
   const csv = "﻿" + linhas.map(linha => linha.map(csvEscape).join(",")).join("\n");
@@ -2359,6 +2435,7 @@ function gerarRelatorioAnalisesPDF() {
   y += 28;
 
   y = pdfSecao(doc, y, "Contratos por Status", PDF_COR.azulMedio);
+  y = pdfTextoExplicativo(doc, y, "Mostra quantos contratos estão em cada etapa do fluxo — do registro da solicitação até a finalização — ajudando a identificar em que ponto do processo os contratos estão concentrados.", { titulo, marca: MARCA, rodapeTexto: RODAPE });
   const statusDados = agruparContagem(lista, c => c.status || "Sem status")
     .map(([s, n]) => ({ label: s, valor: n, valorLabel: `${n} (${Math.round(n/lista.length*100)}%)`, cor: PDF_COR_STATUS[s]||PDF_COR.cinzaMedio }));
   y = pdfGraficoBarras(doc, y, statusDados, { titulo, marca: MARCA, rodapeTexto: RODAPE });
@@ -2373,18 +2450,21 @@ function gerarRelatorioAnalisesPDF() {
 
   y = pdfCheckY(doc, y, 30, titulo, MARCA, RODAPE);
   y = pdfSecao(doc, y, "Contratos por Tipo de Contratação", PDF_COR.laranja);
+  y = pdfTextoExplicativo(doc, y, "Compara o volume de contratos por tipo de contratação (Prestador de Serviço, Despachante etc.), indicando onde está concentrada a demanda por terceirização.", { titulo, marca: MARCA, rodapeTexto: RODAPE });
   const tipoDados = agruparContagem(lista, c => c.cTipoContratacao || "Não informado")
     .map(([t, n], idx) => ({ label: t, valor: n, valorLabel: `${n} (${Math.round(n/lista.length*100)}%)`, cor: corCategoricaPdf(idx) }));
   y = pdfGraficoBarras(doc, y, tipoDados, { titulo, marca: MARCA, rodapeTexto: RODAPE });
 
   y = pdfCheckY(doc, y, 30, titulo, MARCA, RODAPE);
   y = pdfSecao(doc, y, "Contratos por Projeto", PDF_COR.azulMedio);
+  y = pdfTextoExplicativo(doc, y, "Ranking dos projetos com mais contratos de terceirizados ativos, útil para dimensionar a necessidade de mão de obra terceirizada por projeto.", { titulo, marca: MARCA, rodapeTexto: RODAPE });
   const projetoContratos = agruparContagem(lista, c => c.cProjeto || "Sem projeto")
     .map(([p, n], idx) => ({ label: p, valor: n, valorLabel: String(n), cor: corCategoricaPdf(idx) }));
   y = pdfGraficoBarras(doc, y, projetoContratos, { titulo, marca: MARCA, rodapeTexto: RODAPE });
 
   y = pdfCheckY(doc, y, 30, titulo, MARCA, RODAPE);
   y = pdfSecao(doc, y, "Terceirizados Atuando por Projeto", PDF_COR.roxo);
+  y = pdfTextoExplicativo(doc, y, "Quantidade de terceirizados distintos alocados em cada projeto — um mesmo terceirizado pode ter mais de um contrato no mesmo projeto e não é contado duas vezes.", { titulo, marca: MARCA, rodapeTexto: RODAPE });
   const projetoTerc = contarDistintosPorGrupo(lista, c => c.cProjeto || "Sem projeto", c => c.cTerceirizadoId || c.cTercNome || null)
     .map(([p, n], idx) => ({ label: p, valor: n, valorLabel: String(n), cor: corCategoricaPdf(idx) }));
   y = pdfGraficoBarras(doc, y, projetoTerc, { titulo, marca: MARCA, rodapeTexto: RODAPE });
@@ -2393,8 +2473,21 @@ function gerarRelatorioAnalisesPDF() {
     const NOTA_COR_PDF = { "Excelente": PDF_COR.verde, "Bom": PDF_COR.teal, "Intermediário": PDF_COR.amarelo, "Ruim": PDF_COR.laranja, "Péssimo": PDF_COR.vermelho };
     y = pdfCheckY(doc, y, 30, titulo, MARCA, RODAPE);
     y = pdfSecao(doc, y, "Avaliações por Nota", PDF_COR.verde);
+    y = pdfTextoExplicativo(doc, y, "Distribuição das avaliações de desempenho registradas (critérios Campo, Relatório e Relacionamento) por nota qualitativa, da mais alta (Excelente) à mais baixa (Péssimo).", { titulo, marca: MARCA, rodapeTexto: RODAPE });
     const notasDados = dadosNotas.map(([n, v]) => ({ label: n, valor: v, valorLabel: String(v), cor: NOTA_COR_PDF[n] }));
     y = pdfGraficoBarras(doc, y, notasDados, { titulo, marca: MARCA, rodapeTexto: RODAPE });
+  }
+
+  // ─── Terceirizados e Avaliações (descritivo) ───
+  // Em vez de só números, um parágrafo por terceirizado contando quantos
+  // contratos/projetos ele tem e como está sua avaliação de desempenho.
+  const frasesTerceirizados = gerarFrasesTerceirizados(lista);
+
+  if (frasesTerceirizados.length) {
+    y = pdfCheckY(doc, y, 30, titulo, MARCA, RODAPE);
+    y = pdfSecao(doc, y, "Terceirizados e Avaliações", PDF_COR.roxo);
+    y = pdfTextoExplicativo(doc, y, "Resumo descritivo de cada terceirizado com contrato visível neste relatório: em quantos contratos e projetos atua, e como está sua avaliação de desempenho até o momento.", { titulo, marca: MARCA, rodapeTexto: RODAPE });
+    y = pdfListaDescritiva(doc, y, frasesTerceirizados, { titulo, marca: MARCA, rodapeTexto: RODAPE, cor: PDF_COR.roxo });
   }
 
   pdfPgObrigada(doc);
