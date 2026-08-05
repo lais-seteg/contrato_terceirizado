@@ -557,28 +557,6 @@ function aplicarPermissoes() {
   const vS = document.getElementById("avalViewSolicitante");
   if (vG) vG.classList.toggle("hidden", !isGP);
   if (vS) vS.classList.toggle("hidden", isGP);
-
-  // Gestão de Pessoas (DP): Dashboard e Contratos mostravam os mesmos
-  // contratos duas vezes (mini-tabela "Solicitações Recentes" + tabela
-  // completa em Contratos) — para esse perfil, a tabela completa (com
-  // filtros/paginação) passa a viver dentro do próprio Dashboard, e o
-  // menu "Contratos" some da barra lateral. Outros perfis não são afetados.
-  const navContratos = document.getElementById("navContratos");
-  if (navContratos) navContratos.classList.toggle("hidden", p === "gestao-pessoas");
-  mesclarDashboardContratosParaGP(p === "gestao-pessoas");
-}
-
-function mesclarDashboardContratosParaGP(ativar) {
-  const dashboard = document.getElementById("secao-dashboard");
-  const secaoContratos = document.getElementById("secao-contratos");
-  const recentCard = dashboard && dashboard.querySelector(".dash-recent-card");
-  const formContrato = document.getElementById("formContrato");
-  const listaContratos = document.getElementById("listaContratos");
-  if (!dashboard || !secaoContratos || !formContrato || !listaContratos) return;
-  const destino = ativar ? dashboard : secaoContratos;
-  destino.appendChild(formContrato);
-  destino.appendChild(listaContratos);
-  if (recentCard) recentCard.classList.toggle("hidden", ativar);
 }
 
 function podeEditar(item) {
@@ -652,11 +630,8 @@ function renderDashboard() {
   badge.textContent = totalAlertas;
   badge.classList.toggle("hidden", totalAlertas===0);
 
-  if (STATE.perfil === "gestao-pessoas") {
-    renderContratos();
-  } else {
-    renderSolicitacoesRecentes(meus);
-  }
+  renderSolicitacoesRecentes(meus);
+  renderGraficosDashboard(meus);
 }
 
 function renderSolicitacoesRecentes(lista) {
@@ -689,6 +664,63 @@ function renderSolicitacoesRecentes(lista) {
       <td><div class="table-actions">${acoes.join("")}</div></td>
     </tr>`;
   }).join("");
+}
+
+// Mesma paleta semântica por status já usada nos badges (statusBadge/
+// STATUS_CLASS) e no relatório em PDF (PDF_COR_STATUS) — reaproveitada aqui
+// para os gráficos do Dashboard, para que a mesma cor de status seja
+// reconhecível em qualquer tela do sistema.
+const STATUS_COR_DASH = {
+  "Pendente":                      "var(--yellow)",
+  "Em Elaboração":                 "var(--blue)",
+  "Aguardando Aprovação do Líder": "var(--blue-light)",
+  "Aguardando Assinaturas":        "var(--purple)",
+  "Pendente de Ajuste":            "var(--yellow)",
+  "Finalizado":                    "var(--teal)",
+  "Reprovado":                     "var(--red)",
+  "Cancelado":                     "var(--gray)",
+};
+
+function renderGraficosDashboard(lista) {
+  renderGraficoBarrasDash(
+    "graficoStatusContratos",
+    agruparContagem(lista, c => c.status || "Sem status"),
+    status => STATUS_COR_DASH[status] || "var(--gray)"
+  );
+  renderGraficoBarrasDash(
+    "graficoTipoContratos",
+    agruparContagem(lista, c => c.cTipoContratacao || "Não informado"),
+    () => "var(--blue-light)"
+  );
+}
+
+function agruparContagem(lista, chaveFn) {
+  const mapa = new Map();
+  lista.forEach(item => {
+    const chave = chaveFn(item);
+    mapa.set(chave, (mapa.get(chave) || 0) + 1);
+  });
+  return [...mapa.entries()].sort((a, b) => b[1] - a[1]);
+}
+
+// Barras horizontais simples em HTML/CSS (sem lib de gráfico), no mesmo
+// espírito do pdfGraficoBarras usado no relatório em PDF. Cada linha já
+// carrega o rótulo (nome do status/tipo) e o valor por extenso, então a
+// identificação nunca depende só da cor da barra.
+function renderGraficoBarrasDash(elId, dados, corFn) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  if (!dados.length) {
+    el.innerHTML = `<div class="dash-chart-empty">Sem dados ainda</div>`;
+    return;
+  }
+  const max = Math.max(...dados.map(([, valor]) => valor));
+  el.innerHTML = dados.map(([label, valor]) => `
+    <div class="dash-bar-row">
+      <div class="dash-bar-label" title="${esc(label)}">${esc(label)}</div>
+      <div class="dash-bar-track"><div class="dash-bar-fill" style="width:${Math.round(valor / max * 100)}%;background:${corFn(label)}"></div></div>
+      <div class="dash-bar-value">${valor}</div>
+    </div>`).join("");
 }
 
 // ══════════════════════════════════════════════════════
