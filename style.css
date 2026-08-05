@@ -239,14 +239,15 @@ body::before{content:'';position:fixed;inset:0;background:rgba(6,13,31,.92);z-in
 .kpi-row{display:grid;grid-template-columns:repeat(6,1fr);gap:.6rem;margin-bottom:.6rem;flex-shrink:0}
 .kpi-card{background:var(--bg-card);border:1px solid var(--border-color);border-radius:var(--radius-md);padding:.8rem .9rem;display:flex;align-items:center;gap:.7rem;box-shadow:var(--shadow-card);transition:var(--transition)}
 .kpi-card:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(0,0,0,.5)}
-.kpi-icon-wrap{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.15rem;flex-shrink:0}
-.kpi-bg-blue{background:rgba(90,141,208,.18);border:1px solid rgba(90,141,208,.35)}
-.kpi-bg-green{background:rgba(108,194,74,.15);border:1px solid rgba(108,194,74,.3)}
-.kpi-bg-yellow{background:rgba(251,225,34,.12);border:1px solid rgba(251,225,34,.3)}
-.kpi-bg-orange{background:rgba(255,130,0,.15);border:1px solid rgba(255,130,0,.3)}
-.kpi-bg-purple{background:rgba(155,89,182,.15);border:1px solid rgba(155,89,182,.3)}
-.kpi-bg-teal{background:rgba(26,188,156,.14);border:1px solid rgba(26,188,156,.3)}
-.kpi-bg-red{background:rgba(255,93,93,.15);border:1px solid rgba(255,93,93,.35)}
+.kpi-icon-wrap{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.kpi-icon-wrap svg{width:20px;height:20px}
+.kpi-bg-blue{background:rgba(90,141,208,.18);border:1px solid rgba(90,141,208,.35);color:var(--blue-light)}
+.kpi-bg-green{background:rgba(108,194,74,.15);border:1px solid rgba(108,194,74,.3);color:var(--green)}
+.kpi-bg-yellow{background:rgba(251,225,34,.12);border:1px solid rgba(251,225,34,.3);color:var(--yellow)}
+.kpi-bg-orange{background:rgba(255,130,0,.15);border:1px solid rgba(255,130,0,.3);color:var(--orange)}
+.kpi-bg-purple{background:rgba(155,89,182,.15);border:1px solid rgba(155,89,182,.3);color:var(--purple)}
+.kpi-bg-teal{background:rgba(26,188,156,.14);border:1px solid rgba(26,188,156,.3);color:var(--teal)}
+.kpi-bg-red{background:rgba(255,93,93,.15);border:1px solid rgba(255,93,93,.35);color:var(--red)}
 .kpi-label{font-size:.67rem;color:var(--text-secondary);font-weight:500;margin-bottom:.12rem;white-space:nowrap}
 .kpi-value{font-size:1.55rem;font-weight:800;line-height:1}
 .kpi-sub{font-size:.6rem;color:var(--text-muted);margin-top:.18rem;white-space:nowrap;opacity:.8}
@@ -279,15 +280,17 @@ body::before{content:'';position:fixed;inset:0;background:rgba(6,13,31,.92);z-in
 .dash-chart-stat-label{font-size:.65rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em}
 .dash-chart-stat-value{font-size:1.1rem;font-weight:700;color:var(--text-primary);font-variant-numeric:tabular-nums}
 
-/* ─── TERMÔMETROS (indicador tipo gauge) ─────────── */
-.dash-termometros{flex:1;display:flex;align-items:flex-end;justify-content:space-evenly;gap:1.5rem}
-.termometro-bloco{display:flex;flex-direction:column;align-items:center;gap:.55rem}
-.termometro{position:relative;width:44px;height:180px;flex-shrink:0}
-.termometro-tubo{position:absolute;bottom:34px;left:50%;transform:translateX(-50%);width:16px;height:146px;background:var(--bg-secondary);border:2px solid var(--border-color);border-radius:8px;overflow:hidden;display:flex;flex-direction:column;justify-content:flex-end}
-.termometro-fill{width:100%;height:0%;border-radius:6px 6px 0 0;background:var(--gray);transition:height .6s ease,background .3s ease}
-.termometro-bulbo{position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:44px;height:44px;border-radius:50%;border:2px solid var(--border-color);background:var(--gray);transition:background .3s ease}
-.termometro-valor{font-size:1.05rem;font-weight:700;color:var(--text-primary);font-variant-numeric:tabular-nums}
-.termometro-label{font-size:.68rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;text-align:center}
+/* ─── TERMÔMETROS (indicador tipo gauge, em SVG) ──── */
+/* SVG com viewBox escala para o espaço que sobrar no card — nunca fica
+   maior que o container, então nunca é cortado pelo overflow:hidden do
+   card, ao contrário da versão anterior em altura fixa em px. */
+.dash-termometros{flex:1;min-height:0;display:flex;align-items:stretch;justify-content:space-evenly;gap:1.25rem}
+.termometro-bloco{flex:1;min-height:0;min-width:0;max-width:110px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:.4rem}
+.termometro-svg-wrap{flex:1;min-height:0;width:100%;display:flex;align-items:flex-end;justify-content:center}
+.termometro-svg{width:auto;height:100%;max-width:100%}
+.termometro-fill-rect,.termometro-bulbo-fill{transition:all .6s ease}
+.termometro-valor{font-size:1.05rem;font-weight:700;color:var(--text-primary);font-variant-numeric:tabular-nums;flex-shrink:0}
+.termometro-label{font-size:.68rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;text-align:center;flex-shrink:0}
 
 /* ─── LISTA WRAPPERS ─────────────────────────────── */
 .lista-wrapper{display:flex;flex-direction:column;flex:1;min-height:0}
@@ -329,7 +332,8 @@ body::before{content:'';position:fixed;inset:0;background:rgba(6,13,31,.92);z-in
 .table-empty{display:none;text-align:center;padding:2.5rem;color:var(--text-muted)}
 .table-empty.visible{display:block}
 .empty-state{display:flex;flex-direction:column;align-items:center;gap:.5rem}
-.empty-icon{font-size:2.5rem;opacity:.4}
+.empty-icon{color:var(--text-muted);opacity:.5;display:flex;align-items:center;justify-content:center}
+.empty-icon svg{width:40px;height:40px}
 
 /* ─── PAGINATION ──────────────────────────────────── */
 .pagination-container{display:flex;align-items:center;justify-content:center;padding:.55rem .85rem;border-top:1px solid var(--border-color);background:var(--bg-secondary);flex-shrink:0;flex-wrap:wrap;gap:.65rem;border-radius:0 0 var(--radius-lg) var(--radius-lg)}
@@ -643,7 +647,8 @@ body::before{content:'';position:fixed;inset:0;background:rgba(6,13,31,.92);z-in
 .tipo-card-compact{display:flex;align-items:center;gap:.85rem;padding:.9rem 1.1rem;background:transparent;border:none;cursor:pointer;transition:background .18s;font-family:var(--font);text-align:left;width:100%}
 .tipo-card-compact:not(:last-child){border-right:1px solid var(--border-color)}
 .tipo-card-compact:hover{background:var(--bg-card-hover)}
-.tipo-icon-sm{font-size:1.9rem;line-height:1;flex-shrink:0}
+.tipo-icon-sm{line-height:1;flex-shrink:0;color:var(--blue-light);display:flex}
+.tipo-icon-sm svg{width:28px;height:28px}
 .tipo-card-compact-text{flex:1;display:flex;flex-direction:column;gap:.15rem}
 .tipo-card-compact-text strong{font-size:.82rem;font-weight:700;color:var(--text-primary)}
 .tipo-card-compact-text span{font-size:.7rem;color:var(--text-muted)}

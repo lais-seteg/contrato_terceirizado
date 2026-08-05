@@ -26,22 +26,62 @@ let STATE = {
 };
 let entregas = [];
 
+// ══════════════════════════════════════════════════════
+//  ÍCONES SVG (estilo line-icon: stroke, viewBox 24x24, cantos
+//  arredondados) — substituem os emojis usados no sistema por um
+//  conjunto único e consistente. Herdam a cor do texto via currentColor,
+//  então já respeitam qualquer classe/cor existente (btn-icon-verde,
+//  kpi-bg-azul etc.) sem CSS extra.
+// ══════════════════════════════════════════════════════
+const ICONES = {
+  clipboard:      '<path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/>',
+  clipboardCopy:  '<path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6"/><path d="M9 16h4"/>',
+  tool:           '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94z"/>',
+  clock:          '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
+  xCircle:        '<circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>',
+  user:           '<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
+  star:           '<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>',
+  download:       '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>',
+  fileText:       '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>',
+  lock:           '<rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
+  refreshCw:      '<polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>',
+  paperclip:      '<path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>',
+  alertTriangle:  '<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>',
+  printer:        '<polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/>',
+  send:           '<line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>',
+  edit:           '<path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>',
+  penSignature:   '<path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>',
+  link:           '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>',
+  eye:            '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>',
+  settings:       '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
+  messageCircle:  '<path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>',
+  check:          '<polyline points="20 6 9 17 4 12"/>',
+  checkCircle:    '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>',
+  x:              '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>',
+  arrowLeft:      '<line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>',
+};
+
+function svgIcon(nome, tamanho) {
+  tamanho = tamanho || 16;
+  return `<svg width="${tamanho}" height="${tamanho}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;vertical-align:-3px">${ICONES[nome] || ""}</svg>`;
+}
+
 // Botões de decisão no modal de análise (ícone + label + classe)
 const STATUS_BTNS = {
   "gestao": [
-    { status:"Em Elaboração",                  icon:"✎", label:"Em Elaboração",                  cls:"btn-status-warn" },
-    { status:"Aguardando Aprovação do Líder",   icon:"👁", label:"Aguardando Aprovação do Líder",   cls:"btn-status-warn" },
-    { status:"Reprovado",  icon:"✗", label:"Reprovado",  cls:"btn-status-err"  },
-    { status:"Pendente de Ajuste", icon:"⚠", label:"Pendente de Ajuste", cls:"btn-status-warn" },
-    { status:"Finalizado", icon:"✔", label:"Finalizado", cls:"btn-status-final" },
-    { status:"Cancelado", icon:"🚫", label:"Cancelado", cls:"btn-status-err" },
+    { status:"Em Elaboração",                  icon:svgIcon("edit"),   label:"Em Elaboração",                  cls:"btn-status-warn" },
+    { status:"Aguardando Aprovação do Líder",   icon:svgIcon("eye"),    label:"Aguardando Aprovação do Líder",   cls:"btn-status-warn" },
+    { status:"Reprovado",  icon:svgIcon("x"),             label:"Reprovado",  cls:"btn-status-err"  },
+    { status:"Pendente de Ajuste", icon:svgIcon("alertTriangle"), label:"Pendente de Ajuste", cls:"btn-status-warn" },
+    { status:"Finalizado", icon:svgIcon("check"),         label:"Finalizado", cls:"btn-status-final" },
+    { status:"Cancelado", icon:svgIcon("xCircle"),        label:"Cancelado", cls:"btn-status-err" },
   ],
   "gestao-pessoas": [
-    { status:"Em Elaboração",                  icon:"✎", label:"Em Elaboração",                  cls:"btn-status-warn" },
-    { status:"Aguardando Aprovação do Líder",   icon:"👁", label:"Aguardando Aprovação do Líder",   cls:"btn-status-warn" },
-    { status:"Finalizado", icon:"✔", label:"Finalizado", cls:"btn-status-final" },
-    { status:"Pendente de Ajuste", icon:"⚠", label:"Pendente de Ajuste", cls:"btn-status-warn" },
-    { status:"Cancelado", icon:"🚫", label:"Cancelado", cls:"btn-status-err" },
+    { status:"Em Elaboração",                  icon:svgIcon("edit"),   label:"Em Elaboração",                  cls:"btn-status-warn" },
+    { status:"Aguardando Aprovação do Líder",   icon:svgIcon("eye"),    label:"Aguardando Aprovação do Líder",   cls:"btn-status-warn" },
+    { status:"Finalizado", icon:svgIcon("check"),         label:"Finalizado", cls:"btn-status-final" },
+    { status:"Pendente de Ajuste", icon:svgIcon("alertTriangle"), label:"Pendente de Ajuste", cls:"btn-status-warn" },
+    { status:"Cancelado", icon:svgIcon("xCircle"),        label:"Cancelado", cls:"btn-status-err" },
   ]
 };
 
@@ -733,18 +773,25 @@ function corPorPercentual(pct) {
   return "var(--red)";
 }
 
-// Termômetro simples em HTML/CSS: preenche o tubo (0-100%) e colore
-// tubo+bulbo de acordo com a faixa do valor — mesma lógica de "cor por
-// severidade" já usada nos demais indicadores do Dashboard.
+// Termômetro em SVG (viewBox 0 0 60 170, ver index.html): o tubo desenhável
+// vai de y=8 a y=134 (altura 126) — preenche de baixo pra cima conforme o
+// percentual. Por usar SVG com viewBox (não altura fixa em px), o gráfico
+// sempre escala pro espaço que o card tiver disponível, nunca ultrapassa
+// nem é cortado.
+const TERMOMETRO_TUBO_Y = 8;
+const TERMOMETRO_TUBO_ALTURA = 126;
+
 function renderTermometro(prefixo, pct, valorTexto, cor) {
   const fill  = document.getElementById(prefixo + "Fill");
   const bulbo = document.getElementById(prefixo + "Bulbo");
   const valor = document.getElementById(prefixo + "Valor");
   if (!fill || !bulbo || !valor) return;
   const p = Math.max(0, Math.min(100, pct));
-  fill.style.height = p + "%";
-  fill.style.background = cor;
-  bulbo.style.background = cor;
+  const altura = TERMOMETRO_TUBO_ALTURA * (p / 100);
+  fill.setAttribute("height", altura.toFixed(1));
+  fill.setAttribute("y", (TERMOMETRO_TUBO_Y + TERMOMETRO_TUBO_ALTURA - altura).toFixed(1));
+  fill.setAttribute("fill", cor);
+  bulbo.setAttribute("fill", cor);
   valor.textContent = valorTexto;
 }
 
@@ -929,7 +976,7 @@ function buscarTerceirizadoPorCpf() {
     nomeEl.readOnly = true;
     telEl.readOnly  = true;
     idEl.value = t.tId;
-    if (badge) { badge.textContent = "✓ Terceirizado já cadastrado — dados preenchidos automaticamente."; badge.classList.remove("hidden"); }
+    if (badge) { badge.innerHTML = `${svgIcon("check",13)} Terceirizado já cadastrado — dados preenchidos automaticamente.`; badge.classList.remove("hidden"); }
   } else {
     nomeEl.readOnly = false;
     telEl.readOnly  = false;
@@ -1460,7 +1507,7 @@ function gerarHTMLDetalhes(item) {
          ${aval.motivo?`<div class="detail-item full"><span>Observações</span><strong>${esc(aval.motivo)}</strong></div>`:""}
          ${aval.obs?`<div class="detail-item full"><span>Comentário geral</span><strong>${esc(aval.obs)}</strong></div>`:""}`
       : `<div class="detail-section-title">Avaliação</div>
-         <div class="detail-item full"><span>Situação</span><strong><span class="status-badge st-aprovado">✓ Avaliado em ${formatarData(aval.criadoEm)}</span></strong></div>`;
+         <div class="detail-item full"><span>Situação</span><strong><span class="status-badge st-aprovado">${svgIcon("check",13)} Avaliado em ${formatarData(aval.criadoEm)}</span></strong></div>`;
   } else if (item.status==="Encerrado") {
     avalHTML = `<div class="detail-section-title">Avaliação</div>
       <div class="detail-item full"><span>Situação</span><strong><span class="status-badge st-pendente">Aguardando avaliação do líder responsável</span></strong></div>`;
@@ -1488,7 +1535,7 @@ function gerarHTMLDetalhes(item) {
       <span>Link enviado</span>
       <div style="display:flex;align-items:center;gap:.4rem">
         <strong style="word-break:break-all;flex:1">${esc(url)}</strong>
-        <button type="button" class="btn-icon" title="Copiar link" style="flex-shrink:0" onclick="copiarTexto('${url.replace(/'/g,"\\'")}')">📋</button>
+        <button type="button" class="btn-icon" title="Copiar link" style="flex-shrink:0" onclick="copiarTexto('${url.replace(/'/g,"\\'")}')">${svgIcon("clipboardCopy")}</button>
       </div>
     </div>`;
   }
@@ -1600,12 +1647,12 @@ function renderContratos() {
   tbody.innerHTML="";
   fatia.forEach(c=>{
     const dias   = diasAteVencer(c.cDataFim);
-    const alerta = dias!==null&&dias<=30?`<span title="Vence em ${dias}d" style="color:var(--red);margin-left:.3rem">⚠</span>`:"";
+    const alerta = dias!==null&&dias<=30?`<span title="Vence em ${dias}d" style="color:var(--red);margin-left:.3rem">${svgIcon("alertTriangle",13)}</span>`:"";
     const aval   = DB.avaliacoes.find(a=>a.contratoId===c.id);
     const podaAvaliar = ["Encerrado","Finalizado"].includes(c.status) && !aval && (ehGestaoOuGP() || c.criadoPor===STATE.nomeUsuario);
     const avalBtn = aval
-      ? `<span class="status-badge st-aprovado" title="Avaliado em ${formatarData(aval.criadoEm)}" style="font-size:.62rem">✓ Avaliado</span>`
-      : (podaAvaliar ? `<button class="btn-icon btn-icon-teal" title="Avaliar prestador" onclick="abrirFormAvalPorContrato('${c.id}')">⭐</button>` : "");
+      ? `<span class="status-badge st-aprovado" title="Avaliado em ${formatarData(aval.criadoEm)}" style="font-size:.62rem">${svgIcon("check",12)} Avaliado</span>`
+      : (podaAvaliar ? `<button class="btn-icon btn-icon-teal" title="Avaliar prestador" onclick="abrirFormAvalPorContrato('${c.id}')">${svgIcon("star")}</button>` : "");
     tbody.innerHTML+=`<tr>
       <td><span style="color:var(--blue-light);font-weight:700">${esc(c.id)}</span></td>
       <td>${esc(c.cProjeto||"-")}</td>
@@ -1617,20 +1664,20 @@ function renderContratos() {
       <td style="color:var(--green)">${c.cValorTotal?formatarMoeda(c.cValorTotal):"-"}</td>
       <td>${statusBadge(c.status)}</td>
       <td class="col-acoes"><div class="table-actions">
-        <button class="btn-icon" title="Visualizar" onclick="verDetalhesContrato('${c.id}')">👁</button>
+        <button class="btn-icon" title="Visualizar" onclick="verDetalhesContrato('${c.id}')">${svgIcon("eye")}</button>
         ${(STATE.perfil!=="solicitante" || documentoVisivelParaLider(c)) && ["Em Elaboração","Aguardando Aprovação do Líder","Aguardando Assinaturas","Finalizado"].includes(c.status)
           ? (c.cContratoHtml
-            ? `<button class="btn-icon btn-icon-green" title="Ver / Baixar Contrato Gerado" onclick="abrirGerarContrato('${c.id}')">📄</button>`
-            : `<button class="btn-icon btn-icon-teal" title="Gerar Contrato" onclick="abrirGerarContrato('${c.id}')">📄</button>`)
+            ? `<button class="btn-icon btn-icon-green" title="Ver / Baixar Contrato Gerado" onclick="abrirGerarContrato('${c.id}')">${svgIcon("fileText")}</button>`
+            : `<button class="btn-icon btn-icon-teal" title="Gerar Contrato" onclick="abrirGerarContrato('${c.id}')">${svgIcon("fileText")}</button>`)
           : ""}
         ${(!c.cTerceirizadoId && ["Pendente","Em Elaboração"].includes(c.status))
-          ? `<button class="btn-icon" title="Copiar/gerar link para o terceirizado preencher" onclick="regenerarLinkContrato('${c.id}')">🔗</button>`
+          ? `<button class="btn-icon" title="Copiar/gerar link para o terceirizado preencher" onclick="regenerarLinkContrato('${c.id}')">${svgIcon("link")}</button>`
           : ""}
-        ${podeEditar(c)?`<button class="btn-icon btn-icon-orange" title="Editar" onclick="editarContrato('${c.id}')">✎</button>`:""}
-        ${podeAnalisar()?`<button class="btn-icon btn-icon-green" title="Atualizar Status" onclick="abrirAnalise('${c.id}')">⚙</button>`:""}
-        ${ehGestaoOuGP()?`<button class="btn-icon" title="Adicionar Observação" onclick="abrirModalObs('${c.id}')" style="font-size:.7rem">💬</button>`:""}
+        ${podeEditar(c)?`<button class="btn-icon btn-icon-orange" title="Editar" onclick="editarContrato('${c.id}')">${svgIcon("edit")}</button>`:""}
+        ${podeAnalisar()?`<button class="btn-icon btn-icon-green" title="Atualizar Status" onclick="abrirAnalise('${c.id}')">${svgIcon("settings")}</button>`:""}
+        ${ehGestaoOuGP()?`<button class="btn-icon" title="Adicionar Observação" onclick="abrirModalObs('${c.id}')" style="font-size:.7rem">${svgIcon("messageCircle")}</button>`:""}
         ${avalBtn}
-        ${podeExcluir()?`<button class="btn-icon btn-icon-danger" title="Excluir" onclick="excluirContrato('${c.id}')">✕</button>`:""}
+        ${podeExcluir()?`<button class="btn-icon btn-icon-danger" title="Excluir" onclick="excluirContrato('${c.id}')">${svgIcon("x")}</button>`:""}
       </div></td>
     </tr>`;
   });
@@ -2439,9 +2486,9 @@ function abrirGerarContrato(id) {
   document.getElementById("modalContratoDoc").dataset.currentId = id;
   abrirModal("modalContratoDoc");
   const jaGerado = !!item.cContratoHtml;
-  document.getElementById("modalContratoDocTitulo").textContent = jaGerado
-    ? "📄 Contrato de Prestação de Serviços · gerado em " + formatarDataHora(item.cContratoGeradoEm)
-    : "📄 Contrato de Prestação de Serviços";
+  document.getElementById("modalContratoDocTitulo").innerHTML = jaGerado
+    ? `${svgIcon("fileText",18)} Contrato de Prestação de Serviços · gerado em ` + formatarDataHora(item.cContratoGeradoEm)
+    : `${svgIcon("fileText",18)} Contrato de Prestação de Serviços`;
   document.getElementById("contratoDocHint").style.display = jaGerado ? "none" : "";
   if (jaGerado) {
     // Reabre a versão já salva (preserva edições manuais) em vez de regenerar do zero.
@@ -2469,7 +2516,7 @@ function abrirGerarContrato(id) {
     const liberarSeChegouAoFim = () => {
       if (corpo.scrollTop + corpo.clientHeight >= corpo.scrollHeight - 4) {
         btnAprovar.disabled = false;
-        btnAprovar.textContent = "✓ Aprovar Contrato";
+        btnAprovar.innerHTML = `${svgIcon("check",14)} Aprovar Contrato`;
       }
     };
     corpo.onscroll = liberarSeChegouAoFim;
@@ -2534,7 +2581,7 @@ function regenerarContratoDoc() {
   if (!item) return;
   if (item.cContratoHtml && !confirm("Isso descarta as edições feitas no documento salvo e gera um novo a partir dos dados atuais do contrato. Deseja continuar?")) return;
   document.getElementById("contratoDocHint").style.display = "";
-  document.getElementById("modalContratoDocTitulo").textContent = "📄 Contrato de Prestação de Serviços";
+  document.getElementById("modalContratoDocTitulo").innerHTML = `${svgIcon("fileText",18)} Contrato de Prestação de Serviços`;
   paginarContrato(document.getElementById("contratoDocArea"), montarContratoHTML(item));
 }
 
@@ -2919,9 +2966,9 @@ function renderEntregas() {
   entregas.forEach((e,i)=>{
     const tr=document.createElement("tr");
     if(e.salvo){
-      tr.innerHTML=`<td class="td-salvo">${esc(e.entrega)||"—"}</td><td class="td-salvo">${esc(e.marco)||"—"}</td><td class="td-salvo">${formatarData(e.data)}</td><td class="td-salvo td-valor">${formatarMoeda(e.valor)}</td><td class="td-salvo">${esc(e.formaPagamento)||"—"}</td><td><div style="display:flex;gap:.25rem"><button type="button" class="btn-icon" onclick="editarEntrega(${i})">✎</button><button type="button" class="btn-icon btn-icon-danger" onclick="removerEntrega(${i})">✕</button></div></td>`;
+      tr.innerHTML=`<td class="td-salvo">${esc(e.entrega)||"—"}</td><td class="td-salvo">${esc(e.marco)||"—"}</td><td class="td-salvo">${formatarData(e.data)}</td><td class="td-salvo td-valor">${formatarMoeda(e.valor)}</td><td class="td-salvo">${esc(e.formaPagamento)||"—"}</td><td><div style="display:flex;gap:.25rem"><button type="button" class="btn-icon" onclick="editarEntrega(${i})">${svgIcon("edit")}</button><button type="button" class="btn-icon btn-icon-danger" onclick="removerEntrega(${i})">${svgIcon("x")}</button></div></td>`;
     } else {
-      tr.innerHTML=`<td><input class="form-control" value="${esc(e.entrega)}" oninput="atualizarEntrega(${i},'entrega',this.value)" placeholder="Descrição"/></td><td><input class="form-control" value="${esc(e.marco)}" oninput="atualizarEntrega(${i},'marco',this.value)" placeholder="Marco"/></td><td><input class="form-control" type="text" maxlength="10" placeholder="00/00/0000" value="${esc(dataISOparaBR(e.data))}" oninput="atualizarEntregaData(${i},this)"/></td><td><input class="form-control" value="${esc(e.valor)}" oninput="atualizarEntrega(${i},'valor',this.value)" placeholder="0,00"/></td><td><input class="form-control" value="${esc(e.formaPagamento)}" oninput="atualizarEntrega(${i},'formaPagamento',this.value)" placeholder="Pix, Boleto..."/></td><td><div style="display:flex;gap:.25rem"><button type="button" class="btn-salvar-entrega" onclick="salvarEntrega(${i})">✓</button><button type="button" class="btn-icon btn-icon-danger" onclick="removerEntrega(${i})">✕</button></div></td>`;
+      tr.innerHTML=`<td><input class="form-control" value="${esc(e.entrega)}" oninput="atualizarEntrega(${i},'entrega',this.value)" placeholder="Descrição"/></td><td><input class="form-control" value="${esc(e.marco)}" oninput="atualizarEntrega(${i},'marco',this.value)" placeholder="Marco"/></td><td><input class="form-control" type="text" maxlength="10" placeholder="00/00/0000" value="${esc(dataISOparaBR(e.data))}" oninput="atualizarEntregaData(${i},this)"/></td><td><input class="form-control" value="${esc(e.valor)}" oninput="atualizarEntrega(${i},'valor',this.value)" placeholder="0,00"/></td><td><input class="form-control" value="${esc(e.formaPagamento)}" oninput="atualizarEntrega(${i},'formaPagamento',this.value)" placeholder="Pix, Boleto..."/></td><td><div style="display:flex;gap:.25rem"><button type="button" class="btn-salvar-entrega" onclick="salvarEntrega(${i})">${svgIcon("check")}</button><button type="button" class="btn-icon btn-icon-danger" onclick="removerEntrega(${i})">${svgIcon("x")}</button></div></td>`;
     }
     tbody.appendChild(tr);
   });
@@ -3016,7 +3063,7 @@ function renderTerceirizados(){
   const porPagina=20;const totalPag=Math.max(1,Math.ceil(lista.length/porPagina));if(f.pagina>totalPag)f.pagina=totalPag;
   const ini=(f.pagina-1)*porPagina;const fatia=lista.slice(ini,ini+porPagina);
   const tbody=document.getElementById("tabelaTerceirizados");const empty=document.getElementById("emptyTerc");tbody.innerHTML="";
-  fatia.forEach(t=>{tbody.innerHTML+=`<tr><td>${esc(t.tNome)}</td><td>${esc(t.tTipo||"-")}</td><td>${esc(t.tAreaExpertise||"-")}</td><td>${esc(t.tCpf||"-")}</td><td>${esc(t.tEmail||"-")}</td><td>${esc(t.tTelefone||"-")}</td><td>${esc(t.tCnpj||"-")}</td><td class="col-acoes"><div class="table-actions"><button class="btn-icon" title="Visualizar" onclick="verTerceirizado('${t.tId}')">👁</button>${ehGestaoOuGP()?`<button class="btn-icon btn-icon-orange" title="Editar" onclick="editarTerceirizado('${t.tId}')">✎</button>`:""} ${podeExcluir()?`<button class="btn-icon btn-icon-danger" title="Excluir" onclick="excluirTerceirizado('${t.tId}')">✕</button>`:""}</div></td></tr>`;});
+  fatia.forEach(t=>{tbody.innerHTML+=`<tr><td>${esc(t.tNome)}</td><td>${esc(t.tTipo||"-")}</td><td>${esc(t.tAreaExpertise||"-")}</td><td>${esc(t.tCpf||"-")}</td><td>${esc(t.tEmail||"-")}</td><td>${esc(t.tTelefone||"-")}</td><td>${esc(t.tCnpj||"-")}</td><td class="col-acoes"><div class="table-actions"><button class="btn-icon" title="Visualizar" onclick="verTerceirizado('${t.tId}')">${svgIcon("eye")}</button>${ehGestaoOuGP()?`<button class="btn-icon btn-icon-orange" title="Editar" onclick="editarTerceirizado('${t.tId}')">${svgIcon("edit")}</button>`:""} ${podeExcluir()?`<button class="btn-icon btn-icon-danger" title="Excluir" onclick="excluirTerceirizado('${t.tId}')">${svgIcon("x")}</button>`:""}</div></td></tr>`;});
   empty.classList.toggle("visible",lista.length===0);
   document.getElementById("infoT").textContent=`${lista.length} registros`;
   document.getElementById("pageT").textContent=f.pagina;
@@ -3236,7 +3283,7 @@ function renderAvaliacoes(){
         <td>${nb(a.nivelRelatorio)}</td>
         <td><span class="status-badge ${a.prazo==="Totalmente"?"st-aprovado":a.prazo==="Não cumprido"?"st-reprovado":"st-aguar-gp"}">${esc(a.prazo||"-")}</span></td>
         <td>${nb(a.relacionamento)}</td>
-        <td class="col-acoes"><div class="table-actions"><button class="btn-icon" title="Visualizar" onclick="verDetalhesAvaliacao('${a.id}')">👁</button>${podeExcluir()?`<button class="btn-icon btn-icon-danger" title="Excluir" onclick="excluirAvaliacao('${a.id}')">✕</button>`:""}</div></td>
+        <td class="col-acoes"><div class="table-actions"><button class="btn-icon" title="Visualizar" onclick="verDetalhesAvaliacao('${a.id}')">${svgIcon("eye")}</button>${podeExcluir()?`<button class="btn-icon btn-icon-danger" title="Excluir" onclick="excluirAvaliacao('${a.id}')">${svgIcon("x")}</button>`:""}</div></td>
       </tr>`;
     });
     empty.classList.toggle("visible", total===0);
@@ -3262,7 +3309,7 @@ function renderAvaliacoes(){
       <td style="white-space:nowrap">${formatarData(a.criadoEm)}</td>
       <td>${ctr}</td>
       <td>${esc(a.avaliado)}</td>
-      <td><span class="status-badge st-aprovado">✓ Avaliação enviada</span></td>
+      <td><span class="status-badge st-aprovado">${svgIcon("check",12)} Avaliação enviada</span></td>
     </tr>`;
   });
   empty2.classList.toggle("visible", minhas.length===0);
@@ -3289,7 +3336,7 @@ function renderAlertas(){
   const alertas=gerarAlertas();
   const badge=document.getElementById("badgeAlertas");badge.textContent=alertas.length;badge.classList.toggle("hidden",alertas.length===0);
   const el=document.getElementById("listaAlertas");
-  if(!alertas.length){el.innerHTML=`<div class="alertas-empty">✅ Nenhum vencimento próximo nos próximos 30 dias.</div>`;return;}
+  if(!alertas.length){el.innerHTML=`<div class="alertas-empty">${svgIcon("checkCircle",16)} Nenhum vencimento próximo nos próximos 30 dias.</div>`;return;}
   el.innerHTML=alertas.map(a=>{const dl=a.dias<0?`Vencido há ${Math.abs(a.dias)} dia(s)`:a.dias===0?"Vence hoje!":`Vence em ${a.dias} dia(s)`;return`<div class="alerta-card alerta-${a.tipo}"><div class="alerta-titulo">${esc(a.titulo)}</div><div class="alerta-desc">${esc(a.desc)}</div><div class="alerta-meta">${dl}</div></div>`;}).join("");
 }
 
