@@ -557,6 +557,28 @@ function aplicarPermissoes() {
   const vS = document.getElementById("avalViewSolicitante");
   if (vG) vG.classList.toggle("hidden", !isGP);
   if (vS) vS.classList.toggle("hidden", isGP);
+
+  // Gestão de Pessoas (DP): Dashboard e Contratos mostravam os mesmos
+  // contratos duas vezes (mini-tabela "Solicitações Recentes" + tabela
+  // completa em Contratos) — para esse perfil, a tabela completa (com
+  // filtros/paginação) passa a viver dentro do próprio Dashboard, e o
+  // menu "Contratos" some da barra lateral. Outros perfis não são afetados.
+  const navContratos = document.getElementById("navContratos");
+  if (navContratos) navContratos.classList.toggle("hidden", p === "gestao-pessoas");
+  mesclarDashboardContratosParaGP(p === "gestao-pessoas");
+}
+
+function mesclarDashboardContratosParaGP(ativar) {
+  const dashboard = document.getElementById("secao-dashboard");
+  const secaoContratos = document.getElementById("secao-contratos");
+  const recentCard = dashboard && dashboard.querySelector(".dash-recent-card");
+  const formContrato = document.getElementById("formContrato");
+  const listaContratos = document.getElementById("listaContratos");
+  if (!dashboard || !secaoContratos || !formContrato || !listaContratos) return;
+  const destino = ativar ? dashboard : secaoContratos;
+  destino.appendChild(formContrato);
+  destino.appendChild(listaContratos);
+  if (recentCard) recentCard.classList.toggle("hidden", ativar);
 }
 
 function podeEditar(item) {
@@ -630,7 +652,11 @@ function renderDashboard() {
   badge.textContent = totalAlertas;
   badge.classList.toggle("hidden", totalAlertas===0);
 
-  renderSolicitacoesRecentes(meus);
+  if (STATE.perfil === "gestao-pessoas") {
+    renderContratos();
+  } else {
+    renderSolicitacoesRecentes(meus);
+  }
 }
 
 function renderSolicitacoesRecentes(lista) {
@@ -656,7 +682,6 @@ function renderSolicitacoesRecentes(lista) {
       <td><span style="color:var(--blue-light);font-weight:700">${esc(c.id)}</span></td>
       <td>${esc(c.cTipoContratacao||"-")}</td>
       <td>${esc(c.criadoPor||"-")}</td>
-      <td>${esc(c.cEmpresaContratante||"-")}</td>
       <td>${esc(c.cTercNome||c.cRazaoSocial||"-")}</td>
       <td>${statusBadge(c.status)}</td>
       <td style="white-space:nowrap">${formatarData(c.criadoEm)}</td>
