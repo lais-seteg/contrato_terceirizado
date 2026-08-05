@@ -36,3 +36,7 @@ node_modules/
 # puro (preenchidos localmente antes de rodar no SQL Editor) — nunca
 # pode ir para o Git.
 configurar_login_usuarios.sql
+
+# Scripts pontuais de inclusão/edição de usuário(s) — mesmo motivo acima:
+# senha em texto puro para colar no SQL Editor.
+adicionar_lideres_*.sql
