@@ -170,7 +170,7 @@ function applyTheme(theme) {
 }
 
 function toggleTheme() {
-  const current = document.documentElement.getAttribute('data-theme') || 'dark';
+  const current = document.documentElement.getAttribute('data-theme') || 'light';
   const next = current === 'dark' ? 'light' : 'dark';
   applyTheme(next);
   localStorage.setItem('secter_theme', next);
@@ -1871,7 +1871,7 @@ function pdfRodape(doc, texto) {
   doc.setFont("helvetica", "normal");
   doc.setFontSize(6);
   pdfFc(doc, [100, 130, 165], "text");
-  doc.text(pdfSan(texto) || "Seteg Soluções Geológicas e Ambientais - Relatório de Contratos de Terceirizados",
+  doc.text(pdfSan(texto) || "Seteg Soluções Ambientais - Relatório de Contratos de Terceirizados",
     PDF_PG.w / 2, PDF_PG.h - 3.5, { align: "center" });
 }
 
@@ -2087,7 +2087,7 @@ function pdfPgCapa(doc, qtdContratos, valorTotal, filtros, opts) {
   doc.setFont("helvetica", "normal");
   doc.setFontSize(11);
   pdfFc(doc, [175, 200, 225], "text");
-  doc.text("Soluções Geológicas e Ambientais", PDF_PG.w / 2, 83, { align: "center" });
+  doc.text("Soluções Ambientais", PDF_PG.w / 2, 83, { align: "center" });
 
   pdfFc(doc, PDF_COR.laranja, "draw");
   doc.setLineWidth(1.2);
@@ -2141,7 +2141,7 @@ function pdfPgCapa(doc, qtdContratos, valorTotal, filtros, opts) {
   doc.setFont("helvetica", "normal");
   doc.setFontSize(7);
   pdfFc(doc, [90, 130, 170], "text");
-  doc.text("Seteg Soluções Geológicas e Ambientais Ltda", PDF_PG.w / 2, PDF_PG.h - 8, { align: "center" });
+  doc.text("Seteg Soluções Ambientais Ltda", PDF_PG.w / 2, PDF_PG.h - 8, { align: "center" });
   doc.setFontSize(6);
   pdfFc(doc, [65, 100, 140], "text");
   doc.text("Documento de uso interno. Gerado automaticamente.", PDF_PG.w / 2, PDF_PG.h - 3.5, { align: "center" });
@@ -2402,7 +2402,7 @@ function gerarRelatorioAnalisesPDF() {
   if (!lista.length) { mostrarToast("Nenhum contrato encontrado para gerar as análises.","err"); return; }
 
   const MARCA  = "SETEG - RELATÓRIO DE ANÁLISES";
-  const RODAPE = "Seteg Soluções Geológicas e Ambientais - Relatório de Análises de Terceirizados";
+  const RODAPE = "Seteg Soluções Ambientais - Relatório de Análises de Terceirizados";
 
   _pdfPagina = 0;
   const doc = new window.jspdf.jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
@@ -2513,7 +2513,7 @@ function gerarPrintArea(item) {
   document.getElementById("printArea").innerHTML=`
     <div class="pc">
       <div class="ptitle">Formulário de Contratação de Terceirizado / Prestador de Serviço</div>
-      <div class="psub">Seteg – Soluções Geológicas e Ambientais &nbsp;|&nbsp; Nº: ${item.id||"Novo"} &nbsp;|&nbsp; ${new Date().toLocaleDateString("pt-BR")}</div>
+      <div class="psub">Seteg – Soluções Ambientais &nbsp;|&nbsp; Nº: ${item.id||"Novo"} &nbsp;|&nbsp; ${new Date().toLocaleDateString("pt-BR")}</div>
       <div class="ps"><div class="psh">A · Empresa Contratada</div><div class="pg">
         <div class="pf"><div class="pfl">Razão Social</div><div class="pfv">${esc(item.cRazaoSocial||"-")}</div></div>
         <div class="pf"><div class="pfl">CNPJ</div><div class="pfv">${esc(item.cCnpjEmpresa||"-")}</div></div>
@@ -2884,7 +2884,7 @@ function montarContratoHTML(item) {
     <p class="cg-sub">Contrato ${numeroContrato}</p>
 
     <p class="cg-p">Pelo presente instrumento particular, de um lado, como “CONTRATANTE”:</p>
-    <p class="cg-p">SETEG - SOLUÇÕES GEOLÓGICAS E AMBIENTAIS LTDA, pessoa jurídica de direito privado, inscrita no CNPJ sob o nº 35.237.262/0001-59, com contrato social arquivado com registro na Junta Comercial do Estado do Ceará sob o NIRE 23200470522, com sede na Rua Zezito Gomes, nº 410, Timbu, Eusébio/CE, CEP: 61.777-270 (“SETEG”), neste ato representada por seu administrador MATHEUS FONTENELLE XIMENES DE FARIAS, brasileiro, casado sob o regime de comunhão parcial de bens, biólogo, inscrito no CPF sob o nº 630.555.383-15, portador do documento de identidade de nº 00913923006 DETRAN/CE, com endereço profissional retro informado. (“CONTRATANTE”);</p>
+    <p class="cg-p">SETEG - SOLUÇÕES AMBIENTAIS LTDA, pessoa jurídica de direito privado, inscrita no CNPJ sob o nº 35.237.262/0001-59, com contrato social arquivado com registro na Junta Comercial do Estado do Ceará sob o NIRE 23200470522, com sede na Rua Zezito Gomes, nº 410, Timbu, Eusébio/CE, CEP: 61.777-270 (“SETEG”), neste ato representada por seu administrador MATHEUS FONTENELLE XIMENES DE FARIAS, brasileiro, casado sob o regime de comunhão parcial de bens, biólogo, inscrito no CPF sob o nº 630.555.383-15, portador do documento de identidade de nº 00913923006 DETRAN/CE, com endereço profissional retro informado. (“CONTRATANTE”);</p>
 
     <p class="cg-p">E de outro lado, na qualidade de “CONTRATADA”:</p>
     <p class="cg-p">${nomeContratada}, brasileiro(a), ${estadoCivil}, ${profissao}, portador(a) da carteira de identidade de n° ${rg}, inscrito(a) no CPF sob o n° ${cpf}, com endereço residencial em ${enderecoCompleto}. (“CONTRATADA”)</p>
@@ -3015,7 +3015,7 @@ function montarContratoHTML(item) {
     <div class="cg-sign-grid">
       <div class="cg-sign-box">
         <div class="cg-sign-line"></div>
-        <div>SETEG - SOLUÇÕES GEOLÓGICAS E AMBIENTAIS LTDA</div>
+        <div>SETEG - SOLUÇÕES AMBIENTAIS LTDA</div>
         <div>R.p. Matheus Fontenelle Ximenes de Farias</div>
         <div class="cg-sign-tag">(CONTRATANTE)</div>
       </div>
@@ -3518,7 +3518,7 @@ function mascaraMoedaId(id){
 // ══════════════════════════════════════════════════════
 //  START
 // ══════════════════════════════════════════════════════
-applyTheme(localStorage.getItem('secter_theme') || 'dark');
+applyTheme(localStorage.getItem('secter_theme') || 'light');
 document.getElementById('themeToggle')?.addEventListener('click', toggleTheme);
 initLoginEvents();
 init();

@@ -1,177 +1,123 @@
+/* ══════════════════════════════════════════════════════════════════════
+   CONTRATAÇÃO DE TERCEIRIZADOS · SETEG
+   Paleta e layout alinhados ao Controle de Folgas
+   (0000-1-2026--controlefolgas), como no Controle de Estoque, no SGPG e no
+   Portal RH: fundo creme, barra de navegação azul-marinho fixa no topo,
+   cartões brancos e laranja Seteg como cor de ação.
+
+   Os nomes das variáveis continuam os mesmos (--bg-card, --text-primary,
+   --blue…), então nenhum seletor precisou ser renomeado.
+
+   Três coisas mudaram de forma:
+
+   1. O tema. Antes: `:root` era escuro e havia 38 regras
+      `[data-theme="light"]` clareando componente por componente. Agora
+      `:root` é o tema claro (que passou a ser o padrão) e
+      `[data-theme="dark"]` é a variante — aquelas 38 regras saíram.
+
+   2. A navegação. A sidebar lateral de 190px virou a barra azul-marinho de
+      80px no topo. Os nomes de classe (.sidebar, .sidebar-nav,
+      .sidebar-btn…) foram mantidos de propósito, para o script.js não mudar.
+
+   3. O fundo. Saiu a imagem plano_fundo.png (6,8 MB) com a camada escura
+      por cima: o padrão é fundo creme chapado.
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* ─── Satoshi, a fonte do Controle de Folgas ────────────────────────────
+   Servida pelo próprio site (pasta fonts/), no lugar da Inter — que era
+   pedida em --font mas nunca chegava a ser carregada, então na prática o
+   sistema caía na fonte do sistema operacional. A CSP da página já traz
+   font-src 'self', então nada precisou ser liberado. */
+@font-face { font-family:'Satoshi'; src:url('fonts/Satoshi-300.woff2') format('woff2'); font-weight:300; font-style:normal; font-display:swap }
+@font-face { font-family:'Satoshi'; src:url('fonts/Satoshi-400.woff2') format('woff2'); font-weight:400; font-style:normal; font-display:swap }
+@font-face { font-family:'Satoshi'; src:url('fonts/Satoshi-500.woff2') format('woff2'); font-weight:500; font-style:normal; font-display:swap }
+@font-face { font-family:'Satoshi'; src:url('fonts/Satoshi-700.woff2') format('woff2'); font-weight:700; font-style:normal; font-display:swap }
+@font-face { font-family:'Satoshi'; src:url('fonts/Satoshi-900.woff2') format('woff2'); font-weight:900; font-style:normal; font-display:swap }
+
+/* ═══════════════ TEMA CLARO (padrão, igual ao Controle de Folgas) ═══════════════ */
 :root {
-  --blue-dark:#0A2459;--blue:#3A65B0;--blue-light:#5A8DD0;
-  --orange:#FF8200;--orange-hover:#e57400;--yellow:#FBE122;
-  --green:#6CC24A;--purple:#9b59b6;--red:#ff5d5d;--gray:#6c757d;
-  --teal:#1abc9c;
-  --bg-primary:#0C1835;--bg-secondary:#122045;--bg-card:#162654;
-  --bg-card-hover:#1D3066;--bg-input:#122045;
-  --border-color:#264175;--border-light:#355696;
-  --text-primary:#E8ECF4;--text-secondary:#8A95B0;--text-muted:#7A85A0;
-  --radius-sm:8px;--radius-md:12px;--radius-lg:16px;
+  /* Marca */
+  --navy:#071d49;--navy-deep:#03102a;--navy-mid:#061a40;--navy-darker:#020a1c;
+  --blue-dark:#071d49;--blue:#3f6fd9;--blue-light:#6b93e8;
+  --orange:#ff8200;--orange-hover:#e57400;--orange-soft:#ffb066;
+  --yellow:#f59e0b;--green:#22c55e;--purple:#7e57c2;--red:#ef4444;
+  --teal:#0aa6b4;--gray:#9a8f78;
+
+  /* Variantes escuras das cores vivas, para uso como TEXTO sobre cartão
+     branco — os tons puros nascem para preencher área (fundo de badge,
+     ícone de KPI) e perdem contraste como letra. */
+  --blue-text:#2f5bbf;--green-text:#15803d;--orange-text:#b35900;
+  --red-text:#dc2626;--purple-text:#6b3fb0;--yellow-text:#b45309;--teal-text:#00757f;
+
+  /* Superfícies */
+  --bg-primary:#f5f2ec;--bg-secondary:#fbf8f1;--bg-card:#ffffff;
+  --bg-card-hover:#f7f3ea;--bg-sunken:#efeae0;--bg-input:#ffffff;
+  --border-color:#e6dfce;--border-light:#c8bfaa;
+
+  /* Texto */
+  --text-primary:#07142e;--text-secondary:#6e6553;--text-muted:#9a8f78;
+  --text-on-navy:#ffffff;
+
+  --radius-sm:6px;--radius-md:10px;--radius-lg:16px;
+  --shadow-card:0 1px 2px rgba(7,29,73,.04),0 4px 16px rgba(7,29,73,.06);
+  --shadow-lg:0 8px 32px rgba(7,29,73,.14),0 2px 8px rgba(7,29,73,.08);
+  --shadow:0 1px 2px rgba(7,29,73,.04),0 4px 16px rgba(7,29,73,.06);
+  --transition:all .2s ease;
+  --font:'Satoshi',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+
+  /* Layout — barra do topo de 80px, a mesma altura do Controle de Folgas.
+     --sidebar-width continua definida porque o CSS ainda a cita, mas agora
+     vale 0: a navegação não ocupa mais a lateral. */
+  --navbar-height:80px;
+  --header-height:0px;
+  --footer-height:32px;
+  --sidebar-width:0px;
+  --page-padding-x:clamp(20px,4vw,72px);
+}
+
+/* ═══════════════ TEMA ESCURO ═══════════════
+   Mesma marca, superfícies em azul-marinho: o laranja, o azul e os tons de
+   status seguem na mesma família — só as caixas e o texto mudam. */
+[data-theme="dark"] {
+  --bg-primary:#03102a;--bg-secondary:#061a40;--bg-card:#0a2150;
+  --bg-card-hover:#0e2a63;--bg-sunken:#061a40;--bg-input:#061a40;
+  --border-color:#1b3468;--border-light:#2c4d8f;
+  --text-primary:#e8ecf4;--text-secondary:#9aa8c4;--text-muted:#7d8aa6;
   --shadow-card:0 4px 12px rgba(0,0,0,.4);--shadow-lg:0 8px 32px rgba(0,0,0,.6);
-  --transition:all .25s ease;
-  --font:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
-  --header-height:0px;--footer-height:32px;--sidebar-width:190px;
+  --shadow:0 2px 8px rgba(0,0,0,.25);
+
+  /* No escuro os tons vivos voltam a ser a melhor cor de texto. */
+  --blue-text:var(--blue-light);--green-text:var(--green);--orange-text:var(--orange);
+  --red-text:var(--red);--purple-text:var(--purple);--yellow-text:var(--yellow);--teal-text:var(--teal);
 }
+/* A barra de navegação já é azul-marinho no claro; no escuro ela encostaria
+   no fundo, então ganha um tom um passo acima para não sumir. */
+[data-theme="dark"] .sidebar{background:var(--bg-secondary)}
 
-/* ═══════════════ TEMA CLARO ═══════════════ */
-[data-theme="light"] {
-  --bg-primary:#EEF2F8;--bg-secondary:#DDE6F2;--bg-card:#FFFFFF;
-  --bg-card-hover:#C8D8EE;--bg-input:#F5F7FA;
-  --border-color:#B0C4DC;--border-light:#8AAACE;
-  --text-primary:#0F1F3D;--text-secondary:#2E4268;--text-muted:#4E6080;
-  --shadow-card:0 4px 12px rgba(0,0,0,.08);--shadow-lg:0 8px 32px rgba(0,0,0,.12);
-}
-
-/* Fundo e overlay */
-[data-theme="light"] body::before { background:rgba(220,232,248,.84); }
-[data-theme="light"] .login-screen::before { background:rgba(220,232,248,.88); }
-
-/* Textos com cor #fff fixa */
-[data-theme="light"] .brand-title,
-[data-theme="light"] .sec-header h2,
-[data-theme="light"] .form-panel-header h3,
-[data-theme="light"] .modal-header h2,
-[data-theme="light"] .alerta-titulo,
-[data-theme="light"] .detail-item strong,
-[data-theme="light"] .sidebar-btn.active,
-[data-theme="light"] .login-title { color:var(--text-primary); }
-
-/* Logo: filtro para ficar legível no fundo claro */
-[data-theme="light"] .logo img { filter:brightness(0) saturate(0) invert(0.15); }
-
-/* Botão ghost hover */
-[data-theme="light"] .btn-ghost:hover { background:var(--bg-card-hover);color:var(--text-primary);border-color:var(--border-light); }
-[data-theme="light"] .nav-tab:hover { color:var(--text-primary); }
-
-/* Modal close hover */
-[data-theme="light"] .modal-close:hover { color:var(--text-primary);background:var(--bg-card-hover); }
-
-/* Tabela */
-[data-theme="light"] .ter-table th,
-[data-theme="light"] .art-table th { color:var(--text-secondary); }
-
-/* Paginação */
-[data-theme="light"] .btn-pagination { color:var(--text-primary); }
-
-/* Toast */
-[data-theme="light"] .toast { color:var(--text-primary); }
-
-/* Login screen always dark, even in light theme */
-[data-theme="light"] .login-card{background:#122045;border-color:#264175}
-[data-theme="light"] .login-screen::before{background:rgba(6,13,31,.88)}
-[data-theme="light"] .login-card .form-control{background:rgba(255,255,255,.06);color:#E8ECF4;border-color:#264175}
-[data-theme="light"] .login-card .form-control::placeholder{color:#5C6A8A}
-
-/* Formulários */
-[data-theme="light"] .form-control { background:var(--bg-input);color:var(--text-primary);border-color:var(--border-color); }
-[data-theme="light"] .form-control::placeholder { color:var(--text-muted); }
-[data-theme="light"] .form-section-block { border-color:var(--border-color); }
-
-/* Modais */
-[data-theme="light"] .modal { background:rgba(255,255,255,.92);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px); }
-[data-theme="light"] .modal-header { background:var(--bg-secondary); }
-
-/* Header */
-[data-theme="light"] .app-header { box-shadow:0 2px 12px rgba(0,0,0,.10); }
-
-/* Filtros */
-[data-theme="light"] .filter-pill:hover { background:var(--bg-card-hover);color:var(--text-primary); }
-
-/* KPIs */
-[data-theme="light"] .kpi-card { background:#FFFFFF; }
-
-/* ─── Legibilidade das cores de status no modo claro ───
-   Os tons "vivos" da paleta (var(--green)/--orange/--yellow/--red/--teal/
-   --purple/--blue-light) foram calibrados para contraste sobre o fundo
-   escuro. Usados como cor de TEXTO sobre os cartões brancos do modo claro,
-   ficam com contraste baixo (quase ilegíveis). Aqui trocamos só a cor do
-   texto/ícone por uma variante mais escura da mesma família — fundos,
-   bordas e botões sólidos (branco sobre cor) não mudam. */
-[data-theme="light"] {
-  --green-text:#2E7D32; --teal-text:#00695C; --blue-light-text:#2E5C94;
-  --red-text:#C62828; --orange-text:#B35900; --purple-text:#7B1FA2; --yellow-text:#8A6D00;
-}
-[data-theme="light"] .st-aprovado,
-[data-theme="light"] .st-ok,
-[data-theme="light"] .btn-status-ok,
-[data-theme="light"] .btn-icon-green,
-[data-theme="light"] .total-value,
-[data-theme="light"] .td-valor,
-[data-theme="light"] .btn-salvar-entrega,
-[data-theme="light"] .upload-nome,
-[data-theme="light"] .perfil-badge,
-[data-theme="light"] .radio-pill[data-val="Excelente"] input:checked+.radio-pill-label,
-[data-theme="light"] .radio-pill[data-val="Totalmente"] input:checked+.radio-pill-label,
-[data-theme="light"] .tipo-sel-card[data-tipo="Prestador de serviço"] .tipo-sel-badge { color:var(--green-text); }
-
-[data-theme="light"] .st-reprovado,
-[data-theme="light"] .st-vencido,
-[data-theme="light"] .btn-status-err,
-[data-theme="light"] .btn-icon-danger,
-[data-theme="light"] .login-erro,
-[data-theme="light"] .radio-pill[data-val="Péssimo"] input:checked+.radio-pill-label,
-[data-theme="light"] .radio-pill[data-val="Não cumprido"] input:checked+.radio-pill-label { color:var(--red-text); }
-
-[data-theme="light"] .st-finalizado,
-[data-theme="light"] .st-aguar-pagamento,
-[data-theme="light"] .btn-status-final,
-[data-theme="light"] .btn-icon-teal,
-[data-theme="light"] .aval-info-banner,
-[data-theme="light"] .kpi-teal .kpi-value { color:var(--teal-text); }
-
-[data-theme="light"] .st-elaboracao,
-[data-theme="light"] .st-aguar-lider,
-[data-theme="light"] .st-analise,
-[data-theme="light"] .avaliacao-num,
-[data-theme="light"] .detail-section-title,
-[data-theme="light"] .tipo-sel-badge,
-[data-theme="light"] .kpi-blue .kpi-value,
-[data-theme="light"] .radio-pill input:checked+.radio-pill-label,
-[data-theme="light"] .radio-pill[data-val="Bom"] input:checked+.radio-pill-label { color:var(--blue-light-text); }
-
-[data-theme="light"] .st-aguar-gestao,
-[data-theme="light"] .btn-icon-orange,
-[data-theme="light"] .tipo-sel-card[data-tipo="Despachante"] .tipo-sel-badge,
-[data-theme="light"] .radio-pill[data-val="Ruim"] input:checked+.radio-pill-label,
-[data-theme="light"] .radio-pill[data-val="Parcialmente"] input:checked+.radio-pill-label,
-[data-theme="light"] .kpi-orange .kpi-value { color:var(--orange-text); }
-
-[data-theme="light"] .st-aguar-assinatura,
-[data-theme="light"] .st-encerrado,
-[data-theme="light"] .kpi-purple .kpi-value { color:var(--purple-text); }
-
-[data-theme="light"] .st-pendente,
-[data-theme="light"] .st-aguar-gp,
-[data-theme="light"] .kpi-yellow .kpi-value { color:var(--yellow-text); }
-
-[data-theme="light"] .kpi-red .kpi-value { color:var(--red-text); }
-
-[data-theme="light"] .st-em-fila,
-[data-theme="light"] .st-rascunho,
-[data-theme="light"] .st-cancelado { color:var(--text-secondary); }
-
-/* ═══════════════ BOTÃO TOGGLE DE TEMA ═══════════════ */
+/* ═══════════════ BOTÃO TOGGLE DE TEMA ═══════════════
+   Fica na barra de navegação (fundo azul-marinho), por isso a moldura é
+   clara e translúcida em vez de seguir --bg-card. */
 .theme-toggle {
-  position:relative;width:52px;height:28px;background:var(--bg-card);
-  border-radius:999px;border:1px solid var(--border-color);cursor:pointer;
+  position:relative;width:46px;height:26px;background:rgba(255,255,255,.1);
+  border-radius:999px;border:1px solid rgba(255,255,255,.22);cursor:pointer;
   display:flex;align-items:center;padding:3px;transition:var(--transition);flex-shrink:0;
 }
-.theme-toggle:hover { border-color:var(--blue-light);box-shadow:0 0 12px rgba(90,141,208,.35); }
+.theme-toggle:hover{border-color:var(--orange);box-shadow:0 0 0 3px rgba(255,130,0,.18)}
 .theme-toggle-slider {
-  position:absolute;width:22px;height:22px;
-  background:linear-gradient(135deg,var(--blue),var(--blue-dark));
+  position:absolute;width:20px;height:20px;
+  background:linear-gradient(135deg,var(--orange),var(--orange-hover));
   border-radius:50%;transition:transform .3s ease;
   display:flex;align-items:center;justify-content:center;
-  color:#fff;font-size:11px;box-shadow:0 2px 6px rgba(0,0,0,.3);
+  color:#fff;font-size:11px;box-shadow:0 2px 6px rgba(0,0,0,.25);
 }
-[data-theme="light"] .theme-toggle { background:#FFF8F0;border-color:rgba(255,130,0,.35); }
-[data-theme="light"] .theme-toggle:hover { border-color:var(--orange);box-shadow:0 0 12px rgba(255,130,0,.3); }
-[data-theme="light"] .theme-toggle-slider { transform:translateX(24px);background:linear-gradient(135deg,var(--orange),var(--orange-hover)); }
+/* Claro é o padrão: pastilha à direita, com o sol. No escuro ela volta
+   para a esquerda, com a lua. */
+.theme-toggle-slider{transform:translateX(20px)}
+[data-theme="dark"] .theme-toggle-slider{transform:translateX(0);background:linear-gradient(135deg,var(--blue),var(--navy))}
+
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
 html{font-size:14px}
-body{font-family:var(--font);background:var(--bg-primary);color:var(--text-primary);overflow:hidden;line-height:1.5;background-image:url('images/plano_fundo.png');background-size:cover;background-position:center;background-attachment:fixed}
-body::before{content:'';position:fixed;inset:0;background:rgba(6,13,31,.92);z-index:-1}
+body{font-family:var(--font);background:var(--bg-primary);color:var(--text-primary);overflow:hidden;line-height:1.5;-webkit-font-smoothing:antialiased}
 *{scrollbar-width:thin;scrollbar-color:var(--border-color) transparent}
 ::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--border-color);border-radius:3px}
@@ -184,7 +130,7 @@ body::before{content:'';position:fixed;inset:0;background:rgba(6,13,31,.92);z-in
 .brand{display:flex;align-items:center;gap:.65rem}
 .logo img{height:32px;width:auto;object-fit:contain}
 .brand-text{display:flex;flex-direction:column;line-height:1.1}
-.brand-title{font-size:.95rem;font-weight:800;color:#fff}
+.brand-title{font-size:.95rem;font-weight:800;color:var(--text-primary)}
 .brand-sub{font-size:.65rem;color:var(--text-secondary);font-weight:500}
 .header-actions{display:flex;align-items:center;gap:.4rem}
 .perfil-btn{padding:.3rem .65rem;background:rgba(90,141,208,.1);color:var(--text-secondary);border:1px solid var(--border-light);border-radius:var(--radius-sm);font-weight:700;font-size:.72rem;cursor:pointer;transition:var(--transition);font-family:var(--font)}
@@ -192,47 +138,58 @@ body::before{content:'';position:fixed;inset:0;background:rgba(6,13,31,.92);z-in
 .perfil-badge{padding:.25rem .6rem;background:rgba(108,194,74,.12);color:var(--green);border:1px solid rgba(108,194,74,.35);border-radius:var(--radius-sm);font-weight:700;font-size:.72rem;cursor:default}
 
 /* ─── SIDEBAR ────────────────────────────────────── */
-.sidebar{position:fixed;left:0;top:0;bottom:0;width:var(--sidebar-width);background:var(--bg-secondary);border-right:1px solid var(--border-color);z-index:150;display:flex;flex-direction:column;overflow:hidden}
+/* ─── BARRA DE NAVEGAÇÃO (topo) ──────────────────────────────────────────
+   Era uma sidebar lateral de 190px. Virou a barra azul-marinho de 80px do
+   Controle de Folgas, mas os NOMES DAS CLASSES foram mantidos (.sidebar,
+   .sidebar-nav, .sidebar-btn, .sidebar-footer…) para o script.js, que
+   consulta esses seletores, seguir valendo sem alteração. */
+.sidebar{position:fixed;left:0;right:0;top:0;height:var(--navbar-height);background:var(--navy);z-index:150;display:flex;align-items:center;gap:28px;padding:0 var(--page-padding-x);overflow:visible}
 .sidebar.hidden{display:none}
 
-.sidebar-logo{display:flex;flex-direction:column;align-items:center;gap:.45rem;padding:.9rem 1rem .75rem;border-bottom:1px solid var(--border-color);flex-shrink:0;text-align:center}
-.sidebar-logo img{height:36px;width:auto;object-fit:contain}
-[data-theme="light"] .sidebar-logo img{filter:brightness(0) saturate(0) invert(0.15)}
-.sidebar-brand-sub{font-size:.7rem;font-weight:500;color:var(--text-secondary);white-space:normal;text-align:center;line-height:1.4;padding:0 .25rem;letter-spacing:.01em}
+.sidebar-logo{display:flex;align-items:center;gap:14px;flex-shrink:0}
+.sidebar-logo img{height:38px;width:auto;max-width:130px;object-fit:contain}
+/* Nome do sistema ao lado da logo, com a barrinha laranja separando —
+   mesma assinatura do cabeçalho do Controle de Folgas. */
+.sidebar-brand-sub{display:flex;align-items:center;gap:9px;padding-left:14px;border-left:1px solid rgba(255,255,255,.16);color:var(--text-on-navy);font-size:.82rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;white-space:nowrap;line-height:1.2}
+.sidebar-brand-sub::before{content:'';width:8px;height:8px;border-radius:2px;background:var(--orange);flex-shrink:0}
 
-.sidebar-nav{flex:1;display:flex;flex-direction:column;padding:.5rem .5rem;gap:.1rem;overflow-y:auto}
-.sidebar-btn{display:flex;align-items:center;gap:.65rem;padding:.58rem .85rem;background:transparent;border:none;border-left:3px solid transparent;border-radius:0;color:var(--text-secondary);font-family:var(--font);font-size:.78rem;font-weight:500;cursor:pointer;transition:var(--transition);text-align:left;width:100%;white-space:nowrap}
-.sidebar-btn:hover{background:var(--bg-card-hover);color:var(--text-primary);border-left-color:transparent}
-.sidebar-btn.active{background:rgba(90,141,208,.15);color:#fff;border-left-color:var(--orange);font-weight:600}
-.sidebar-btn svg{flex-shrink:0;opacity:.75}
+/* A navegação ocupa o meio da barra. Cada item marca a aba ativa com o
+   traço laranja embaixo, no lugar da borda lateral de quando era sidebar. */
+.sidebar-nav{flex:1;display:flex;align-items:center;justify-content:center;gap:.2rem;min-width:0;overflow-x:auto;overflow-y:hidden;height:100%;padding:0}
+.sidebar-btn{position:relative;display:flex;align-items:center;gap:.5rem;height:100%;width:auto;padding:0 .9rem;background:transparent;border:none;border-bottom:3px solid transparent;border-radius:0;color:var(--text-on-navy);font-family:var(--font);font-size:.8rem;font-weight:700;letter-spacing:.02em;cursor:pointer;transition:var(--transition);white-space:nowrap;flex-shrink:0;text-align:left}
+.sidebar-btn:hover{color:var(--text-on-navy);background:rgba(255,255,255,.06)}
+.sidebar-btn.active{color:var(--text-on-navy);background:transparent;border-bottom-color:var(--orange);font-weight:700}
+.sidebar-btn svg{flex-shrink:0;opacity:.8}
 .sidebar-btn.active svg,.sidebar-btn:hover svg{opacity:1}
-.sidebar-divider{height:1px;background:var(--border-color);margin:.4rem .5rem}
-.nav-badge{display:inline-flex;align-items:center;justify-content:center;background:var(--red);color:#fff;border-radius:10px;font-size:.58rem;font-weight:700;min-width:16px;height:16px;padding:0 4px;margin-left:auto}
+.sidebar-divider{display:none}
+.nav-badge{display:inline-flex;align-items:center;justify-content:center;background:var(--red);color:#fff;border-radius:999px;font-size:.58rem;font-weight:800;min-width:17px;height:17px;padding:0 4px;margin-left:0}
 
-.sidebar-footer{display:flex;align-items:center;gap:.5rem;padding:.75rem 1rem;border-top:1px solid var(--border-color);flex-shrink:0}
-.sidebar-user{display:flex;align-items:center;gap:.55rem;flex:1;min-width:0}
-.sidebar-avatar{width:30px;height:30px;border-radius:50%;background:var(--blue);color:#fff;font-size:.72rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;letter-spacing:-.02em}
-.sidebar-user-info{display:flex;flex-direction:column;min-width:0}
-.sidebar-user-info strong{font-size:.74rem;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-[data-theme="light"] .sidebar-user-info strong{color:var(--text-primary)}
-.sidebar-user-detail{font-size:.62rem;color:var(--text-muted);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.sidebar-actions{display:flex;align-items:center;gap:.3rem;flex-shrink:0}
-.btn-sair{background:rgba(255,93,93,.15);border:1px solid rgba(255,93,93,.35);color:#ff6b6b;border-radius:var(--radius-sm);padding:.28rem .42rem;font-size:.85rem;cursor:pointer;transition:var(--transition);flex-shrink:0;line-height:1}
-.btn-sair:hover{background:var(--red);color:#fff}
+/* Bloco da direita: quem está logado, o toggle de tema e o botão de sair. */
+.sidebar-footer{display:flex;align-items:center;gap:.85rem;padding:0;border:none;flex-shrink:0}
+.sidebar-user{display:flex;align-items:center;gap:.55rem;min-width:0}
+.sidebar-avatar{width:32px;height:32px;border-radius:50%;background:var(--orange);color:#fff;font-size:.75rem;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;letter-spacing:-.02em}
+.sidebar-user-info{display:flex;flex-direction:column;min-width:0;max-width:180px}
+.sidebar-user-info strong{font-size:.75rem;font-weight:700;color:var(--text-on-navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sidebar-user-detail{font-size:.63rem;color:rgba(255,255,255,.6);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:.02em}
+.sidebar-actions{display:flex;align-items:center;gap:.5rem;flex-shrink:0}
+/* Sair vira botão de ícone sem moldura, como nos outros sistemas. */
+.btn-sair{background:transparent;border:none;color:rgba(255,255,255,.72);border-radius:var(--radius-sm);padding:.35rem;font-size:.9rem;cursor:pointer;transition:var(--transition);flex-shrink:0;line-height:0;display:flex;align-items:center;justify-content:center}
+.btn-sair:hover{background:rgba(255,255,255,.1);color:var(--text-on-navy)}
 
 /* ─── SEC-HEADER RIGHT ───────────────────────────── */
 .sec-header-right{display:flex;align-items:center;gap:.65rem}
 
 /* ─── MAIN / SECTIONS ────────────────────────────── */
-.app-main{margin-left:var(--sidebar-width);height:calc(100vh - var(--footer-height));overflow:hidden;display:flex;flex-direction:column}
-.secao{display:none;flex:1;overflow-y:auto;overflow-x:hidden;padding:1rem 1.25rem}
+/* O conteúdo desce a altura da barra em vez de recuar pela lateral. */
+.app-main{margin-left:0;padding-top:var(--navbar-height);height:100vh;overflow:hidden;display:flex;flex-direction:column}
+.secao{display:none;flex:1;overflow-y:auto;overflow-x:hidden;padding:1rem var(--page-padding-x)}
 .secao.active{display:flex;flex-direction:column}
 /* Dashboard é só análise/KPIs de relance — sem scroll, tem que caber
    inteiro na tela; as demais seções (listas longas) mantêm scroll normal. */
 #secao-dashboard{overflow:hidden;min-height:0}
 #secao-dashboard.active{min-height:0}
 .sec-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:.85rem;flex-shrink:0}
-.sec-header h2{font-size:1.1rem;font-weight:700;color:#fff}
+.sec-header h2{font-size:1.1rem;font-weight:700;color:var(--text-primary)}
 .sec-sub{font-size:.72rem;color:var(--text-secondary)}
 
 /* ─── DASHBOARD KPIs ─────────────────────────────── */
@@ -304,7 +261,7 @@ body::before{content:'';position:fixed;inset:0;background:rgba(6,13,31,.92);z-in
 .table-controls{padding:.6rem 0;flex-shrink:0}
 .filter-pills{display:flex;flex-wrap:wrap;gap:.2rem;margin-bottom:.5rem}
 .filter-pill{padding:.2rem .5rem;border:1px solid var(--border-color);border-radius:20px;background:transparent;color:var(--text-secondary);font-family:var(--font);font-size:.68rem;font-weight:500;cursor:pointer;transition:var(--transition)}
-.filter-pill:hover{background:var(--bg-card-hover);color:#fff}
+.filter-pill:hover{background:var(--bg-card-hover);color:var(--text-primary)}
 .filter-pill.active{background:var(--blue);border-color:var(--blue);color:#fff}
 .filter-row{display:flex;gap:.4rem;flex-wrap:wrap}
 .filter-select{padding:.3rem .45rem;font-size:.72rem;min-width:110px;max-width:160px}
@@ -371,7 +328,7 @@ body::before{content:'';position:fixed;inset:0;background:rgba(6,13,31,.92);z-in
 /* ─── FORM PANEL ─────────────────────────────────── */
 .form-panel{display:flex;flex-direction:column;flex:1;min-height:0;background:var(--bg-primary);border:1px solid var(--border-color);border-radius:var(--radius-lg);overflow:hidden;box-shadow:var(--shadow-lg)}
 .form-panel-header{display:flex;align-items:center;justify-content:space-between;padding:.75rem 1.1rem;border-bottom:1px solid var(--border-color);background:var(--bg-secondary);flex-shrink:0}
-.form-panel-header h3{font-size:.95rem;font-weight:600;color:#fff}
+.form-panel-header h3{font-size:.95rem;font-weight:600;color:var(--text-primary)}
 .form-body{flex:1;overflow-y:auto;padding:1.1rem;padding-bottom:1.2rem}
 .form-panel-footer{display:flex;align-items:center;justify-content:flex-end;gap:.65rem;padding:.75rem 1.1rem;border-top:1px solid var(--border-color);background:var(--bg-secondary);flex-shrink:0}
 .btn-voltar{background:rgba(231,76,60,.12);color:#ff6b6b;border:1px solid rgba(231,76,60,.35);padding:.35rem .7rem;border-radius:var(--radius-sm);font-family:var(--font);font-size:.78rem;font-weight:600;cursor:pointer;transition:var(--transition)}
@@ -464,7 +421,7 @@ body::before{content:'';position:fixed;inset:0;background:rgba(6,13,31,.92);z-in
 .alerta-card.alerta-critico{border-left:3px solid var(--red)}
 .alerta-card.alerta-atencao{border-left:3px solid var(--orange)}
 .alerta-card.alerta-aviso{border-left:3px solid var(--yellow)}
-.alerta-titulo{font-size:.82rem;font-weight:700;color:#fff;margin-bottom:.3rem}
+.alerta-titulo{font-size:.82rem;font-weight:700;color:var(--text-primary);margin-bottom:.3rem}
 .alerta-desc{font-size:.74rem;color:var(--text-secondary);margin-bottom:.5rem}
 .alerta-meta{font-size:.68rem;color:var(--text-muted)}
 .alertas-empty{text-align:center;padding:3rem;color:var(--text-secondary);font-size:.85rem}
@@ -474,7 +431,7 @@ body::before{content:'';position:fixed;inset:0;background:rgba(6,13,31,.92);z-in
 .detail-item{background:var(--bg-input);border:1px solid var(--border-color);border-radius:var(--radius-sm);padding:.65rem}
 .detail-item.full{grid-column:1/-1}
 .detail-item span{display:block;color:var(--text-secondary);font-size:.68rem;margin-bottom:.22rem;text-transform:uppercase;letter-spacing:.03em}
-.detail-item strong{color:#fff;font-weight:600;white-space:pre-wrap;font-size:.82rem}
+.detail-item strong{color:var(--text-primary);font-weight:600;white-space:pre-wrap;font-size:.82rem}
 .detail-section-title{grid-column:1/-1;padding:.5rem .65rem;background:rgba(58,101,176,.15);border-radius:var(--radius-sm);color:var(--blue-light);font-size:.78rem;font-weight:600;text-transform:uppercase;letter-spacing:.04em}
 .historico-lista{display:flex;flex-direction:column;gap:.5rem;margin-top:.5rem}
 .historico-item{background:var(--bg-input);border:1px solid var(--border-color);border-radius:var(--radius-sm);padding:.6rem}
@@ -487,7 +444,7 @@ body::before{content:'';position:fixed;inset:0;background:rgba(6,13,31,.92);z-in
 .btn-primary{background:var(--orange);color:#fff;box-shadow:0 2px 6px rgba(255,130,0,.3)}
 .btn-primary:hover{background:var(--orange-hover);transform:translateY(-1px);box-shadow:0 3px 10px rgba(255,130,0,.4)}
 .btn-ghost{background:transparent;color:var(--text-secondary);border:1px solid var(--border-color)}
-.btn-ghost:hover{background:var(--bg-card-hover);color:#fff;border-color:var(--border-light)}
+.btn-ghost:hover{background:var(--bg-card-hover);color:var(--text-primary);border-color:var(--border-light)}
 .btn-sm{padding:.28rem .6rem;font-size:.73rem}
 .btn-green{background:var(--green);color:#fff;box-shadow:0 2px 6px rgba(108,194,74,.35)}
 .btn-green:hover{background:#5aad3d;transform:translateY(-1px);box-shadow:0 3px 10px rgba(108,194,74,.45)}
@@ -536,14 +493,14 @@ body::before{content:'';position:fixed;inset:0;background:rgba(6,13,31,.92);z-in
 .tipo-sel-card[data-tipo="Campanha periódica"]{border-top-color:#9b59b6}
 .tipo-sel-card[data-tipo="Outro"]{border-top-color:var(--text-secondary)}
 .modal-header{display:flex;align-items:center;justify-content:space-between;padding:.75rem 1.15rem;border-bottom:1px solid var(--border-color);background:var(--bg-secondary);border-radius:var(--radius-lg) var(--radius-lg) 0 0;flex-shrink:0}
-.modal-header h2{font-size:.95rem;font-weight:600;color:#fff}
+.modal-header h2{font-size:.95rem;font-weight:600;color:var(--text-primary)}
 .modal-close{background:none;border:none;color:var(--text-secondary);font-size:1.25rem;cursor:pointer;padding:.15rem;transition:var(--transition);border-radius:4px;line-height:1}
-.modal-close:hover{color:#fff;background:var(--bg-card-hover)}
+.modal-close:hover{color:var(--text-primary);background:var(--bg-card-hover)}
 .modal-body{padding:1rem 1.15rem;overflow-y:auto;flex:1}
 .modal-footer{padding:.7rem 1.15rem;border-top:1px solid var(--border-color);display:flex;gap:.4rem;justify-content:flex-end;flex-shrink:0}
 
 /* ─── TOAST ──────────────────────────────────────── */
-.toast{position:fixed;right:1.2rem;bottom:2.8rem;background:var(--bg-secondary);color:#fff;border:1px solid var(--border-light);padding:.8rem 1rem;border-radius:var(--radius-md);box-shadow:var(--shadow-lg);opacity:0;transform:translateY(16px);transition:var(--transition);pointer-events:none;z-index:9999;font-size:.82rem;max-width:320px}
+.toast{position:fixed;right:1.2rem;bottom:2.8rem;background:var(--bg-secondary);color:var(--text-primary);border:1px solid var(--border-light);padding:.8rem 1rem;border-radius:var(--radius-md);box-shadow:var(--shadow-lg);opacity:0;transform:translateY(16px);transition:var(--transition);pointer-events:none;z-index:9999;font-size:.82rem;max-width:320px}
 .toast.show{opacity:1;transform:translateY(0)}
 .toast.toast-ok{border-color:rgba(108,194,74,.5);background:rgba(108,194,74,.15)}
 .toast.toast-err{border-color:rgba(255,93,93,.5);background:rgba(255,93,93,.1)}
@@ -617,25 +574,115 @@ body::before{content:'';position:fixed;inset:0;background:rgba(6,13,31,.92);z-in
 .contrato-page-content .cg-sign-line{border-top:1px solid #333;margin-bottom:.35rem}
 .contrato-page-content .cg-sign-tag{color:#555;margin-top:.15rem}
 
-/* ─── LOGIN SCREEN ───────────────────────────────── */
-.login-screen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:var(--bg-primary);background-image:url('images/plano_fundo.png');background-size:cover;background-position:center;z-index:9999}
-.login-screen::before{content:'';position:absolute;inset:0;background:rgba(6,13,31,.88);z-index:0}
-.login-card{position:relative;z-index:1;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:2.4rem 2rem 2rem;width:100%;max-width:400px;box-shadow:var(--shadow-lg);display:flex;flex-direction:column;align-items:center;gap:.6rem}
-.login-logo img{height:56px;width:auto;object-fit:contain}
-.login-title{font-size:1.5rem;font-weight:800;color:#fff;letter-spacing:.04em;margin:0}
-.login-subtitle{font-size:.8rem;color:var(--text-secondary);margin:0;text-align:center}
-.login-form{width:100%;margin-top:.8rem;display:flex;flex-direction:column;gap:.55rem}
-.input-password-wrap{position:relative;display:flex;align-items:center}
-.input-password-wrap .form-control{padding-right:2.5rem}
-.btn-toggle-password{position:absolute;right:.55rem;background:none;border:none;color:var(--text-muted);cursor:pointer;padding:.2rem;display:flex;align-items:center;transition:var(--transition)}
-.btn-toggle-password:hover{color:var(--text-primary)}
-.login-erro{font-size:.75rem;color:var(--red);margin:0;padding:.4rem .6rem;background:rgba(255,93,93,.1);border:1px solid rgba(255,93,93,.3);border-radius:var(--radius-sm)}
-.btn-full{width:100%;justify-content:center;padding:.55rem;font-size:.85rem;margin-top:.3rem}
-.login-footer-text{font-size:.68rem;color:var(--text-muted);margin-top:.6rem;text-align:center}
+/* ═══════════════════════════════════════════════════════════════════
+   LOGIN — painel duplo (marca à esquerda, formulário à direita),
+   mesma tela do Controle de Folgas. Os prefixos `lp-` são os de lá,
+   para as duas telas continuarem fáceis de comparar lado a lado.
+   ═══════════════════════════════════════════════════════════════════ */
+/* A tela de login não acompanha o tema: ela é sempre a versão clara, como
+   no Controle de Folgas — quem está fora do sistema nem alcança o toggle, e
+   com os tokens do tema escuro o texto azul-marinho ficaria sobre painel
+   azul-marinho. Daí os `--lp-*` próprios, declarados aqui e nunca
+   redefinidos em [data-theme="dark"]. */
+.login-screen{
+  --lp-cream:#fbf8f1;--lp-border:#e6dfce;--lp-text:#07142e;
+  --lp-muted:#6e6553;--lp-faint:#9a8f78;--lp-green:#15803d;
+  position:fixed;inset:0;display:flex;width:100vw;height:100vh;overflow:hidden;background:var(--lp-cream);z-index:9999;
+}
 
-/* ─── LOGIN: título com degradê ──── */
-.login-title{font-size:1.3rem;font-weight:800;background:linear-gradient(135deg,#ffffff 30%,var(--blue-light) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:.02em;margin:0;text-align:center}
-.login-subtitle{font-size:.76rem;color:var(--text-muted);margin:0;text-align:center}
+/* ─── Painel da marca (esquerda) ─────────────────── */
+.lp-brand{flex:1 1 56%;position:relative;overflow:hidden;display:flex;flex-direction:column;padding:40px 56px;background:var(--navy-deep);color:#fff}
+.lp-brand::before{
+  content:'';position:absolute;inset:0;pointer-events:none;
+  background:
+    radial-gradient(ellipse 60% 50% at 30% 30%, rgba(20,60,140,.55) 0%, transparent 65%),
+    radial-gradient(ellipse 70% 60% at 70% 80%, rgba(255,130,0,.16) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 70% at 95% 5%, rgba(60,100,200,.20) 0%, transparent 55%),
+    radial-gradient(ellipse 40% 35% at 50% 100%, rgba(7,29,73,.5) 0%, transparent 75%),
+    linear-gradient(160deg, var(--navy-mid) 0%, var(--navy-deep) 60%, var(--navy-darker) 100%);
+}
+/* Malha quadriculada bem discreta, com máscara radial para sumir nas bordas. */
+.lp-brand::after{
+  content:'';position:absolute;inset:0;pointer-events:none;
+  background-image:
+    linear-gradient(rgba(255,255,255,.022) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.022) 1px, transparent 1px);
+  background-size:52px 52px;
+  -webkit-mask-image:radial-gradient(ellipse 80% 75% at 50% 50%, black 30%, transparent 85%);
+  mask-image:radial-gradient(ellipse 80% 75% at 50% 50%, black 30%, transparent 85%);
+}
+.lp-brand-line{position:absolute;top:0;left:0;width:240px;height:2px;background:linear-gradient(90deg,var(--orange) 0%,transparent 100%);pointer-events:none;z-index:2}
+.lp-brand-center{flex:1;position:relative;z-index:3;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;padding-left:24px}
+.lp-eyebrow{display:inline-flex;align-items:center;gap:10px;margin-bottom:28px;font-size:11px;font-weight:700;color:var(--orange-soft);letter-spacing:2.5px;text-transform:uppercase}
+.lp-eyebrow-bar{width:24px;height:1.5px;background:var(--orange)}
+.lp-logo-wrap{position:relative;margin-bottom:32px;display:inline-block}
+.lp-logo-halo-orange{position:absolute;left:-60px;top:-40px;width:380px;height:300px;background:radial-gradient(circle,rgba(255,130,0,.55) 0%,rgba(255,130,0,.18) 30%,transparent 65%);filter:blur(28px);pointer-events:none;z-index:-1;animation:lp-boltGlow 5s ease-in-out infinite}
+.lp-logo-halo-blue{position:absolute;left:40px;top:-30px;width:420px;height:240px;background:radial-gradient(ellipse,rgba(80,140,255,.28) 0%,transparent 60%);filter:blur(36px);pointer-events:none;z-index:-1}
+.lp-logo-img{display:block;height:64px;width:auto;position:relative;z-index:1;filter:drop-shadow(0 6px 28px rgba(255,130,0,.35));animation:lp-boltFloat 6s ease-in-out infinite}
+.lp-tagline{font-size:36px;font-weight:800;color:#fff;margin:0;letter-spacing:-.8px;line-height:1.1;max-width:460px}
+.lp-description{font-size:15px;color:rgba(255,255,255,.65);margin:16px 0 0;line-height:1.55;max-width:440px;font-weight:400}
+.lp-module-tag{display:inline-flex;align-items:center;gap:8px;margin-top:24px;padding:5px 12px;border-radius:20px;background:rgba(255,130,0,.12);border:1px solid rgba(255,130,0,.3);color:var(--orange-soft);font-size:11.5px;font-weight:700;letter-spacing:.4px}
+.lp-brand-bottom{position:relative;z-index:3;display:flex;justify-content:space-between;align-items:center;padding-top:24px;border-top:1px solid rgba(255,255,255,.08)}
+.lp-contacts{display:flex;align-items:center;gap:20px;color:rgba(255,255,255,.6);font-size:12.5px;font-weight:500}
+.lp-contacts a{color:inherit;text-decoration:none;display:inline-flex;align-items:center;gap:8px;transition:color .15s}
+.lp-contacts a:hover{color:#fff}
+.lp-contacts a svg{color:var(--orange);flex-shrink:0}
+.lp-contacts-divider{width:1px;height:12px;background:rgba(255,255,255,.12)}
+
+/* ─── Painel do formulário (direita) ─────────────── */
+.lp-form{flex:1 1 44%;position:relative;display:flex;flex-direction:column;background:var(--lp-cream);padding:40px 56px}
+.lp-form-center{flex:1;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;max-width:420px;width:100%;margin:0 auto}
+.lp-form-inner{width:100%}
+.lp-form-title{font-size:30px;font-weight:800;color:var(--navy);margin:0;letter-spacing:-.6px;line-height:1.15}
+.lp-form-subtitle{font-size:14px;color:var(--lp-muted);margin:10px 0 36px;line-height:1.55}
+.lp-fields{display:flex;flex-direction:column;gap:18px}
+.lp-field{display:flex;flex-direction:column;gap:8px}
+.lp-field-label{font-size:12.5px;font-weight:700;color:var(--lp-text);letter-spacing:.2px}
+.lp-field-control{display:flex;align-items:center;height:52px;padding:0 14px 0 16px;gap:12px;background:#fff;border:1.5px solid var(--lp-border);border-radius:12px;transition:border-color .15s,box-shadow .15s}
+.lp-field-control:focus-within{border-color:var(--orange);box-shadow:0 0 0 4px rgba(255,130,0,.15)}
+.lp-field-icon{color:var(--lp-faint);flex-shrink:0;display:flex;transition:color .15s}
+.lp-field-control:focus-within .lp-field-icon{color:var(--orange)}
+/* O input do login é o mesmo #inputCodigo de antes; aqui ele perde a
+   moldura própria e vira só o campo de texto dentro da caixa. */
+.lp-field-control input{flex:1;border:none;outline:none;background:transparent;color:var(--lp-text);font-size:14.5px;font-weight:500;font-family:inherit;min-width:0;padding:0;text-transform:none}
+.lp-field-control input[type="password"]:not(:placeholder-shown){letter-spacing:2px}
+.lp-field-control input::placeholder{color:var(--lp-faint)}
+.lp-toggle-eye{background:transparent;border:none;padding:6px;color:var(--lp-faint);cursor:pointer;display:inline-flex;align-items:center;transition:color .15s;flex-shrink:0}
+.lp-toggle-eye:hover{color:var(--lp-text)}
+.lp-btn-submit{height:52px;width:100%;background:var(--navy);color:#fff;border:none;border-radius:12px;font-family:inherit;font-size:14.5px;font-weight:700;letter-spacing:.3px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 2px 8px rgba(7,29,73,.18);transition:transform .15s,box-shadow .15s,opacity .15s;margin-top:8px}
+.lp-btn-submit:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 8px 24px rgba(7,29,73,.28)}
+.lp-btn-submit:disabled{opacity:.7;cursor:not-allowed}
+/* O aviso de erro recebe só texto (`erro.textContent = …` no script.js),
+   então o ícone entra pelo CSS — se fosse um <svg> filho, a primeira
+   mensagem de erro o apagaria. */
+.lp-error{display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:10px;background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);font-size:13px;font-weight:500;color:#dc2626}
+.lp-error::before{
+  content:'';width:15px;height:15px;flex-shrink:0;background-color:currentColor;
+  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='currentColor'%3E%3Cpath d='M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 5a1 1 0 0 1 1 1v6a1 1 0 0 1-2 0V8a1 1 0 0 1 1-1zm0 10.5a1.25 1.25 0 1 1 0 2.5 1.25 1.25 0 0 1 0-2.5z'/%3E%3C/svg%3E") center/contain no-repeat;
+  mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='currentColor'%3E%3Cpath d='M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 5a1 1 0 0 1 1 1v6a1 1 0 0 1-2 0V8a1 1 0 0 1 1-1zm0 10.5a1.25 1.25 0 1 1 0 2.5 1.25 1.25 0 0 1 0-2.5z'/%3E%3C/svg%3E") center/contain no-repeat;
+}
+/* Aviso de conexão lenta — mesma caixa do erro, em âmbar em vez de vermelho
+   (antes era um style inline com a cor #f39c12). */
+.lp-error-aviso{background:rgba(245,158,11,.08);border-color:rgba(245,158,11,.3);color:var(--yellow-text)}
+.lp-trust{margin-top:28px;padding-top:18px;border-top:1px solid var(--lp-border);display:flex;align-items:center;justify-content:space-between;font-size:11.5px;color:var(--lp-faint);font-weight:500}
+.lp-trust span{display:inline-flex;align-items:center;gap:6px}
+.lp-trust .i-green{color:var(--lp-green);flex-shrink:0}
+.lp-first-access{margin-top:32px;padding:16px 18px;background:rgba(255,130,0,.06);border:1px solid rgba(255,130,0,.15);border-radius:12px;display:flex;gap:12px;align-items:flex-start}
+.lp-first-access>svg{color:var(--orange);flex-shrink:0;margin-top:1px}
+.lp-first-access-title{font-size:13px;font-weight:700;color:var(--navy);margin-bottom:2px}
+.lp-first-access-text{font-size:12.5px;color:var(--lp-muted);line-height:1.5}
+.lp-first-access-text a{color:var(--orange-text);text-decoration:none;font-weight:700}
+.lp-first-access-text a:hover{text-decoration:underline}
+
+/* Cantoneiras */
+.lp-bracket{position:absolute;width:14px;height:14px;opacity:.35;pointer-events:none;z-index:2}
+.lp-bracket-tl{top:24px;left:24px}
+.lp-bracket-bl{bottom:24px;left:24px;transform:rotate(270deg);opacity:.4}
+.lp-bracket-tr{top:24px;right:24px;transform:rotate(90deg)}
+.lp-bracket-br{bottom:24px;right:24px;transform:rotate(180deg)}
+
+@keyframes lp-boltFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+@keyframes lp-boltGlow{0%,100%{opacity:.85;transform:scale(1)}50%{opacity:1;transform:scale(1.08)}}
 
 /* ─── SOL-BLOCK / TIPO-CARDS ────────────────────────── */
 .sol-block{background:var(--bg-card);border:1px solid var(--border-color);border-radius:var(--radius-lg);overflow:hidden;box-shadow:var(--shadow-card)}
@@ -657,15 +704,32 @@ body::before{content:'';position:fixed;inset:0;background:rgba(6,13,31,.92);z-in
 
 /* ─── RESPONSIVO ─────────────────────────────────── */
 @media(max-width:1200px){
+  :root{--page-padding-x:20px}
   .kpi-row{grid-template-columns:repeat(3,1fr)}
+  .sidebar{gap:16px}
+  .sidebar-btn{padding:0 .65rem;font-size:.76rem}
 }
 @media(max-width:960px){
   .kpi-row{grid-template-columns:repeat(3,1fr)}
+  .sidebar-brand-sub{display:none}
+  .sidebar{gap:12px}
 }
+/* Login: os dois painéis empilham antes do resto, porque o formulário fica
+   estreito demais bem antes disso. */
+@media(max-width:860px){
+  .login-screen{position:absolute;height:auto;min-height:100vh;flex-direction:column;overflow:auto}
+  .lp-brand{flex:none;padding:32px}
+  .lp-brand-bottom{flex-direction:column;align-items:flex-start;gap:14px}
+  .lp-form{flex:none;padding:32px}
+  .lp-tagline{font-size:28px}
+}
+
 @media(max-width:768px){
   body{overflow:auto}
-  :root{--sidebar-width:0px}
-  .sidebar{display:none}
+  /* A barra do topo NÃO some: é a única navegação. Ela compacta — o nome do
+     sistema e os dados do usuário saem, os itens seguem alcançáveis. */
+  .sidebar{gap:12px;padding:0 16px}
+  .sidebar-user-info{display:none}
   .app-main{margin-left:0;overflow-y:auto;height:auto}
   .secao{overflow:visible}
   .brand-sub{display:none}
@@ -678,4 +742,10 @@ body::before{content:'';position:fixed;inset:0;background:rgba(6,13,31,.92);z-in
   .header-top{padding:0 .75rem}
   .tipo-cards-compact{grid-template-columns:1fr}
   .tipo-card-compact:not(:last-child){border-right:none;border-bottom:1px solid var(--border-color)}
+}
+@media(max-width:480px){
+  .lp-brand,.lp-form{padding:24px 20px}
+  .lp-brand-center{padding-left:0}
+  .lp-contacts{flex-direction:column;align-items:flex-start;gap:8px}
+  .lp-contacts-divider{display:none}
 }
