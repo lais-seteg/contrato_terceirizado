@@ -181,12 +181,14 @@ body{font-family:var(--font);background:var(--bg-primary);color:var(--text-prima
 
 /* ─── MAIN / SECTIONS ────────────────────────────── */
 /* O conteúdo desce a altura da barra em vez de recuar pela lateral. */
-.app-main{margin-left:0;padding-top:var(--navbar-height);height:100vh;overflow:hidden;display:flex;flex-direction:column}
+.app-main{margin-left:0;height:100vh;padding-top:var(--navbar-height);padding-bottom:var(--footer-height);overflow:hidden;display:flex;flex-direction:column}
 .secao{display:none;flex:1;overflow-y:auto;overflow-x:hidden;padding:1rem var(--page-padding-x)}
 .secao.active{display:flex;flex-direction:column}
-/* Dashboard é só análise/KPIs de relance — sem scroll, tem que caber
-   inteiro na tela; as demais seções (listas longas) mantêm scroll normal. */
-#secao-dashboard{overflow:hidden;min-height:0}
+/* O Dashboard era travado sem rolagem, de quando a navegação ficava na
+   lateral e sobrava altura. Com a barra no topo consumindo 80px, os
+   gráficos deixavam de caber e ficavam cortados — então ele rola como as
+   demais seções. */
+#secao-dashboard{overflow-y:auto;overflow-x:hidden;min-height:0}
 #secao-dashboard.active{min-height:0}
 .sec-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:.85rem;flex-shrink:0}
 .sec-header h2{font-size:1.1rem;font-weight:700;color:var(--text-primary)}
@@ -220,7 +222,7 @@ body{font-family:var(--font);background:var(--bg-primary);color:var(--text-prima
 .dash-analises-header{display:flex;align-items:center;justify-content:space-between;gap:.65rem;margin-bottom:.6rem;flex-shrink:0}
 .dash-analises-header h3{font-size:.95rem;font-weight:700;color:var(--text-primary);margin:0}
 .dash-analises-actions{display:flex;align-items:center;gap:.4rem}
-.dash-charts-row{flex:1;min-height:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));grid-auto-rows:1fr;gap:.75rem;margin-bottom:0}
+.dash-charts-row{flex:1;min-height:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));grid-auto-rows:minmax(260px,1fr);gap:.75rem;margin-bottom:0}
 .dash-chart-card{background:var(--bg-card);border:1px solid var(--border-color);border-top:3px solid var(--card-accent, var(--blue-light));border-radius:var(--radius-lg);box-shadow:var(--shadow-card);padding:.75rem 1rem;display:flex;flex-direction:column;min-height:0;overflow:hidden}
 .dash-chart-title{font-size:.74rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.06em;margin:0 0 .4rem;display:flex;align-items:center;gap:.4rem;flex-shrink:0}
 .dash-chart-title::before{content:'';display:block;width:3px;height:12px;border-radius:2px;background:var(--card-accent, var(--blue-light))}
