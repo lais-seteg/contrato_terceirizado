@@ -1673,7 +1673,7 @@ function renderContratos() {
   const fatia = lista.slice(ini,ini+porPagina);
   const tbody = document.getElementById("tabelaContratos");
   const empty = document.getElementById("emptyContratos");
-  tbody.innerHTML="";
+  const linhasC=[];
   fatia.forEach(c=>{
     const dias   = diasAteVencer(c.cDataFim);
     const alerta = dias!==null&&dias<=30?`<span title="Vence em ${dias}d" style="color:var(--red);margin-left:.3rem">${svgIcon("alertTriangle",13)}</span>`:"";
@@ -1682,7 +1682,7 @@ function renderContratos() {
     const avalBtn = aval
       ? `<span class="status-badge st-aprovado" title="Avaliado em ${formatarData(aval.criadoEm)}" style="font-size:.62rem">${svgIcon("check",12)} Avaliado</span>`
       : (podaAvaliar ? `<button class="btn-icon btn-icon-teal" title="Avaliar prestador" onclick="abrirFormAvalPorContrato('${c.id}')">${svgIcon("star")}</button>` : "");
-    tbody.innerHTML+=`<tr>
+    linhasC.push(`<tr>
       <td><span style="color:var(--blue-light);font-weight:700">${esc(c.id)}</span></td>
       <td>${esc(c.cProjeto||"-")}</td>
       <td>${esc(c.cTercNome||"-")}</td>
@@ -1708,8 +1708,9 @@ function renderContratos() {
         ${avalBtn}
         ${podeExcluir()?`<button class="btn-icon btn-icon-danger" title="Excluir" onclick="excluirContrato('${c.id}')">${svgIcon("x")}</button>`:""}
       </div></td>
-    </tr>`;
+    </tr>`);
   });
+  tbody.innerHTML = linhasC.join("");
   empty.classList.toggle("visible",lista.length===0);
   document.getElementById("infoC").textContent = lista.length?`${ini+1}–${Math.min(ini+porPagina,lista.length)} de ${lista.length}`:"0 registros";
   document.getElementById("pageC").textContent = f.pagina;
@@ -2177,9 +2178,30 @@ function pdfPgObrigada(doc) {
 // desempenho no relatório — "Não se aplica" fica de fora da média.
 const NOTA_QUALITATIVA = { "Excelente":5, "Bom":4, "Intermediário":3, "Ruim":2, "Péssimo":1 };
 
-function gerarRelatorioContratosPDF(lista, filtros) {
-  if (!window.jspdf || !window.jspdf.jsPDF) {
-    mostrarToast("Biblioteca de PDF ainda carregando — tente de novo em instantes.","err");
+// O jsPDF (~357 KB) era baixado por todo mundo que abria o sistema, mas só
+// serve para os dois relatórios abaixo. Agora ele é buscado na primeira vez
+// que alguém gera um PDF, e a promessa é guardada: quem pedir de novo
+// reaproveita. Quem nunca gera relatório não paga nada por ele.
+let _jsPDFPromise = null;
+function garantirJsPDF() {
+  if (window.jspdf && window.jspdf.jsPDF) return Promise.resolve(true);
+  if (!_jsPDFPromise) {
+    _jsPDFPromise = new Promise(resolve => {
+      const s = document.createElement("script");
+      s.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
+      s.integrity = "sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk";
+      s.crossOrigin = "anonymous";
+      s.onload  = () => resolve(!!(window.jspdf && window.jspdf.jsPDF));
+      s.onerror = () => { _jsPDFPromise = null; resolve(false); };  // deixa tentar de novo
+      document.head.appendChild(s);
+    });
+  }
+  return _jsPDFPromise;
+}
+
+async function gerarRelatorioContratosPDF(lista, filtros) {
+  if (!await garantirJsPDF()) {
+    mostrarToast("Não foi possível carregar a biblioteca de PDF. Verifique sua conexão.","err");
     return;
   }
   if (!lista.length) { mostrarToast("Nenhum contrato encontrado com esse filtro.","err"); return; }
@@ -2393,9 +2415,9 @@ function exportarAnalisesCSV() {
 // pdfSecao/pdfKpiBox/pdfGraficoBarras/pdfPgCapa/pdfPgObrigada), só que sem
 // a listagem contrato a contrato — este relatório é só as análises
 // agregadas, espelhando exatamente o que aparece no Dashboard.
-function gerarRelatorioAnalisesPDF() {
-  if (!window.jspdf || !window.jspdf.jsPDF) {
-    mostrarToast("Biblioteca de PDF ainda carregando — tente de novo em instantes.","err");
+async function gerarRelatorioAnalisesPDF() {
+  if (!await garantirJsPDF()) {
+    mostrarToast("Não foi possível carregar a biblioteca de PDF. Verifique sua conexão.","err");
     return;
   }
   const lista = contratosVisiveisParaRelatorio();
@@ -3156,7 +3178,7 @@ function renderTerceirizados(){
   const porPagina=20;const totalPag=Math.max(1,Math.ceil(lista.length/porPagina));if(f.pagina>totalPag)f.pagina=totalPag;
   const ini=(f.pagina-1)*porPagina;const fatia=lista.slice(ini,ini+porPagina);
   const tbody=document.getElementById("tabelaTerceirizados");const empty=document.getElementById("emptyTerc");tbody.innerHTML="";
-  fatia.forEach(t=>{tbody.innerHTML+=`<tr><td>${esc(t.tNome)}</td><td>${esc(t.tTipo||"-")}</td><td>${esc(t.tAreaExpertise||"-")}</td><td>${esc(t.tCpf||"-")}</td><td>${esc(t.tEmail||"-")}</td><td>${esc(t.tTelefone||"-")}</td><td>${esc(t.tCnpj||"-")}</td><td class="col-acoes"><div class="table-actions"><button class="btn-icon" title="Visualizar" onclick="verTerceirizado('${t.tId}')">${svgIcon("eye")}</button>${ehGestaoOuGP()?`<button class="btn-icon btn-icon-orange" title="Editar" onclick="editarTerceirizado('${t.tId}')">${svgIcon("edit")}</button>`:""} ${podeExcluir()?`<button class="btn-icon btn-icon-danger" title="Excluir" onclick="excluirTerceirizado('${t.tId}')">${svgIcon("x")}</button>`:""}</div></td></tr>`;});
+  const linhasT=[];fatia.forEach(t=>{linhasT.push(`<tr><td>${esc(t.tNome)}</td><td>${esc(t.tTipo||"-")}</td><td>${esc(t.tAreaExpertise||"-")}</td><td>${esc(t.tCpf||"-")}</td><td>${esc(t.tEmail||"-")}</td><td>${esc(t.tTelefone||"-")}</td><td>${esc(t.tCnpj||"-")}</td><td class="col-acoes"><div class="table-actions"><button class="btn-icon" title="Visualizar" onclick="verTerceirizado('${t.tId}')">${svgIcon("eye")}</button>${ehGestaoOuGP()?`<button class="btn-icon btn-icon-orange" title="Editar" onclick="editarTerceirizado('${t.tId}')">${svgIcon("edit")}</button>`:""} ${podeExcluir()?`<button class="btn-icon btn-icon-danger" title="Excluir" onclick="excluirTerceirizado('${t.tId}')">${svgIcon("x")}</button>`:""}</div></td></tr>`);});tbody.innerHTML=linhasT.join("");
   empty.classList.toggle("visible",lista.length===0);
   document.getElementById("infoT").textContent=`${lista.length} registros`;
   document.getElementById("pageT").textContent=f.pagina;
@@ -3291,7 +3313,7 @@ function fecharFormAval(){
 function popularSelectAvaliados(){
   const sel=document.getElementById("aAvaliado");
   sel.innerHTML='<option value="">Selecione</option>';
-  DB.terceirizados.forEach(t=>{sel.innerHTML+=`<option value="${t.tId}">${esc(t.tNome)}</option>`;});
+  sel.innerHTML += DB.terceirizados.map(t=>`<option value="${t.tId}">${esc(t.tNome)}</option>`).join("");
 }
 
 function salvarAvaliacao(){
@@ -3363,10 +3385,10 @@ function renderAvaliacoes(){
     if (fa.pagina > totPag) fa.pagina = totPag;
     const ini   = (fa.pagina - 1) * ppA;
     const fatia = DB.avaliacoes.slice(ini, ini + ppA);
-    tbody.innerHTML = "";
+    const linhasA=[];
     fatia.forEach(a=>{
       const ctrLabel = a.contratoId ? `<br><small style="color:var(--text-muted)">${esc(a.contratoId)}</small>` : "";
-      tbody.innerHTML += `<tr>
+      linhasA.push(`<tr>
         <td style="white-space:nowrap">${formatarData(a.criadoEm)}</td>
         <td>${esc(a.avaliador)}</td>
         <td>${esc(a.avaliado)}${ctrLabel}</td>
@@ -3377,8 +3399,9 @@ function renderAvaliacoes(){
         <td><span class="status-badge ${a.prazo==="Totalmente"?"st-aprovado":a.prazo==="Não cumprido"?"st-reprovado":"st-aguar-gp"}">${esc(a.prazo||"-")}</span></td>
         <td>${nb(a.relacionamento)}</td>
         <td class="col-acoes"><div class="table-actions"><button class="btn-icon" title="Visualizar" onclick="verDetalhesAvaliacao('${a.id}')">${svgIcon("eye")}</button>${podeExcluir()?`<button class="btn-icon btn-icon-danger" title="Excluir" onclick="excluirAvaliacao('${a.id}')">${svgIcon("x")}</button>`:""}</div></td>
-      </tr>`;
+      </tr>`);
     });
+    tbody.innerHTML = linhasA.join("");
     empty.classList.toggle("visible", total===0);
     if (infoA) infoA.textContent = total ? `${ini+1}–${Math.min(ini+ppA,total)} de ${total}` : "0 registros";
     if (pgA)   pgA.textContent   = fa.pagina;
@@ -3395,16 +3418,17 @@ function renderAvaliacoes(){
   const fatiaS  = minhas.slice(iniS, iniS + ppA);
   const tbody2  = document.getElementById("tabelaAvalSolicitante");
   const empty2  = document.getElementById("emptyAvalSolicitante");
-  tbody2.innerHTML = "";
+  const linhasS=[];
   fatiaS.forEach(a=>{
     const ctr = a.contratoId ? `<span style="color:var(--blue-light)">${esc(a.contratoId)}</span>` : "—";
-    tbody2.innerHTML += `<tr>
+    linhasS.push(`<tr>
       <td style="white-space:nowrap">${formatarData(a.criadoEm)}</td>
       <td>${ctr}</td>
       <td>${esc(a.avaliado)}</td>
       <td><span class="status-badge st-aprovado">${svgIcon("check",12)} Avaliação enviada</span></td>
-    </tr>`;
+    </tr>`);
   });
+  tbody2.innerHTML = linhasS.join("");
   empty2.classList.toggle("visible", minhas.length===0);
   if (infoA) infoA.textContent = minhas.length ? `${iniS+1}–${Math.min(iniS+ppA,minhas.length)} de ${minhas.length}` : "0 registros";
   if (pgA)   pgA.textContent   = fa.pagina;

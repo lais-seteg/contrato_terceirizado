@@ -124,20 +124,6 @@ body{font-family:var(--font);background:var(--bg-primary);color:var(--text-prima
 ::-webkit-scrollbar-thumb:hover{background:var(--blue-light)}
 .hidden{display:none!important}
 
-/* ─── HEADER ─────────────────────────────────────── */
-.app-header{position:fixed;top:0;left:0;right:0;z-index:200;background:var(--bg-secondary);border-bottom:1px solid var(--border-color);box-shadow:0 2px 8px rgba(0,0,0,.3)}
-.header-top{display:flex;align-items:center;justify-content:space-between;padding:0 1.25rem;height:52px}
-.brand{display:flex;align-items:center;gap:.65rem}
-.logo img{height:32px;width:auto;object-fit:contain}
-.brand-text{display:flex;flex-direction:column;line-height:1.1}
-.brand-title{font-size:.95rem;font-weight:800;color:var(--text-primary)}
-.brand-sub{font-size:.65rem;color:var(--text-secondary);font-weight:500}
-.header-actions{display:flex;align-items:center;gap:.4rem}
-.perfil-btn{padding:.3rem .65rem;background:rgba(90,141,208,.1);color:var(--text-secondary);border:1px solid var(--border-light);border-radius:var(--radius-sm);font-weight:700;font-size:.72rem;cursor:pointer;transition:var(--transition);font-family:var(--font)}
-.perfil-btn:hover,.perfil-btn.active{background:var(--blue);color:#fff;border-color:var(--blue)}
-.perfil-badge{padding:.25rem .6rem;background:rgba(108,194,74,.12);color:var(--green);border:1px solid rgba(108,194,74,.35);border-radius:var(--radius-sm);font-weight:700;font-size:.72rem;cursor:default}
-
-/* ─── SIDEBAR ────────────────────────────────────── */
 /* ─── BARRA DE NAVEGAÇÃO (topo) ──────────────────────────────────────────
    Era uma sidebar lateral de 190px. Virou a barra azul-marinho de 80px do
    Controle de Folgas, mas os NOMES DAS CLASSES foram mantidos (.sidebar,
@@ -161,7 +147,6 @@ body{font-family:var(--font);background:var(--bg-primary);color:var(--text-prima
 .sidebar-btn.active{color:var(--text-on-navy);background:transparent;border-bottom-color:var(--orange);font-weight:700}
 .sidebar-btn svg{flex-shrink:0;opacity:.8}
 .sidebar-btn.active svg,.sidebar-btn:hover svg{opacity:1}
-.sidebar-divider{display:none}
 .nav-badge{display:inline-flex;align-items:center;justify-content:center;background:var(--red);color:#fff;border-radius:999px;font-size:.58rem;font-weight:800;min-width:17px;height:17px;padding:0 4px;margin-left:0}
 
 /* Bloco da direita: quem está logado, o toggle de tema e o botão de sair. */
