@@ -560,6 +560,7 @@ function registrarListeners() {
   document.getElementById("btnFecharContratoDoc").addEventListener("click", fecharModalContratoDoc);
   document.getElementById("btnFecharContratoDocOk").addEventListener("click", fecharModalContratoDoc);
   document.getElementById("btnRegerarContratoDoc").addEventListener("click", regenerarContratoDoc);
+  document.getElementById("btnAtualizarModeloContratos").addEventListener("click", atualizarContratosParaModeloAtual);
   document.getElementById("btnExportarContratoPDF").addEventListener("click", exportarContratoPDF);
   document.getElementById("prevAval").addEventListener("click", () => { STATE.filtros.avaliacoes.pagina--; renderAvaliacoes(); });
   document.getElementById("nextAval").addEventListener("click", () => { STATE.filtros.avaliacoes.pagina++; renderAvaliacoes(); });
@@ -3491,6 +3492,88 @@ function montarContratoPJHTML(item) {
 
     ${render(modelo.anexos)}
   `;
+}
+
+// ══════════════════════════════════════════════════════
+//  ATUALIZAR CONTRATOS JÁ GERADOS PARA O MODELO ATUAL
+// ══════════════════════════════════════════════════════
+
+// Só nestes status o documento ainda está em elaboração e pode ser trocado de
+// modelo. Depois que o líder aprova, o texto passa a ser o que foi aprovado e
+// assinado — reescrever isso apagaria a prova do que as Partes acertaram.
+const STATUS_DOC_EM_ELABORACAO = [
+  "Pendente", "Em Elaboração", "Aguardando Aprovação do Líder", "Pendente de Ajuste",
+  // Legado, mesma etapa do fluxo antigo
+  "Rascunho", "Em Fila", "Aguardando Gestão de Pessoas", "Em Análise DP/RH", "Aguardando Gestão"
+];
+
+// Contrato encerrado não tem documento a atualizar — regerar não serviria
+// para nada e ainda mexeria no histórico.
+const STATUS_ENCERRADOS = ["Reprovado", "Cancelado", "Encerrado"];
+
+// Em vez de remontar e paginar 50+ páginas por contrato aqui (a paginação mede
+// altura no navegador e precisaria do modal aberto para cada um), o documento
+// salvo é descartado. Na próxima vez que alguém abrir o contrato, ele é gerado
+// na hora, já no modelo atual e com os dados atuais.
+function classificarParaAtualizacao() {
+  const atualizaveis = [], jaNoModelo = [], protegidos = [], encerrados = [];
+  DB.contratos.forEach(c => {
+    if (!c.cContratoHtml) return;                       // nunca gerou: já vai sair no modelo atual
+    const salvoEhPJ = /cg-pagebreak/.test(c.cContratoHtml);
+    if (salvoEhPJ === contratoEhPJ(c)) { jaNoModelo.push(c); return; }
+    if (STATUS_DOC_EM_ELABORACAO.includes(c.status)) atualizaveis.push(c);
+    else if (STATUS_ENCERRADOS.includes(c.status)) encerrados.push(c);
+    else protegidos.push(c);
+  });
+  return { atualizaveis, jaNoModelo, protegidos, encerrados };
+}
+
+function atualizarContratosParaModeloAtual() {
+  if (!ehGestaoOuGP()) { mostrarToast("Apenas DP/RH e Gestão podem atualizar os documentos.", "err"); return; }
+
+  const { atualizaveis, jaNoModelo, protegidos, encerrados } = classificarParaAtualizacao();
+
+  if (!atualizaveis.length) {
+    const partes = [];
+    if (jaNoModelo.length) partes.push(jaNoModelo.length + " já no modelo atual");
+    if (protegidos.length) partes.push(protegidos.length + " preservado(s) por já estar(em) aprovado/assinado");
+    if (encerrados.length) partes.push(encerrados.length + " encerrado(s)");
+    mostrarToast("Nenhum documento a atualizar" + (partes.length ? " — " + partes.join(", ") + "." : "."), "ok");
+    return;
+  }
+
+  const resumo = [
+    `${atualizaveis.length} documento(s) serão descartados e gerados de novo no modelo atual, com os dados atuais do contrato.`,
+    "",
+    "Isso descarta as edições feitas manualmente nesses documentos.",
+    protegidos.length ? `\n${protegidos.length} contrato(s) NÃO serão tocados por já estarem aprovados ou assinados — o documento salvo é o texto que as Partes acertaram.` : "",
+    jaNoModelo.length ? `\n${jaNoModelo.length} já está(ão) no modelo atual.` : "",
+    encerrados.length ? `\n${encerrados.length} encerrado(s) (reprovado/cancelado) também ficam de fora.` : "",
+    "",
+    "Continuar?"
+  ].filter(Boolean).join("\n");
+  if (!confirm(resumo)) return;
+
+  const agora = new Date().toISOString();
+  atualizaveis.forEach(c => {
+    const idx = DB.contratos.findIndex(x => x.id === c.id);
+    if (idx < 0) return;
+    DB.contratos[idx].cContratoHtml = "";
+    DB.contratos[idx].cContratoGeradoEm = "";
+    DB.contratos[idx].historico = [...(DB.contratos[idx].historico || []), {
+      data: agora, usuario: STATE.nomeUsuario, perfil: STATE.perfil, status: DB.contratos[idx].status,
+      obs: "Documento descartado para ser gerado novamente no modelo atual do contrato."
+    }];
+    DB.contratos[idx].atualizadoEm = agora;
+    DB.contratos[idx].atualizadoPor = STATE.nomeUsuario;
+    registrarAuditoria("Documento marcado para regeração", "Contratos", c.id, "", "",
+      "Documento antigo descartado; será gerado no modelo atual ao ser aberto.");
+    syncContrato(DB.contratos[idx]);
+  });
+
+  renderContratos();
+  mostrarToast(`${atualizaveis.length} documento(s) serão gerados no modelo atual ao abrir o contrato.` +
+    (protegidos.length ? ` ${protegidos.length} preservado(s) por já estar(em) assinado(s).` : ""), "ok");
 }
 
 // ══════════════════════════════════════════════════════
