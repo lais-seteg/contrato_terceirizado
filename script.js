@@ -117,8 +117,8 @@ const STATUS_CLASS = {
 const CAMPOS_CONTRATO = [
   "cId","cStatus","cRazaoSocial","cNomeFantasia","cCnpjEmpresa","cRespEmpresa",
   "cEmailEmpresa","cTelEmpresa","cEndEmpresa","cNumeroContrato","cEmpresaContratante",
-  "cTipoContratacao","cTipoOutro","cDataInicio","cDataFim","cCentroCusto","cProjeto",
-  "cUnidade","cValorMensal","cValorTotal","cObjeto","cObjetoOutro","cArt",
+  "cTipoContratacao","cTipoOutro","cModeloContrato","cDataInicio","cDataFim","cCentroCusto","cProjeto",
+  "cUnidade","cValorMensal","cParcelas","cValorTotal","cObjeto","cObjetoOutro","cArt",
   "cCargo","cCargoOutro","cSetor",
   "cObjetivoContrato","cObjetivoContratoOutro","cNaturezaContrato","cNaturezaContratoOutro",
   "cDocIdentidade","cDocComprovanteResidencia","cDocCnpj","cDocCurriculo",
@@ -127,6 +127,11 @@ const CAMPOS_CONTRATO = [
   "cTercEstadoCivil","cTercGraduacao","cTercNivelFormacao","cTercAreaExpertise","cTercRegistro",
   "cTercCrbio2","cTercCtf","cTercLattes","cTercCnh","cTercCursosExtras",
   "cTercComprovante","cTercCnpj","cTercEmissao","cTercFormaPgto","cTercParcelas","cDadosPagamento",
+  // Pessoa jurídica e dados bancários separados — alimentam o modelo CNPJ do
+  // contrato (qualificação da CONTRATADA, sede, representante legal e o bloco
+  // Nome/Banco/Ag/CC/Pix da cláusula de pagamento).
+  "cTercRazaoSocial","cTercRepLegal","cTercEnderecoSede",
+  "cTercTitularConta","cTercBanco","cTercAgencia","cTercConta","cTercPix",
   "cTercDisponibilidade","cTercEmerg1Nome","cTercEmerg1Tel","cTercEmerg2Nome","cTercEmerg2Tel",
   "cTercProjetosSeteg",
   "cRespNome","cRespSetor","cRespCargo","cRespEmail","cRespDiretoria",
@@ -138,6 +143,8 @@ const CAMPOS_TERC = [
   "tCidade","tEndereco","tGraduacao","tNivelFormacao","tAreaExpertise","tCursosExtras",
   "tLattes","tRegistro","tCrbio2","tCtf","tCnh","tExpDirecao","tPossuiCnpj","tCnpj",
   "tComprovante","tEmissao","tFormaPgto","tParcelas","tDadosBancarios","tEmerg1Nome","tEmerg1Tel",
+  "tRazaoSocial","tRepLegal","tEnderecoSede",
+  "tTitularConta","tBanco","tAgencia","tConta","tPix",
   "tEmerg2Nome","tEmerg2Tel","tProjetosSeteg","tDisponibilidade","tOutrasInfo"
 ];
 const TERC_LABELS = {
@@ -150,6 +157,8 @@ const TERC_LABELS = {
   tCnpj:"CNPJ",tComprovante:"Comprovante",tEmissao:"Emissão",tFormaPgto:"Forma Pgto",
   tParcelas:"Parcelas",
   tDadosBancarios:"Dados Bancários",tDisponibilidade:"Disponibilidade",
+  tRazaoSocial:"Razão Social",tRepLegal:"Representante Legal",tEnderecoSede:"Endereço da Sede",
+  tTitularConta:"Titular da Conta",tBanco:"Banco",tAgencia:"Agência",tConta:"Conta",tPix:"Chave Pix",
   tEmerg1Nome:"Emerg 1 Nome",tEmerg1Tel:"Emerg 1 Tel",
   tEmerg2Nome:"Emerg 2 Nome",tEmerg2Tel:"Emerg 2 Tel",
   tProjetosSeteg:"Projetos Seteg",tOutrasInfo:"Outras Informações"
@@ -510,9 +519,10 @@ function registrarListeners() {
   document.getElementById("btnFecharTerc").addEventListener("click", fecharFormTerc);
   document.getElementById("btnSalvarTerc").addEventListener("click", salvarTerceirizado);
   document.getElementById("btnLimparTerc").addEventListener("click", limparFormTerc);
-  document.getElementById("tPossuiCnpj").addEventListener("change", () => toggleCondicional("tPossuiCnpj","Sim","grpCnpjTerc"));
+  document.getElementById("tPossuiCnpj").addEventListener("change", toggleCamposCnpjTerc);
   document.getElementById("tFormaPgto").addEventListener("change", () => toggleCondicional("tFormaPgto","Parcelado","grpParcelasTerc"));
   document.getElementById("tCpf").addEventListener("input", () => mascaraCpfId("tCpf"));
+  document.getElementById("tCnpj").addEventListener("input", () => mascaraCnpjId("tCnpj"));
   document.getElementById("tTelefone").addEventListener("input", () => mascaraTelId("tTelefone"));
   document.getElementById("filtroTipoT").addEventListener("change", () => { STATE.filtros.terceirizados.tipo=document.getElementById("filtroTipoT").value; STATE.filtros.terceirizados.pagina=1; renderTerceirizados(); });
   document.getElementById("buscaT").addEventListener("input", () => { STATE.filtros.terceirizados.busca=document.getElementById("buscaT").value.toLowerCase(); STATE.filtros.terceirizados.pagina=1; renderTerceirizados(); });
@@ -1047,6 +1057,17 @@ function sincronizarDadosTerceirizado() {
   set("cTercRg", t.tRg);
   set("cTercEstadoCivil", t.tEstadoCivil);
   set("cTercEndereco", t.tEndereco);
+  // Pessoa jurídica e dados bancários separados — é o que decide se o
+  // contrato gerado sai no modelo CNPJ ou no de pessoa física.
+  set("cTercCnpj", t.tCnpj);
+  set("cTercRazaoSocial", t.tRazaoSocial);
+  set("cTercRepLegal", t.tRepLegal);
+  set("cTercEnderecoSede", t.tEnderecoSede);
+  set("cTercTitularConta", t.tTitularConta);
+  set("cTercBanco", t.tBanco);
+  set("cTercAgencia", t.tAgencia);
+  set("cTercConta", t.tConta);
+  set("cTercPix", t.tPix);
 
   // Campos específicos do formulário do tipo selecionado — reaproveita os
   // preencherCampos* usados na edição de contrato para puxar TUDO que já
@@ -1334,6 +1355,9 @@ function validarContrato(item, dataSolicitacao) {
   if (!item.cTipoContratacao)     return "Tipo de contratação não selecionado.";
   if (!item.cNumeroContrato)      return "Número do contrato não foi gerado — abra novamente o formulário.";
   if (!item.cProjeto)             return "Informe o projeto/local.";
+  // Só exigido em solicitação nova: contratos antigos (anteriores ao campo)
+  // continuam editáveis pelo DP sem precisar reconstruir o valor mensal.
+  if (!item.cId && !(parseInt(item.cParcelas, 10) > 0)) return "Informe o número de parcelas (use 1 para pagamento único).";
   if (!item.cValorTotal)          return "Informe o valor total do contrato.";
   if (!item.cDataInicio)          return "Informe o início da vigência.";
   if (!item.cDataFim)             return "Informe o término da vigência.";
@@ -1380,6 +1404,9 @@ function editarContrato(id) {
   document.getElementById("cDataInicio").value = dataISOparaBR(item.cDataInicio);
   document.getElementById("cDataFim").value    = dataISOparaBR(item.cDataFim);
   atualizarSecaoTerceirizado();
+  // Valor da parcela é derivado: recalcula a partir do total e das parcelas
+  // salvas, em vez de confiar no que ficou gravado no campo.
+  recalcularValorParcela();
   preencherCamposContrato(item);
   if (item.cTercCpf) buscarTerceirizadoPorCpf();
   entregas = (item.entregas||[]).map(e => ({...e, salvo:true}));
@@ -2537,8 +2564,8 @@ function gerarPrintArea(item) {
       <div class="ptitle">Formulário de Contratação de Terceirizado / Prestador de Serviço</div>
       <div class="psub">Seteg – Soluções Ambientais &nbsp;|&nbsp; Nº: ${item.id||"Novo"} &nbsp;|&nbsp; ${new Date().toLocaleDateString("pt-BR")}</div>
       <div class="ps"><div class="psh">A · Empresa Contratada</div><div class="pg">
-        <div class="pf"><div class="pfl">Razão Social</div><div class="pfv">${esc(item.cRazaoSocial||"-")}</div></div>
-        <div class="pf"><div class="pfl">CNPJ</div><div class="pfv">${esc(item.cCnpjEmpresa||"-")}</div></div>
+        <div class="pf"><div class="pfl">Razão Social</div><div class="pfv">${esc(item.cTercRazaoSocial||item.cRazaoSocial||"-")}</div></div>
+        <div class="pf"><div class="pfl">CNPJ</div><div class="pfv">${esc(item.cTercCnpj||item.cCnpjEmpresa||"-")}</div></div>
         <div class="pf"><div class="pfl">Empresa Contratante</div><div class="pfv">${esc(item.cEmpresaContratante||"-")}</div></div>
         <div class="pf"><div class="pfl">Tipo</div><div class="pfv">${esc(item.cTipoContratacao||"-")}</div></div>
       </div></div>
@@ -2546,6 +2573,8 @@ function gerarPrintArea(item) {
         <div class="pf"><div class="pfl">Nº do Contrato</div><div class="pfv">${esc(item.cNumeroContrato||"-")}</div></div>
         <div class="pf"><div class="pfl">Início</div><div class="pfv">${formatarData(item.cDataInicio)}</div></div>
         <div class="pf"><div class="pfl">Término</div><div class="pfv">${formatarData(item.cDataFim)}</div></div>
+        <div class="pf"><div class="pfl">Valor da Parcela</div><div class="pfv">${item.cValorMensal?formatarMoeda(item.cValorMensal):"-"}</div></div>
+        <div class="pf"><div class="pfl">Nº de Parcelas</div><div class="pfv">${esc(item.cParcelas||"-")}</div></div>
         <div class="pf"><div class="pfl">Valor Total</div><div class="pfv">${item.cValorTotal?formatarMoeda(item.cValorTotal):"-"}</div></div>
         <div class="pf pfw"><div class="pfl">Escopo do Contrato</div><div class="pfv">${esc(item.cObjeto||"-")}</div></div>
       </div></div>
@@ -2594,7 +2623,23 @@ function cgFill(valor, placeholder) {
   return v ? esc(v) : `<span class="cg-yellow">[${esc(placeholder || "completar")}]</span>`;
 }
 
-function abrirGerarContrato(id) {
+// Um documento já gerado é reaberto do jeito que foi salvo, para não perder as
+// edições manuais do DP — mas isso esconde a troca de modelo: quem gerou no
+// modelo de pessoa física e depois marcou CNPJ continuava vendo o antigo, sem
+// nenhuma pista de que bastava regerar. O aviso abaixo torna isso explícito.
+// O modelo do documento salvo é reconhecido pela quebra de página dos anexos,
+// que só existe no modelo CNPJ — evita ter de gravar mais uma coluna.
+function avisarModeloDesatualizado(item) {
+  const aviso = document.getElementById("contratoDocAvisoModelo");
+  if (!aviso) return;
+  const salvoEhPJ  = /cg-pagebreak/.test(item.cContratoHtml || "");
+  const atualEhPJ  = contratoEhPJ(item);
+  if (salvoEhPJ === atualEhPJ) { aviso.classList.add("hidden"); return; }
+  aviso.classList.remove("hidden");
+  aviso.innerHTML = `${svgIcon("alertTriangle", 15)} Este documento foi gerado no <strong>${salvoEhPJ ? "modelo padrão, com os anexos" : "modelo anterior, sem anexos"}</strong>, mas os dados atuais do contrato indicam o <strong>${atualEhPJ ? "modelo padrão, com os anexos" : "modelo anterior, sem anexos"}</strong>. Use <strong>Regerar</strong> para montar o documento no modelo certo (as edições manuais feitas neste texto serão descartadas).`;
+}
+
+async function abrirGerarContrato(id) {
   const item = DB.contratos.find(c => c.id === id);
   if (!item) return;
   if (STATE.perfil==="solicitante" && !documentoVisivelParaLider(item)) { mostrarToast("Este contrato ainda está em elaboração pelo DP.","err"); return; }
@@ -2602,15 +2647,17 @@ function abrirGerarContrato(id) {
   abrirModal("modalContratoDoc");
   const jaGerado = !!item.cContratoHtml;
   document.getElementById("modalContratoDocTitulo").innerHTML = jaGerado
-    ? `${svgIcon("fileText",18)} Contrato de Prestação de Serviços · gerado em ` + formatarDataHora(item.cContratoGeradoEm)
-    : `${svgIcon("fileText",18)} Contrato de Prestação de Serviços`;
+    ? `${svgIcon("fileText",18)} Contrato de Prestação de Serviços · ${/cg-pagebreak/.test(item.cContratoHtml) ? "modelo padrão (com anexos)" : "modelo anterior (sem anexos)"} · gerado em ` + formatarDataHora(item.cContratoGeradoEm)
+    : `${svgIcon("fileText",18)} Contrato de Prestação de Serviços · ${rotuloModeloContrato(item)}`;
   document.getElementById("contratoDocHint").style.display = jaGerado ? "none" : "";
   if (jaGerado) {
     // Reabre a versão já salva (preserva edições manuais) em vez de regenerar do zero.
     document.getElementById("contratoDocArea").innerHTML = item.cContratoHtml;
+    avisarModeloDesatualizado(item);
   } else {
+    document.getElementById("contratoDocAvisoModelo")?.classList.add("hidden");
     // Paginação depende de medir altura real — só funciona com o modal já visível.
-    paginarContrato(document.getElementById("contratoDocArea"), montarContratoHTML(item));
+    await gerarDocumentoContrato(document.getElementById("contratoDocArea"), item);
   }
   const btnEncaminhar = document.getElementById("btnEncaminharLider");
   if (btnEncaminhar) btnEncaminhar.classList.toggle("hidden", !(ehGestaoOuGP() && item.status === "Em Elaboração"));
@@ -2690,14 +2737,33 @@ function contratoAssinado() {
   mostrarToast("Contrato assinado e finalizado!", "ok");
 }
 
-function regenerarContratoDoc() {
+async function regenerarContratoDoc() {
   const id = document.getElementById("modalContratoDoc").dataset.currentId;
   const item = DB.contratos.find(c => c.id === id);
   if (!item) return;
   if (item.cContratoHtml && !confirm("Isso descarta as edições feitas no documento salvo e gera um novo a partir dos dados atuais do contrato. Deseja continuar?")) return;
   document.getElementById("contratoDocHint").style.display = "";
-  document.getElementById("modalContratoDocTitulo").innerHTML = `${svgIcon("fileText",18)} Contrato de Prestação de Serviços`;
-  paginarContrato(document.getElementById("contratoDocArea"), montarContratoHTML(item));
+  document.getElementById("contratoDocAvisoModelo")?.classList.add("hidden");
+  document.getElementById("modalContratoDocTitulo").innerHTML = `${svgIcon("fileText",18)} Contrato de Prestação de Serviços · ${rotuloModeloContrato(item)}`;
+  await gerarDocumentoContrato(document.getElementById("contratoDocArea"), item);
+}
+
+// Monta e pagina o documento. Quando o contrato é com CNPJ/MEI o texto do
+// modelo mora em contrato_pj.js e é baixado agora — por isso assíncrona.
+async function gerarDocumentoContrato(container, item) {
+  if (contratoEhPJ(item)) {
+    if (!await garantirContratoPJ()) {
+      mostrarToast("Não foi possível carregar o modelo CNPJ do contrato. Verifique sua conexão.", "err");
+      return;
+    }
+    // Com os 4 anexos o documento passa de 90 páginas e a paginação mede
+    // a altura bloco a bloco — avisa que está trabalhando.
+    mostrarToast("Montando o contrato no modelo CNPJ, com os Anexos I a IV…", "ok");
+    // Devolve o turno ao navegador para o aviso aparecer antes da paginação,
+    // que é síncrona e trava a tela por alguns segundos.
+    await new Promise(r => setTimeout(r, 0));
+  }
+  paginarContrato(container, montarContratoHTML(item));
 }
 
 function salvarContratoDoc(sufixo) {
@@ -2810,11 +2876,15 @@ function paginarContrato(container, rawHtml) {
   };
 
   blocos.forEach(bloco => {
-    if (bloco.tagName === "OL" && bloco.classList.contains("cg-lista")) {
+    // Cada anexo começa em página nova, como no documento em Word.
+    if (bloco.classList.contains("cg-pagebreak") && conteudo.childNodes.length) {
+      conteudo = novaPaginaContrato(container);
+    }
+    if ((bloco.tagName === "OL" || bloco.tagName === "UL") && bloco.classList.contains("cg-lista")) {
       const itens = Array.from(bloco.children);
       let total = 0;
-      let ol = document.createElement("ol");
-      ol.className = "cg-lista";
+      let ol = document.createElement(bloco.tagName);
+      ol.className = bloco.className;
       conteudo.appendChild(ol);
       itens.forEach(li => {
         ol.appendChild(li);
@@ -2823,9 +2893,10 @@ function paginarContrato(container, rawHtml) {
           ol.removeChild(li);
           total--;
           conteudo = novaPaginaContrato(container);
-          ol = document.createElement("ol");
-          ol.className = "cg-lista";
-          ol.style.counterReset = "cg-item " + total;
+          ol = document.createElement(bloco.tagName);
+          ol.className = bloco.className;
+          // Só a lista de alíneas usa contador CSS; a de marcadores não.
+          if (bloco.tagName === "OL") ol.style.counterReset = "cg-item " + total;
           conteudo.appendChild(ol);
           ol.appendChild(li);
           total++;
@@ -2837,26 +2908,67 @@ function paginarContrato(container, rawHtml) {
   });
 }
 
-function montarContratoHTML(item) {
-  // Preenche automaticamente com os dados que o próprio terceirizado já
-  // informou no cadastro (RG, estado civil, endereço, dados bancários, forma
-  // de pagamento...) — sem depender do DP clicar em "Sincronizar" antes de
-  // gerar o documento. Não sobrescreve valor já presente no contrato (ex.:
-  // se o DP já editou manualmente), só preenche o que ainda está vazio.
+// Preenche automaticamente com os dados que o próprio terceirizado já informou
+// no cadastro (RG, estado civil, endereço, CNPJ, razão social, dados
+// bancários, forma de pagamento...) — sem depender do DP clicar em
+// "Sincronizar" antes de gerar o documento. Não sobrescreve valor já presente
+// no contrato (ex.: se o DP já editou manualmente), só preenche o que ainda
+// está vazio.
+function completarDadosTerceirizado(item) {
   const terc = item.cTerceirizadoId ? DB.terceirizados.find(t => t.tId === item.cTerceirizadoId) : null;
-  if (terc) {
-    item = {
-      ...item,
-      cTercRg:            item.cTercRg         || terc.tRg,
-      cTercEstadoCivil:    item.cTercEstadoCivil || terc.tEstadoCivil,
-      cTercEndereco:       item.cTercEndereco     || terc.tEndereco,
-      cTercMunicipio:      item.cTercMunicipio    || [terc.tCidade, terc.tEstado].filter(Boolean).join(" - "),
-      cTercFuncao:         item.cTercFuncao       || terc.tGraduacao,
-      cDadosPagamento:     item.cDadosPagamento   || terc.tDadosBancarios,
-      cTercFormaPgto:      item.cTercFormaPgto    || terc.tFormaPgto,
-      cTercParcelas:       item.cTercParcelas     || terc.tParcelas,
-    };
-  }
+  if (!terc) return item;
+  return {
+    ...item,
+    cTercRg:             item.cTercRg            || terc.tRg,
+    cTercEstadoCivil:    item.cTercEstadoCivil   || terc.tEstadoCivil,
+    cTercEndereco:       item.cTercEndereco      || terc.tEndereco,
+    cTercMunicipio:      item.cTercMunicipio     || [terc.tCidade, terc.tEstado].filter(Boolean).join(" - "),
+    cTercFuncao:         item.cTercFuncao        || terc.tGraduacao,
+    cTercAreaExpertise:  item.cTercAreaExpertise || terc.tAreaExpertise,
+    cDadosPagamento:     item.cDadosPagamento    || terc.tDadosBancarios,
+    cTercFormaPgto:      item.cTercFormaPgto     || terc.tFormaPgto,
+    cTercParcelas:       item.cTercParcelas      || terc.tParcelas,
+    cTercComprovante:    item.cTercComprovante   || terc.tComprovante,
+    cTercCnpj:           item.cTercCnpj          || terc.tCnpj,
+    cTercRazaoSocial:    item.cTercRazaoSocial   || terc.tRazaoSocial,
+    cTercRepLegal:       item.cTercRepLegal      || terc.tRepLegal,
+    cTercEnderecoSede:   item.cTercEnderecoSede  || terc.tEnderecoSede,
+    cTercTitularConta:   item.cTercTitularConta  || terc.tTitularConta,
+    cTercBanco:          item.cTercBanco         || terc.tBanco,
+    cTercAgencia:        item.cTercAgencia       || terc.tAgencia,
+    cTercConta:          item.cTercConta         || terc.tConta,
+    cTercPix:            item.cTercPix           || terc.tPix,
+  };
+}
+
+// Qual dos dois modelos de contrato usar.
+//
+// Decisão da Seteg: o modelo transcrito de
+// doc/MODELO_CONTRATO_PRESTACAO_SERVICOS_CNPJ_SETEG.docx é o contrato padrão
+// de TODO terceirizado, pessoa física ou jurídica. Não há mais inferência
+// pelo cadastro — o modelo anterior (pessoa física) só sai quando o DP
+// escolhe "PF" no campo "Modelo do contrato a gerar", e fica disponível
+// sobretudo para regerar contratos antigos com o texto com que foram assinados.
+//
+// Atenção: no modelo padrão a CONTRATADA é qualificada como pessoa jurídica
+// ("devidamente inscrita no CNPJ sob o nº..."). Gerado para pessoa física, o
+// documento sai com razão social, CNPJ e sede em amarelo e essa qualificação
+// precisa ser ajustada à mão pelo DP no próprio documento.
+function contratoEhPJ(item) {
+  return item.cModeloContrato !== "PF";
+}
+
+// Deixa visível no modal qual dos dois modelos saiu — antes só se descobria
+// lendo o documento inteiro.
+function rotuloModeloContrato(item) {
+  return contratoEhPJ(item) ? "modelo padrão (CNPJ)" : "modelo anterior (pessoa física)";
+}
+function montarContratoHTML(item) {
+  const dados = completarDadosTerceirizado(item);
+  return contratoEhPJ(dados) ? montarContratoPJHTML(dados) : montarContratoPFHTML(dados);
+}
+
+function montarContratoPFHTML(item) {
   const nomeContratada     = cgFill(item.cTercNome, "nome completo");
   const estadoCivil        = cgFill(item.cTercEstadoCivil, "estado civil");
   const profissao          = cgFill(item.cTercFuncao, "profissão / função");
@@ -2879,20 +2991,37 @@ function montarContratoHTML(item) {
   const dataAssinaturaExt  = formatarDataExtenso(new Date().toISOString().slice(0, 10));
 
   const formaPgto = item.cTercFormaPgto || "";
-  let textoParcelamento, textoMeioPagamento;
-  if (formaPgto === "Parcelado") {
-    const nParcelas = item.cTercParcelas ? esc(item.cTercParcelas) : `<span class="cg-yellow">[nº de parcelas]</span>`;
-    textoParcelamento  = `Pela execução dos serviços objeto deste contrato, a CONTRATANTE pagará ao(à) CONTRATADO (A) o valor total de ${valorTotal}, em ${nParcelas} parcelas, com vencimentos a serem definidos entre as Partes, mediante validação da entrega e cumprimento das obrigações pactuadas.`;
+  // Nº de parcelas: informado pelo líder na solicitação (cParcelas). Contratos
+  // antigos não têm esse campo — caem no que o cadastro do terceirizado
+  // registrava (cTercParcelas, válido só quando a forma era "Parcelado").
+  const nParcelas   = parseInt(item.cParcelas || item.cTercParcelas || "", 10);
+  const parcelado   = nParcelas > 1;
+  const totalNum    = numeroBRparaFloat(item.cValorTotal);
+  // Valor de cada parcela: o informado pelo líder ou, na falta dele, o total
+  // dividido pelas parcelas — nunca deixa a cláusula sem o valor da parcela.
+  const parcelaNum  = numeroBRparaFloat(item.cValorMensal)
+    || (parcelado && totalNum ? totalNum / nParcelas : 0);
+  const valorParcela = parcelaNum
+    ? esc(parcelaNum.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }))
+    : "";
+
+  let textoParcelamento;
+  if (parcelado) {
+    textoParcelamento = `Pela execução dos serviços objeto deste contrato, a CONTRATANTE pagará ao(à) CONTRATADO (A) o valor total de ${valorTotal}, em ${nParcelas} (${esc(extensoFeminino(numeroParaExtenso(nParcelas)))}) parcelas mensais${valorParcela ? ` de ${valorParcela}` : ""}, com vencimentos a serem definidos entre as Partes, mediante validação da entrega e cumprimento das obrigações pactuadas.`;
+  } else {
+    textoParcelamento = `Pela execução dos serviços objeto deste contrato, a CONTRATANTE pagará ao(à) CONTRATADO (A) o valor total de ${valorTotal}. O pagamento será realizado em parcela única, após a conclusão das atividades previstas no contrato, mediante validação da entrega e cumprimento das obrigações pactuadas.`;
+  }
+
+  // A forma de pagamento diz só COMO se paga; quantas vezes é o campo acima.
+  let textoMeioPagamento;
+  if (formaPgto === "Pix") {
+    textoMeioPagamento = `Os pagamentos mencionados deverão ser realizados via Pix, na chave de titularidade da CONTRATADA a seguir indicada:`;
+  } else if (formaPgto === "Boleto") {
+    textoMeioPagamento = `Os pagamentos mencionados deverão ser realizados mediante boleto bancário emitido em nome da CONTRATADA, conforme dados a seguir indicados:`;
+  } else if (formaPgto === "Parcelado") {
     textoMeioPagamento = `Os pagamentos mencionados deverão ser realizados mediante depósito ou transferência bancária em conta de titularidade da CONTRATADA, a seguir indicada:`;
   } else {
-    textoParcelamento  = `Pela execução dos serviços objeto deste contrato, a CONTRATANTE pagará ao(à) CONTRATADO (A) o valor total de ${valorTotal}. O pagamento será realizado em parcela única, após a conclusão das atividades previstas no contrato, mediante validação da entrega e cumprimento das obrigações pactuadas.`;
-    if (formaPgto === "Pix") {
-      textoMeioPagamento = `Os pagamentos mencionados deverão ser realizados via Pix, na chave de titularidade da CONTRATADA a seguir indicada:`;
-    } else if (formaPgto === "Boleto") {
-      textoMeioPagamento = `Os pagamentos mencionados deverão ser realizados mediante boleto bancário emitido em nome da CONTRATADA, conforme dados a seguir indicados:`;
-    } else {
-      textoMeioPagamento = `Os pagamentos mencionados deverão ser realizados por transferência bancária em conta de titularidade da CONTRATADA, a seguir indicada:`;
-    }
+    textoMeioPagamento = `Os pagamentos mencionados deverão ser realizados por transferência bancária em conta de titularidade da CONTRATADA, a seguir indicada:`;
   }
 
   const clausula = (n, texto) => `<p class="cg-p"><strong>Cláusula ${n}ª.</strong> ${texto}</p>`;
@@ -3057,6 +3186,314 @@ function montarContratoHTML(item) {
 }
 
 // ══════════════════════════════════════════════════════
+//  MODELO CNPJ (PESSOA JURÍDICA) DO CONTRATO
+// ══════════════════════════════════════════════════════
+
+// O texto do modelo CNPJ (48 cláusulas + 4 anexos, ~130 KB) mora em
+// contrato_pj.js e só é baixado quando alguém gera esse contrato — mesmo
+// critério do jsPDF: quem só faz contrato de pessoa física não paga por ele.
+let _contratoPJPromise = null;
+function garantirContratoPJ() {
+  if (window.CONTRATO_PJ) return Promise.resolve(true);
+  if (!_contratoPJPromise) {
+    _contratoPJPromise = new Promise(resolve => {
+      const s = document.createElement("script");
+      s.src = "contrato_pj.js";
+      s.onload  = () => resolve(!!window.CONTRATO_PJ);
+      s.onerror = () => { _contratoPJPromise = null; resolve(false); };  // deixa tentar de novo
+      document.head.appendChild(s);
+    });
+  }
+  return _contratoPJPromise;
+}
+
+const NUM_UNIDADES = ["","um","dois","três","quatro","cinco","seis","sete","oito","nove","dez",
+  "onze","doze","treze","quatorze","quinze","dezesseis","dezessete","dezoito","dezenove"];
+const NUM_DEZENAS  = ["","","vinte","trinta","quarenta","cinquenta","sessenta","setenta","oitenta","noventa"];
+const NUM_CENTENAS = ["","cento","duzentos","trezentos","quatrocentos","quinhentos","seiscentos",
+  "setecentos","oitocentos","novecentos"];
+
+function _extensoAte999(n) {
+  if (n === 100) return "cem";
+  const partes = [];
+  const c = Math.floor(n / 100), r = n % 100;
+  if (c) partes.push(NUM_CENTENAS[c]);
+  if (r < 20) { if (r) partes.push(NUM_UNIDADES[r]); }
+  else {
+    const d = Math.floor(r / 10), u = r % 10;
+    partes.push(u ? NUM_DEZENAS[d] + " e " + NUM_UNIDADES[u] : NUM_DEZENAS[d]);
+  }
+  return partes.join(" e ");
+}
+
+// O modelo pede prazo e valores por extenso ("[PRAZO POR EXTENSO]",
+// "[VALOR GLOBAL POR EXTENSO]") — sem isso o contrato sai com lacuna.
+function numeroParaExtenso(valor) {
+  const n = Math.floor(Math.abs(Number(valor) || 0));
+  if (n === 0) return "zero";
+  const partes = [];
+  let resto = n;
+  const escalas = [[1e9,"bilhão","bilhões"],[1e6,"milhão","milhões"],[1e3,"mil","mil"]];
+  escalas.forEach(([unidade, singular, plural]) => {
+    const q = Math.floor(resto / unidade);
+    if (!q) return;
+    partes.push(unidade === 1e3
+      ? (q === 1 ? "mil" : _extensoAte999(q) + " mil")
+      : _extensoAte999(q) + " " + (q === 1 ? singular : plural));
+    resto = resto % unidade;
+  });
+  if (resto) partes.push(_extensoAte999(resto));
+  if (partes.length === 1) return partes[0];
+  const ultimo = partes.pop();
+  // Regra usual do português: "e" antes do último grupo quando ele é menor que
+  // cem ou centena redonda ("mil e duzentos"); vírgula nos outros casos.
+  const conector = (resto && (resto < 100 || resto % 100 === 0)) ? " e " : ", ";
+  return partes.join(", ") + conector + ultimo;
+}
+
+// "2 (duas) parcelas", não "2 (dois) parcelas" — o extenso sai no masculino e
+// aqui ele concorda com um substantivo feminino.
+function extensoFeminino(texto) {
+  return String(texto)
+    .replace(/\bum\b/g, "uma")
+    .replace(/\bdois\b/g, "duas")
+    .replace(/\b(duzent|trezent|quatrocent|quinhent|seiscent|setecent|oitocent|novecent)os\b/g, "$1as");
+}
+
+function numeroBRparaFloat(valor) {
+  return parseFloat(String(valor || "0").replace(/\./g, "").replace(",", ".")) || 0;
+}
+
+// Só o número, sem "R$" — o texto do modelo já traz o símbolo antes do campo.
+function formatarNumeroBR(valor) {
+  return numeroBRparaFloat(valor).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function valorParaExtenso(valor) {
+  const centavosTotais = Math.round(numeroBRparaFloat(valor) * 100);
+  const reais = Math.floor(centavosTotais / 100), centavos = centavosTotais % 100;
+  const partes = [];
+  if (reais)    partes.push(numeroParaExtenso(reais)    + (reais === 1 ? " real" : " reais"));
+  if (centavos) partes.push(numeroParaExtenso(centavos) + (centavos === 1 ? " centavo" : " centavos"));
+  return partes.length ? partes.join(" e ") : "zero real";
+}
+
+// Meses de vigência: quantos meses inteiros cabem entre início e término,
+// tratando o término como dia incluído (01/03 a 31/05 são 3 meses, não 2).
+function calcularPrazoMeses(inicio, fim) {
+  if (!inicio || !fim) return null;
+  const di = new Date(inicio + "T00:00:00"), df = new Date(fim + "T00:00:00");
+  if (isNaN(di) || isNaN(df) || df < di) return null;
+  const limite = new Date(df);
+  limite.setDate(limite.getDate() + 1);
+  let meses = 0;
+  while (true) {
+    const proximo = new Date(di);
+    proximo.setMonth(proximo.getMonth() + meses + 1);
+    if (proximo > limite) break;
+    meses++;
+  }
+  return meses > 0 ? meses : 1;
+}
+
+// Valor da parcela = valor total ÷ nº de parcelas. O líder informa o total e
+// em quantas vezes; o valor de cada parcela é consequência, então o campo é
+// somente leitura — evita os três números na tela não fecharem entre si.
+function recalcularValorParcela() {
+  const elTotal  = document.getElementById("cValorTotal");
+  const elParc   = document.getElementById("cParcelas");
+  const elMensal = document.getElementById("cValorMensal");
+  if (!elTotal || !elMensal) return;
+
+  const total    = numeroBRparaFloat(elTotal.value);
+  const parcelas = parseInt(elParc ? elParc.value : "", 10);
+  const hint     = document.getElementById("hintValorParcela");
+
+  if (!total || !(parcelas > 0)) {
+    elMensal.value = "";
+    if (hint) hint.textContent = "Calculado automaticamente: valor total ÷ nº de parcelas.";
+    return;
+  }
+
+  const parcela = Math.round((total / parcelas) * 100) / 100;
+  elMensal.value = parcela.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  if (hint) {
+    const exata = Math.abs(parcela * parcelas - total) < 0.005;
+    hint.textContent = exata
+      ? "Calculado: valor total ÷ " + parcelas + (parcelas === 1 ? " parcela." : " parcelas.")
+      : "Calculado: valor total ÷ " + parcelas + " parcelas. A divisão não é exata — o arredondamento não fecha o total exato.";
+  }
+}
+
+// Os campos de pessoa jurídica do cadastro de terceirizados são vários e
+// aparecem/desaparecem juntos — daí a classe em vez de um id só.
+function toggleCamposCnpjTerc() {
+  const mostra = (document.getElementById("tPossuiCnpj")?.value || "") === "Sim";
+  document.querySelectorAll(".grp-cnpj-terc").forEach(el => el.classList.toggle("hidden", !mostra));
+}
+
+function montarResumoBancario(o) {
+  return [
+    o.tTitularConta && "Titular: " + o.tTitularConta,
+    o.tBanco        && "Banco: "   + o.tBanco,
+    o.tAgencia      && "Ag: "      + o.tAgencia,
+    o.tConta        && "CC: "      + o.tConta,
+    o.tPix          && "Pix: "     + o.tPix
+  ].filter(Boolean).join("\n");
+}
+
+const SECOES_ROMANAS = ["I","II","III","IV","V","VI","VII","VIII","IX","X",
+  "XI","XII","XIII","XIV","XV","XVI","XVII","XVIII","XIX","XX"];
+
+function montarContratoPJHTML(item) {
+  const modelo = window.CONTRATO_PJ;
+  if (!modelo) {
+    return `<p class="cg-p">Não foi possível carregar o modelo do contrato (contrato_pj.js). Verifique sua conexão e gere o documento novamente.</p>`;
+  }
+
+  const cargo = item.cCargo === "Outro" ? item.cCargoOutro : item.cCargo;
+  // Escopo: a 1ª linha do campo é a finalidade da atuação (entra na cláusula
+  // do objeto); cada linha seguinte vira uma alínea da lista de escopo.
+  const linhasEscopo = String(item.cObjeto || "").split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  const finalidade   = linhasEscopo[0] || "";
+  const itensEscopo  = linhasEscopo.slice(1);
+
+  const meses = calcularPrazoMeses(item.cDataInicio, item.cDataFim);
+  // O número do contrato do sistema já vem como "NN/MMAA" — o modelo pede
+  // [NÚMERO]/[ANO], então basta separar nos dois lados da barra.
+  const partesNumero = String(item.cNumeroContrato || "").split("/");
+  const enderecoResidencial = [item.cTercEndereco, item.cTercMunicipio].filter(Boolean).join(", ");
+
+  const campos = {
+    "NÚMERO":                         cgFill(partesNumero[0], "nº"),
+    "ANO":                            cgFill(partesNumero[1], "ano"),
+    "RAZÃO SOCIAL DA CONTRATADA":     cgFill(item.cTercRazaoSocial, "razão social da contratada"),
+    "CNPJ":                           cgFill(item.cTercCnpj, "CNPJ"),
+    "ENDEREÇO COMPLETO DA SEDE":      cgFill(item.cTercEnderecoSede || enderecoResidencial, "endereço da sede"),
+    "NOME DO REPRESENTANTE LEGAL":    cgFill(item.cTercRepLegal || item.cTercNome, "representante legal"),
+    "NACIONALIDADE":                  "brasileiro(a)",
+    "PROFISSÃO":                      cgFill(item.cTercFuncao || item.cTercGraduacao, "profissão"),
+    "RG / ÓRGÃO EXPEDIDOR":           cgFill(item.cTercRg, "RG / órgão expedidor"),
+    "CPF":                            cgFill(item.cTercCpf, "CPF"),
+    "ENDEREÇO RESIDENCIAL COMPLETO":  cgFill(enderecoResidencial, "endereço residencial"),
+    "SERVIÇO / ÁREA DE ATUAÇÃO":      cgFill(item.cTercAreaExpertise || cargo, "serviço / área de atuação"),
+    "OBJETO / FINALIDADE DA ATUAÇÃO": cgFill(finalidade, "finalidade da atuação"),
+    "VALOR MENSAL":                   cgFill(item.cValorMensal && formatarNumeroBR(item.cValorMensal), "valor mensal"),
+    "VALOR MENSAL POR EXTENSO":       cgFill(item.cValorMensal && valorParaExtenso(item.cValorMensal), "valor mensal por extenso"),
+    "VALOR GLOBAL":                   cgFill(item.cValorTotal && formatarNumeroBR(item.cValorTotal), "valor global"),
+    "VALOR GLOBAL POR EXTENSO":       cgFill(item.cValorTotal && valorParaExtenso(item.cValorTotal), "valor global por extenso"),
+    "PRAZO EM MESES":                 cgFill(meses && String(meses), "nº de meses"),
+    "PRAZO POR EXTENSO":              cgFill(meses && numeroParaExtenso(meses), "prazo por extenso"),
+    "DATA DE INÍCIO":                 cgFill(formatarDataExtenso(item.cDataInicio), "data de início"),
+    "DATA DE TÉRMINO":                cgFill(formatarDataExtenso(item.cDataFim), "data de término")
+  };
+
+  // O texto do modelo é escapado primeiro e só depois os campos entre
+  // colchetes são trocados — assim o valor injetado (já escapado por cgFill,
+  // ou já um <span> amarelo) é o único HTML que entra no documento.
+  const preencher = txt => esc(txt).replace(/\[([^\[\]]+)\]/g, (achado, chave) =>
+    Object.prototype.hasOwnProperty.call(campos, chave)
+      ? campos[chave]
+      : `<span class="cg-yellow">[${esc(chave.toLowerCase())}]</span>`);
+
+  const linhasBanco = [
+    ["Nome",  item.cTercTitularConta || item.cTercRazaoSocial || item.cTercNome],
+    ["Banco", item.cTercBanco],
+    ["Ag",    item.cTercAgencia],
+    ["CC",    item.cTercConta],
+    ["Pix",   item.cTercPix]
+  ].filter(par => par[1]);
+  const blocoBancario = linhasBanco.length
+    ? `<div class="cg-bank">${linhasBanco.map(par => esc(par[0] + ": " + par[1])).join("\n")}</div>`
+    : (item.cDadosPagamento
+        ? `<div class="cg-bank">${esc(item.cDadosPagamento)}</div>`
+        : `<div class="cg-bank cg-yellow">[titular / banco / agência / conta / chave Pix]</div>`);
+
+  const listaEscopo = itensEscopo.length
+    ? `<ol class="cg-lista">${itensEscopo.map(i => `<li>${esc(i)}</li>`).join("")}</ol>`
+    : `<ol class="cg-lista"><li><span class="cg-yellow">[detalhar os itens do escopo — uma linha por item no campo "Escopo do Contrato"]</span></li></ol>`;
+
+  let nClausula = 0, nSecao = 0;
+  const render = blocos => {
+    const html = [];
+    let lista = null;   // agrupa alíneas/marcadores consecutivos numa lista só
+    const fecharLista = () => {
+      if (!lista) return;
+      html.push(`<${lista.tag} class="${lista.classe}">${lista.itens.join("")}</${lista.tag}>`);
+      lista = null;
+    };
+    const acumular = (tag, classe, conteudo) => {
+      if (!lista || lista.tag !== tag) { fecharLista(); lista = { tag, classe, itens: [] }; }
+      lista.itens.push(`<li>${conteudo}</li>`);
+    };
+
+    blocos.forEach(bloco => {
+      const tipo = bloco[0], texto = bloco[1];
+      if (tipo === "item") { acumular("ol", "cg-lista", preencher(texto)); return; }
+      if (tipo === "li")   { acumular("ul", "cg-lista cg-bullets", preencher(texto)); return; }
+      fecharLista();
+      if (tipo === "secao") {
+        nSecao++;
+        html.push(`<p class="cg-secao">${SECOES_ROMANAS[nSecao - 1] || nSecao} – ${preencher(texto)}</p>`);
+      } else if (tipo === "clausula") {
+        nClausula++;
+        html.push(`<p class="cg-p"><strong>Cláusula ${nClausula}ª.</strong> ${preencher(texto)}</p>`);
+      } else if (tipo === "paragrafo") {
+        html.push(`<p class="cg-p cg-paragrafo">${preencher(texto)}</p>`);
+      } else if (tipo === "escopo") {
+        html.push(listaEscopo);
+      } else if (tipo === "banco") {
+        html.push(blocoBancario);
+      } else if (tipo === "anexo") {
+        html.push(`<p class="cg-title cg-pagebreak">${preencher(texto)}</p>`);
+      } else if (tipo === "sub") {
+        html.push(`<p class="cg-subsecao">${preencher(texto)}</p>`);
+      } else {
+        html.push(`<p class="cg-p">${preencher(texto)}</p>`);
+      }
+    });
+    fecharLista();
+    return html.join("\n");
+  };
+
+  const dataAssinatura = formatarDataExtenso(new Date().toISOString().slice(0, 10));
+
+  return `
+    <p class="cg-title">CONTRATO DE PRESTAÇÃO DE SERVIÇOS</p>
+    <p class="cg-sub">Contrato ${cgFill(item.cNumeroContrato, "nº/ano")}</p>
+
+    ${render(modelo.corpo)}
+
+    <p class="cg-p cg-data-final">Fortaleza/CE, ${dataAssinatura}.</p>
+
+    <div class="cg-sign-grid">
+      <div class="cg-sign-box">
+        <div class="cg-sign-line"></div>
+        <!-- Grafia igual à da qualificação da CONTRATANTE no modelo em Word
+             (sem cedilha): mantida fiel ao documento fornecido. -->
+        <div>SETEG SOLUCOES AMBIENTAIS LTDA</div>
+        <div>R.p. Matheus Fontenelle Ximenes de Farias</div>
+        <div class="cg-sign-tag">(CONTRATANTE)</div>
+      </div>
+      <div class="cg-sign-box">
+        <div class="cg-sign-line"></div>
+        <div>${campos["RAZÃO SOCIAL DA CONTRATADA"]}</div>
+        <div>R.p. ${campos["NOME DO REPRESENTANTE LEGAL"]}</div>
+        <div class="cg-sign-tag">(CONTRATADA)</div>
+      </div>
+    </div>
+
+    <p class="cg-p cg-testemunhas">TESTEMUNHAS:</p>
+    <div class="cg-wit-grid">
+      <div class="cg-sign-box"><div class="cg-sign-line"></div><div>Nome: Eveline Andrade Mesquita</div><div>CPF: 032.392.603-79</div></div>
+      <div class="cg-sign-box"><div class="cg-sign-line"></div><div>Nome: Talita de Lima Rodrigues</div><div>CPF: 028.261.183-58</div></div>
+    </div>
+
+    ${render(modelo.anexos)}
+  `;
+}
+
+// ══════════════════════════════════════════════════════
 //  ENTREGAS
 // ══════════════════════════════════════════════════════
 function adicionarLinhaEntrega(dados){entregas.push(dados||{entrega:"",marco:"",data:"",valor:"",formaPagamento:"",salvo:false});renderEntregas();}
@@ -3102,9 +3539,14 @@ function calcularTotalEntregas(){
 // ══════════════════════════════════════════════════════
 function abrirFormNovoTerc(){limparFormTerc();document.getElementById("formTercTitulo").textContent="Cadastrar Terceirizado";document.getElementById("listaTerceirizados").classList.add("hidden");document.getElementById("formTerc").classList.remove("hidden");}
 function fecharFormTerc(){document.getElementById("formTerc").classList.add("hidden");document.getElementById("listaTerceirizados").classList.remove("hidden");renderTerceirizados();}
-function limparFormTerc(){document.getElementById("tercForm").reset();document.getElementById("tId").value="";document.getElementById("grpCnpjTerc").classList.add("hidden");document.getElementById("grpParcelasTerc").classList.add("hidden");}
+function limparFormTerc(){document.getElementById("tercForm").reset();document.getElementById("tId").value="";toggleCamposCnpjTerc();document.getElementById("grpParcelasTerc").classList.add("hidden");}
 function salvarTerceirizado(){
   const item=coletarCampos(CAMPOS_TERC);item.tId=item.tId||gerarId("TER");
+  // Os campos separados (titular/banco/agência/conta/Pix) são a fonte da
+  // verdade; o resumo em texto existe para as telas e relatórios antigos e
+  // para os cadastros que só têm ele. Só sobrescreve quando há o que compor.
+  const resumoBanco=montarResumoBancario(item);
+  if(resumoBanco) item.tDadosBancarios=resumoBanco;
   const errData=validarEConverterData(item,"tNascimento","a data de nascimento");
   if(errData){mostrarToast(errData,"err");return;}
   if(!item.tNome){mostrarToast("Informe o nome.","err");return;}
@@ -3130,7 +3572,7 @@ function editarTerceirizado(id){
   limparFormTerc();document.getElementById("formTercTitulo").textContent="Editar Terceirizado";
   CAMPOS_TERC.forEach(campo=>{const el=document.getElementById(campo);if(el)el.value=item[campo]||"";});
   document.getElementById("tNascimento").value=dataISOparaBR(item.tNascimento);
-  toggleCondicional("tPossuiCnpj","Sim","grpCnpjTerc");
+  toggleCamposCnpjTerc();
   toggleCondicional("tFormaPgto","Parcelado","grpParcelasTerc");
   document.getElementById("listaTerceirizados").classList.add("hidden");document.getElementById("formTerc").classList.remove("hidden");
 }
@@ -3161,7 +3603,7 @@ function gerarHTMLDetalhesTerceirizado(t, hist) {
     <div class="detail-section-title">2 · Formação e Expertise</div>
     ${di("Graduação",t.tGraduacao)}${di("Nível Formação",t.tNivelFormacao)}${di("Área",t.tAreaExpertise)}${di("Cursos extras",t.tCursosExtras)}${di("Lattes",t.tLattes)}${di("Conselho",t.tRegistro)}${di("Nº Registro",t.tCrbio2)}${di("CTF",t.tCtf)}${di("CNH",t.tCnh)}${diF("Exp. Direção",t.tExpDirecao)}
     <div class="detail-section-title">3 · Dados Financeiros</div>
-    ${di("Possui CNPJ",t.tPossuiCnpj)}${di("CNPJ",t.tCnpj)}${di("Comprovante",t.tComprovante)}${di("Emissão",t.tEmissao)}${di("Forma Pgto",t.tFormaPgto)}${t.tFormaPgto==="Parcelado"?di("Parcelas",t.tParcelas):""}${diF("Dados Bancários",t.tDadosBancarios)}${di("Disponibilidade",t.tDisponibilidade)}
+    ${di("Possui CNPJ",t.tPossuiCnpj)}${di("CNPJ",t.tCnpj)}${di("Razão Social",t.tRazaoSocial)}${di("Representante Legal",t.tRepLegal)}${diF("Endereço da Sede",t.tEnderecoSede)}${di("Titular da Conta",t.tTitularConta)}${di("Banco",t.tBanco)}${di("Agência",t.tAgencia)}${di("Conta",t.tConta)}${di("Chave Pix",t.tPix)}${di("Comprovante",t.tComprovante)}${di("Emissão",t.tEmissao)}${di("Forma Pgto",t.tFormaPgto)}${t.tFormaPgto==="Parcelado"?di("Parcelas",t.tParcelas):""}${diF("Dados Bancários",t.tDadosBancarios)}${di("Disponibilidade",t.tDisponibilidade)}
     <div class="detail-section-title">4 · Emergência</div>
     ${di("Emergência 1",t.tEmerg1Nome?(t.tEmerg1Nome+(t.tEmerg1Tel?" · "+t.tEmerg1Tel:"")):"")}${di("Emergência 2",t.tEmerg2Nome?(t.tEmerg2Nome+(t.tEmerg2Tel?" · "+t.tEmerg2Tel:"")):"")}</div>
     ${t.tProjetosSeteg||t.tOutrasInfo?`<div class="detail-grid"><div class="detail-section-title">5 · Projetos e Informações</div>${diF("Projetos Seteg",t.tProjetosSeteg)}${diF("Outras Informações",t.tOutrasInfo)}</div>`:""}
@@ -3525,7 +3967,15 @@ function validarEConverterData(item, campo, rotulo){
   const raw=(item[campo]||"").trim();
   if(!raw){ item[campo]=""; return null; }
   const iso=dataBRparaISO(raw);
-  if(!iso) return `Informe ${rotulo} num formato válido (dd/mm/aaaa).`;
+  if(!iso){
+    // Duas causas bem diferentes caíam na mesma mensagem: data incompleta
+    // (ano com menos de 4 dígitos) e data que não existe no calendário
+    // (29/02 em ano não bissexto, 31 num mês de 30 dias). Dizer "formato
+    // inválido" no segundo caso manda quem preencheu procurar no lugar errado.
+    return /^[0-9][0-9][/][0-9][0-9][/][0-9][0-9][0-9][0-9]$/.test(raw)
+      ? `${raw} não existe no calendário — confira ${rotulo}.`
+      : `Informe ${rotulo} completa, no formato dd/mm/aaaa.`;
+  }
   item[campo]=iso;
   return null;
 }

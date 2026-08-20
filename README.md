@@ -9,9 +9,12 @@ Aplicação estática (sem build, sem framework, sem backend próprio): HTML + C
 - `index.html` — aplicação principal (login + dashboard + contratos + terceirizados + avaliações + alertas)
 - `cadastro.html` — formulário público, sem login, para o terceirizado preencher seus dados a partir de um link enviado pelo líder
 - `script.js` — toda a lógica da aplicação principal
+- `contrato_pj.js` — texto do modelo CNPJ do contrato (48 cláusulas + 4 anexos), carregado sob demanda
 - `style.css` — estilos (tema escuro/claro)
 - `config.js` — credenciais do Supabase (URL + chave publishable/anon)
 - `images/` — logo, favicon, plano de fundo e timbrado usado no contrato gerado
+- `doc/` — modelos do contrato em Word, de onde o texto gerado pelo sistema foi transcrito
+- `migracao_*.sql` — migrações de schema a rodar no SQL Editor do Supabase antes de publicar o front
 
 O schema do banco (tabelas, RLS, função de login) já está aplicado no projeto Supabase em produção — não fica versionado aqui (era só um script de setup de uso único, sem mais função depois de aplicado).
 
@@ -57,3 +60,30 @@ Ramos: Reprovado · Pendente de Ajuste · Cancelado
 ```
 
 O financeiro não participa do fluxo do sistema — a assinatura já finaliza o contrato.
+
+## Contrato gerado: dois modelos
+
+O documento é montado a partir dos dados da solicitação e do cadastro do terceirizado, e existe em duas versões:
+
+| Modelo | Quando | Onde mora o texto |
+|---|---|---|
+| **Padrão** | Sempre — pessoa física ou jurídica | `contrato_pj.js` (48 cláusulas + Anexos I a IV), montado por `montarContratoPJHTML()` |
+| Anterior | Só quando o DP escolhe explicitamente | `montarContratoPFHTML()`, em `script.js` |
+
+O modelo padrão vale para todo terceirizado, pessoa física ou jurídica — não há inferência pelo cadastro. O modelo anterior continua acessível no campo **Modelo do contrato a gerar** (bloco "Dados Completos do Terceirizado"), principalmente para regerar contratos antigos com o texto com que foram assinados.
+
+**Ponto de atenção jurídica:** no modelo padrão a CONTRATADA é qualificada como pessoa jurídica ("devidamente inscrita no CNPJ sob o nº..."). Gerado para uma pessoa física, o documento sai com **razão social** e **CNPJ** em amarelo e essa frase precisa ser ajustada à mão no próprio documento — o texto não tem variante para pessoa física. Uma variante PF do modelo em Word resolveria isso na origem.
+
+O modelo escolhido aparece no título do modal ("Contrato de Prestação de Serviços · modelo CNPJ / MEI"), para não ser preciso ler o documento inteiro para descobrir qual saiu.
+
+Um documento já gerado é reaberto exatamente como foi salvo, para preservar as edições manuais do DP — inclusive quando o modelo mudou depois. Nesse caso aparece um aviso no topo do modal dizendo em que modelo ele foi gerado e qual os dados indicam agora, com a instrução de usar **Regerar**. O modelo do documento salvo é reconhecido pela quebra de página dos anexos, que só existe no modelo CNPJ.
+
+Os termos de pagamento saem da solicitação do líder: **Valor Total** + **Nº de Parcelas**. O valor de cada parcela é calculado (total ÷ parcelas) e o campo é somente leitura — assim os três números na tela nunca deixam de fechar entre si. No modelo de pessoa física, 1 parcela gera a cláusula de parcela única e 2 ou mais geram "em N (extenso) parcelas mensais de R$ X"; no modelo CNPJ o valor da parcela é o valor mensal, pago no dia 5 contra nota fiscal.
+
+A forma de pagamento do cadastro do terceirizado (Pix / boleto / transferência) define só **como** se paga; **quantas vezes** é o campo de parcelas do contrato. Antes as duas coisas estavam no mesmo campo do cadastro, e um contrato com valor mensal saía como parcela única.
+
+No campo **Escopo do Contrato**, a primeira linha entra na cláusula do objeto como a finalidade da atuação; cada linha seguinte vira uma alínea (a, b, c...) da lista de escopo.
+
+O texto de `contrato_pj.js` foi extraído do `.docx` programaticamente para preservar a numeração automática das cláusulas do Word — as referências cruzadas do próprio contrato ("Cláusula 29ª", "Cláusulas 15ª e 16ª", "Cláusulas 3ª a 7ª") dependem dessa ordem. Ao receber uma revisão nova do modelo em Word, é mais seguro reextrair do que editar o arquivo à mão.
+
+Campo sem dado sai destacado em amarelo no documento, para o DP completar antes de encaminhar.

@@ -320,9 +320,50 @@
             <h4 class="form-subtitle"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;vertical-align:-3px"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Dados Completos do Terceirizado <span style="font-weight:400;font-size:.72rem;color:var(--text-secondary)">(visível só para DP/RH — preenchidos pelo próprio terceirizado)</span></h4>
             <button type="button" class="btn btn-ghost" style="margin-bottom:.75rem" onclick="sincronizarDadosTerceirizado()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;vertical-align:-3px"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg> Sincronizar dados do terceirizado cadastrado</button>
             <div class="form-grid" style="margin-bottom:.75rem">
-              <div class="form-group"><label class="form-label">RG</label><input id="cTercRg" class="form-control" placeholder="00.000.000-0" /></div>
+              <div class="form-group"><label class="form-label">RG / Órgão expedidor</label><input id="cTercRg" class="form-control" placeholder="Ex: 2001234567 SSP/CE" /></div>
               <div class="form-group"><label class="form-label">Estado Civil</label><input id="cTercEstadoCivil" class="form-control" placeholder="Ex: solteiro(a), casado(a) sob regime de..." /></div>
               <div class="form-group full-width"><label class="form-label">Endereço Completo</label><input id="cTercEndereco" class="form-control" placeholder="Rua, número, bairro, cidade/UF" /></div>
+            </div>
+
+            <!-- MODELO DO CONTRATO — o modelo padrão (transcrito do .docx da
+                 pasta doc, com os Anexos I a IV) vale para todo terceirizado,
+                 pessoa física ou jurídica. O modelo anterior fica aqui para
+                 regerar contratos antigos com o texto com que foram assinados. -->
+            <div class="form-grid" style="margin-bottom:.75rem">
+              <div class="form-group full-width">
+                <label class="form-label">Modelo do contrato a gerar</label>
+                <select id="cModeloContrato" class="form-control">
+                  <option value="">Padrão — 48 cláusulas + Anexos I a IV</option>
+                  <option value="PF">Modelo anterior (pessoa física, sem anexos)</option>
+                </select>
+                <span class="modal-hint">O modelo padrão vale para pessoa física e jurídica. Nele a CONTRATADA é qualificada como empresa: sem CNPJ e razão social, esses trechos saem em amarelo para o DP ajustar.</span>
+              </div>
+            </div>
+
+            <!-- PESSOA JURÍDICA — só faz sentido quando o terceirizado presta
+                 serviço por MEI/CNPJ. É o que alimenta o modelo CNPJ do
+                 contrato (qualificação da CONTRATADA, sede e representante
+                 legal). Vem preenchido do cadastro do próprio terceirizado;
+                 o DP corrige aqui quando necessário. -->
+            <h5 class="form-subtitle" style="font-size:.78rem;margin-top:.25rem">Pessoa Jurídica (MEI / CNPJ) <span style="font-weight:400;font-size:.72rem;color:var(--text-secondary)">(preencher quando o contrato for com CNPJ — define o modelo do contrato gerado)</span></h5>
+            <div class="form-grid" style="margin-bottom:.75rem">
+              <div class="form-group"><label class="form-label">CNPJ / MEI</label><input id="cTercCnpj" class="form-control" placeholder="00.000.000/0000-00" maxlength="18" oninput="mascaraCnpjId('cTercCnpj')" /></div>
+              <div class="form-group"><label class="form-label">Razão social</label><input id="cTercRazaoSocial" class="form-control" placeholder="Como no cartão CNPJ" /></div>
+              <div class="form-group"><label class="form-label">Representante legal</label><input id="cTercRepLegal" class="form-control" placeholder="Em branco = o próprio terceirizado" /></div>
+              <div class="form-group full-width"><label class="form-label">Endereço da sede</label><input id="cTercEnderecoSede" class="form-control" placeholder="Em branco = usa o endereço residencial" /></div>
+            </div>
+
+            <!-- DADOS BANCÁRIOS ESTRUTURADOS — o modelo CNPJ do contrato pede
+                 titular/banco/agência/conta/Pix em linhas separadas. Quando
+                 estes campos estão vazios, o contrato cai no texto livre de
+                 "Dados de pagamento" do formulário do tipo de contratação. -->
+            <h5 class="form-subtitle" style="font-size:.78rem;margin-top:.25rem">Dados Bancários da CONTRATADA</h5>
+            <div class="form-grid" style="margin-bottom:.75rem">
+              <div class="form-group"><label class="form-label">Titular da conta</label><input id="cTercTitularConta" class="form-control" /></div>
+              <div class="form-group"><label class="form-label">Banco (nome / código)</label><input id="cTercBanco" class="form-control" placeholder="Ex: Banco do Brasil / 001" /></div>
+              <div class="form-group"><label class="form-label">Agência</label><input id="cTercAgencia" class="form-control" /></div>
+              <div class="form-group"><label class="form-label">Conta</label><input id="cTercConta" class="form-control" /></div>
+              <div class="form-group"><label class="form-label">Chave Pix</label><input id="cTercPix" class="form-control" /></div>
             </div>
 
             <!-- Formulário específico para Despachante -->
@@ -612,7 +653,13 @@
             <div class="form-grid">
               <div class="form-group"><label class="form-label required">Número do Contrato</label><input id="cNumeroContrato" class="form-control" placeholder="Gerado automaticamente" readonly /></div>
               <div class="form-group"><label class="form-label required">Projeto / Local</label><input id="cProjeto" class="form-control" placeholder="Ex: IBITU – CG1/CG2" /></div>
-              <div class="form-group"><label class="form-label required">Valor Total (R$)</label><input id="cValorTotal" class="form-control" placeholder="0,00" oninput="mascaraMoedaId('cValorTotal')" /></div>
+              <div class="form-group"><label class="form-label required">Valor Total (R$)</label><input id="cValorTotal" class="form-control" placeholder="0,00" oninput="mascaraMoedaId('cValorTotal');recalcularValorParcela()" /></div>
+              <div class="form-group"><label class="form-label required">Nº de Parcelas</label><input id="cParcelas" type="number" min="1" step="1" class="form-control" placeholder="1" oninput="recalcularValorParcela()" />
+                <span class="modal-hint">Parcelas mensais. Use 1 para pagamento único.</span>
+              </div>
+              <div class="form-group"><label class="form-label">Valor da Parcela / Mensal (R$)</label><input id="cValorMensal" class="form-control" placeholder="calculado" readonly />
+                <span class="modal-hint" id="hintValorParcela">Calculado automaticamente: valor total ÷ nº de parcelas.</span>
+              </div>
               <div class="form-group">
                 <label class="form-label required">Início da Vigência</label>
                 <input id="cDataInicio" type="text" maxlength="10" placeholder="00/00/0000" class="form-control" oninput="mascaraDataId('cDataInicio')" />
@@ -624,7 +671,9 @@
               <div class="form-group full-width">
                 <span class="modal-hint">A data de início deve anteceder as atividades de campo, pois documentos obrigatórios (ASO, treinamentos e demais documentos de SST) somente poderão ser emitidos após o início da vigência contratual.</span>
               </div>
-              <div class="form-group full-width"><label class="form-label required">Escopo do Contrato</label><textarea id="cObjeto" class="form-control" rows="3" placeholder="Descreva os serviços específicos a serem prestados..."></textarea></div>
+              <div class="form-group full-width"><label class="form-label required">Escopo do Contrato</label><textarea id="cObjeto" class="form-control" rows="5" placeholder="1ª linha: finalidade da atuação (ex: ao monitoramento de fauna do projeto IBITU)&#10;Uma linha por item do escopo:&#10;Levantamento de dados primários em campo&#10;Elaboração de relatórios técnicos"></textarea>
+                <span class="modal-hint">A primeira linha entra na cláusula do objeto como a finalidade da atuação. Cada linha seguinte vira uma alínea (a, b, c...) da lista de escopo do contrato.</span>
+              </div>
 
               <div class="form-group full-width">
                 <label class="form-label required">Necessidade de ART</label>
@@ -864,7 +913,7 @@
               </div>
               <div class="form-group"><label class="form-label required">E-mail</label><input id="tEmail" type="email" class="form-control" /></div>
               <div class="form-group"><label class="form-label required">CPF</label><input id="tCpf" class="form-control" placeholder="000.000.000-00" maxlength="14" /></div>
-              <div class="form-group"><label class="form-label">RG</label><input id="tRg" class="form-control" /></div>
+              <div class="form-group"><label class="form-label">RG / Órgão expedidor</label><input id="tRg" class="form-control" placeholder="Ex: 2001234567 SSP/CE" /></div>
               <div class="form-group"><label class="form-label">Data de nascimento</label><input id="tNascimento" type="text" maxlength="10" placeholder="00/00/0000" class="form-control" oninput="mascaraDataId('tNascimento')" /></div>
               <div class="form-group"><label class="form-label">Estado Civil</label><input id="tEstadoCivil" class="form-control" placeholder="Ex: solteiro(a), casado(a) sob regime de..." /></div>
               <div class="form-group"><label class="form-label required">Telefone</label><input id="tTelefone" class="form-control" placeholder="(00) 00000-0000" maxlength="15" /></div>
@@ -910,7 +959,10 @@
               <div class="form-group"><label class="form-label">Possui MEI/CNPJ?</label>
                 <select id="tPossuiCnpj" class="form-control"><option value="">Selecione</option><option>Não</option><option>Sim</option></select>
               </div>
-              <div class="form-group hidden" id="grpCnpjTerc"><label class="form-label">Número MEI/CNPJ</label><input id="tCnpj" class="form-control" /></div>
+              <div class="form-group hidden grp-cnpj-terc" id="grpCnpjTerc"><label class="form-label">Número MEI/CNPJ</label><input id="tCnpj" class="form-control" placeholder="00.000.000/0000-00" maxlength="18" /></div>
+              <div class="form-group hidden grp-cnpj-terc"><label class="form-label">Razão social</label><input id="tRazaoSocial" class="form-control" placeholder="Como no cartão CNPJ" /></div>
+              <div class="form-group hidden grp-cnpj-terc"><label class="form-label">Representante legal</label><input id="tRepLegal" class="form-control" placeholder="Em branco = o próprio terceirizado" /></div>
+              <div class="form-group hidden grp-cnpj-terc full-width"><label class="form-label">Endereço da sede</label><input id="tEnderecoSede" class="form-control" placeholder="Em branco = usa o endereço residencial" /></div>
               <div class="form-group"><label class="form-label">Tipo comprovante</label>
                 <select id="tComprovante" class="form-control"><option value="">Selecione</option><option>Pessoa jurídica</option><option>Pessoa física</option></select>
               </div>
@@ -921,7 +973,14 @@
                 <select id="tFormaPgto" class="form-control"><option value="">Selecione</option><option>Pix</option><option>Transferência bancária</option><option>Boleto</option><option>Parcelado</option></select>
               </div>
               <div class="form-group hidden" id="grpParcelasTerc"><label class="form-label">Número de parcelas</label><input id="tParcelas" type="number" min="2" class="form-control" placeholder="Ex: 3" /></div>
-              <div class="form-group full-width"><label class="form-label">Dados bancários</label><textarea id="tDadosBancarios" class="form-control" rows="2" placeholder="Banco, agência, conta, chave Pix..."></textarea></div>
+              <div class="form-group"><label class="form-label">Titular da conta</label><input id="tTitularConta" class="form-control" /></div>
+              <div class="form-group"><label class="form-label">Banco (nome / código)</label><input id="tBanco" class="form-control" placeholder="Ex: Banco do Brasil / 001" /></div>
+              <div class="form-group"><label class="form-label">Agência</label><input id="tAgencia" class="form-control" /></div>
+              <div class="form-group"><label class="form-label">Conta</label><input id="tConta" class="form-control" /></div>
+              <div class="form-group"><label class="form-label">Chave Pix</label><input id="tPix" class="form-control" /></div>
+              <div class="form-group full-width"><label class="form-label">Dados bancários (resumo)</label><textarea id="tDadosBancarios" class="form-control" rows="2" placeholder="Banco, agência, conta, chave Pix..."></textarea>
+                <span class="modal-hint">Recomposto automaticamente ao salvar, a partir dos campos acima. Cadastros antigos só têm este resumo — o contrato usa os campos separados quando existem e cai aqui quando não.</span>
+              </div>
               <div class="form-group"><label class="form-label">Disponibilidade de horário</label><input id="tDisponibilidade" class="form-control" /></div>
             </div>
           </div>
@@ -1327,6 +1386,7 @@
       <button class="modal-close" id="btnFecharContratoDoc">×</button>
     </div>
     <div class="modal-body modal-body-contrato" id="contratoDocBody">
+      <div class="pendencia-aviso hidden" id="contratoDocAvisoModelo" style="margin:0 0 .6rem"></div>
       <p class="contrato-doc-hint" id="contratoDocHint">Os campos em <strong style="color:#000;background:#fff59d;padding:.05rem .3rem;border-radius:3px">amarelo</strong> ainda precisam ser completados manualmente. O documento inteiro é editável — as alterações são salvas automaticamente ao fechar ou baixar.</p>
       <p class="contrato-doc-hint hidden" id="contratoDocAprovarHint">Leia o contrato até o final. O botão de aprovação só é liberado depois que você rolar o documento inteiro.</p>
       <div id="contratoDocArea" contenteditable="true" spellcheck="false"></div>

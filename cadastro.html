@@ -119,6 +119,19 @@
       letter-spacing: .05em;
     }
 
+    /* Checkbox de "mesmo endereço": mantém o texto na mesma linha da caixa,
+       sem herdar o layout em coluna de .form-group. */
+    .cad-check {
+      display: flex;
+      align-items: center;
+      gap: .4rem;
+      font-size: .78rem;
+      color: #0F1F3D;
+      cursor: pointer;
+      margin-bottom: .1rem;
+    }
+    .cad-check input { width: auto; margin: 0; accent-color: #1A5490; }
+
     /* ─── Form overrides para tema claro ─── */
     .form-control {
       background: #F5F7FA !important;
@@ -465,8 +478,8 @@
           <input id="tCpf" class="form-control" placeholder="000.000.000-00" maxlength="14" inputmode="numeric" autocomplete="off" />
         </div>
         <div class="form-group">
-          <label class="form-label">RG</label>
-          <input id="tRg" class="form-control" />
+          <label class="form-label">RG / Órgão expedidor</label>
+          <input id="tRg" class="form-control" placeholder="Ex: 2001234567 SSP/CE" />
         </div>
         <div class="form-group">
           <label class="form-label">Data de nascimento</label>
@@ -646,9 +659,23 @@
             <option>Sim</option>
           </select>
         </div>
-        <div class="form-group hidden" id="grpCnpj">
-          <label class="form-label">Número MEI / CNPJ</label>
-          <input id="tCnpj" class="form-control" />
+        <div class="form-group grp-cnpj hidden">
+          <label class="form-label required">Número MEI / CNPJ</label>
+          <input id="tCnpj" class="form-control" placeholder="00.000.000/0000-00" maxlength="18" />
+        </div>
+        <div class="form-group grp-cnpj hidden">
+          <label class="form-label required">Razão social do MEI / empresa</label>
+          <input id="tRazaoSocial" class="form-control" placeholder="Exatamente como no cartão CNPJ" />
+        </div>
+        <div class="form-group grp-cnpj hidden">
+          <label class="form-label">Representante legal</label>
+          <input id="tRepLegal" class="form-control" placeholder="Deixe em branco se for você mesmo" />
+          <span class="modal-hint">Só preencha se quem assina pela empresa for outra pessoa.</span>
+        </div>
+        <div class="form-group grp-cnpj hidden full-width">
+          <label class="form-label required">Endereço da sede</label>
+          <label class="cad-check"><input type="checkbox" id="tSedeIgualResidencia" checked /> Mesmo endereço residencial informado acima</label>
+          <input id="tEnderecoSede" class="form-control hidden" placeholder="Rua, número, bairro, cidade/UF, CEP" />
         </div>
         <div class="form-group">
           <label class="form-label required">Comprovante em nome de</label>
@@ -683,8 +710,27 @@
           <input id="tDisponibilidade" class="form-control" placeholder="Ex: Seg–Sex, horário comercial" />
         </div>
         <div class="form-group full-width">
-          <label class="form-label required">Dados bancários / Chave Pix</label>
-          <textarea id="tDadosBancarios" class="form-control" rows="3" placeholder="Banco, agência, conta e/ou chave Pix"></textarea>
+          <label class="form-label required">Titular da conta</label>
+          <input id="tTitularConta" class="form-control" placeholder="Nome de quem recebe (pessoa física ou jurídica)" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Banco (nome / código)</label>
+          <input id="tBanco" class="form-control" placeholder="Ex: Banco do Brasil / 001" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Agência</label>
+          <input id="tAgencia" class="form-control" placeholder="Ex: 1234-5" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Conta</label>
+          <input id="tConta" class="form-control" placeholder="Ex: 12345-6" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Chave Pix</label>
+          <input id="tPix" class="form-control" placeholder="CPF/CNPJ, e-mail, telefone ou chave aleatória" />
+        </div>
+        <div class="form-group full-width">
+          <span class="modal-hint">Preencha banco + agência + conta, ou a chave Pix — pelo menos uma das duas formas. Estes dados vão direto para o contrato.</span>
         </div>
       </div>
     </div>
@@ -875,6 +921,15 @@
     return `${String(y).padStart(4, '0')}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
   }
 
+  function mascaraCnpj(el) {
+    let d = el.value.replace(/[^0-9]/g, '').slice(0, 14);
+    if (d.length > 12) d = d.slice(0, 2) + '.' + d.slice(2, 5) + '.' + d.slice(5, 8) + '/' + d.slice(8, 12) + '-' + d.slice(12);
+    else if (d.length > 8) d = d.slice(0, 2) + '.' + d.slice(2, 5) + '.' + d.slice(5, 8) + '/' + d.slice(8);
+    else if (d.length > 5) d = d.slice(0, 2) + '.' + d.slice(2, 5) + '.' + d.slice(5);
+    else if (d.length > 2) d = d.slice(0, 2) + '.' + d.slice(2);
+    el.value = d;
+  }
+
   function mascaraTel(el) {
     let s = el.value.replace(/\D/g, '').slice(0, 11);
     if (s.length <= 10) s = s.replace(/(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3');
@@ -892,9 +947,14 @@
     const comprov   = v('tComprovante');
     const emissao   = v('tEmissao');
     const formaPgto = v('tFormaPgto');
-    const dados     = v('tDadosBancarios');
+    const titular   = v('tTitularConta');
+    const pix       = v('tPix');
+    const banco     = v('tBanco');
+    const agencia   = v('tAgencia');
+    const conta     = v('tConta');
     const emerg1N   = v('tEmerg1Nome');
     const emerg1T   = v('tEmerg1Tel');
+    const temCnpj   = v('tPossuiCnpj') === 'Sim';
 
     if (!nome)      { mostrarToast('Informe seu nome completo.', 'err'); document.getElementById('tNome').focus(); return; }
     if (!cpf)       { mostrarToast('Informe seu CPF.', 'err'); document.getElementById('tCpf').focus(); return; }
@@ -905,7 +965,34 @@
     if (!emissao)   { mostrarToast('Informe se haverá emissão de nota fiscal.', 'err'); document.getElementById('tEmissao').focus(); return; }
     if (!formaPgto) { mostrarToast('Informe a forma de pagamento.', 'err'); document.getElementById('tFormaPgto').focus(); return; }
     if (formaPgto === 'Parcelado' && !v('tParcelas')) { mostrarToast('Informe o número de parcelas.', 'err'); document.getElementById('tParcelas').focus(); return; }
-    if (!dados)     { mostrarToast('Informe os dados bancários ou chave Pix.', 'err'); document.getElementById('tDadosBancarios').focus(); return; }
+    if (!titular)   { mostrarToast('Informe o titular da conta.', 'err'); document.getElementById('tTitularConta').focus(); return; }
+    if (!pix && !(banco && agencia && conta)) {
+      mostrarToast('Informe banco, agência e conta — ou uma chave Pix.', 'err');
+      document.getElementById(banco ? 'tAgencia' : 'tBanco').focus();
+      return;
+    }
+    // Coerência PJ: o contrato gerado usa o modelo CNPJ quando o comprovante é
+    // de pessoa jurídica — sem CNPJ e razão social esse modelo sai incompleto.
+    if (comprov.startsWith('Pessoa jurídica') && !temCnpj) {
+      mostrarToast('Comprovante de pessoa jurídica exige MEI/CNPJ — selecione "Sim" em "Possui MEI / CNPJ?".', 'err');
+      document.getElementById('tPossuiCnpj').focus();
+      return;
+    }
+    if (temCnpj) {
+      if (!v('tCnpj'))        { mostrarToast('Informe o número do MEI / CNPJ.', 'err'); document.getElementById('tCnpj').focus(); return; }
+      if (!v('tRazaoSocial')) { mostrarToast('Informe a razão social do MEI / empresa.', 'err'); document.getElementById('tRazaoSocial').focus(); return; }
+      const sedeIgual = document.getElementById('tSedeIgualResidencia').checked;
+      if (sedeIgual && !v('tEndereco')) {
+        mostrarToast('Informe o endereço completo — ele será usado como endereço da sede.', 'err');
+        document.getElementById('tEndereco').focus();
+        return;
+      }
+      if (!sedeIgual && !v('tEnderecoSede')) {
+        mostrarToast('Informe o endereço da sede.', 'err');
+        document.getElementById('tEnderecoSede').focus();
+        return;
+      }
+    }
     if (!emerg1N)   { mostrarToast('Informe o contato de emergência 01.', 'err'); document.getElementById('tEmerg1Nome').focus(); return; }
     if (!emerg1T)   { mostrarToast('Informe o telefone do contato de emergência 01.', 'err'); document.getElementById('tEmerg1Tel').focus(); return; }
     const nascimentoRaw = v('tNascimento');
@@ -922,6 +1009,19 @@
       btn.textContent = 'Enviar Cadastro';
       return;
     }
+
+    // Sede: quando é a mesma do endereço residencial, grava o próprio endereço
+    // — o contrato precisa do texto da sede, não de um "igual ao de cima".
+    const enderecoSede = temCnpj
+      ? (document.getElementById('tSedeIgualResidencia').checked ? v('tEndereco') : v('tEnderecoSede'))
+      : '';
+    const dadosBancariosTexto = [
+      titular && 'Titular: ' + titular,
+      banco   && 'Banco: '   + banco,
+      agencia && 'Ag: '      + agencia,
+      conta   && 'CC: '      + conta,
+      pix     && 'Pix: '     + pix
+    ].filter(Boolean).join('\n');
 
     try {
       const dadosPessoais = {
@@ -947,12 +1047,23 @@
         t_cnh:             (document.querySelector('input[name="possuiCnh"]:checked')?.value === 'sim' ? v('tCnh') : null) || null,
         t_exp_direcao:     v('tExpDirecao')      || null,
         t_possui_cnpj:     v('tPossuiCnpj')      || null,
-        t_cnpj:            v('tCnpj')            || null,
+        t_cnpj:            (temCnpj ? v('tCnpj')        : '') || null,
+        t_razao_social:    (temCnpj ? v('tRazaoSocial') : '') || null,
+        t_rep_legal:       (temCnpj ? v('tRepLegal')    : '') || null,
+        t_endereco_sede:   enderecoSede          || null,
         t_comprovante:     comprov,
         t_emissao:         emissao,
         t_forma_pgto:      formaPgto,
         t_parcelas:        (formaPgto === 'Parcelado' ? v('tParcelas') : '') || null,
-        t_dados_bancarios: dados,
+        t_titular_conta:   titular,
+        t_banco:           banco                 || null,
+        t_agencia:         agencia               || null,
+        t_conta:           conta                 || null,
+        t_pix:             pix                   || null,
+        // Mantido preenchido a partir dos campos estruturados: telas e
+        // relatórios antigos (e os cadastros já existentes) continuam lendo
+        // este campo único.
+        t_dados_bancarios: dadosBancariosTexto,
         t_disponibilidade: v('tDisponibilidade') || null,
         t_emerg1_nome:     emerg1N,
         t_emerg1_tel:      emerg1T,
@@ -1002,8 +1113,13 @@
   document.getElementById('tEmerg1Tel').addEventListener('input', e => mascaraTel(e.target));
   document.getElementById('tEmerg2Tel').addEventListener('input', e => mascaraTel(e.target));
   document.getElementById('tPossuiCnpj').addEventListener('change', function () {
-    document.getElementById('grpCnpj').classList.toggle('hidden', this.value !== 'Sim');
+    const mostra = this.value === 'Sim';
+    document.querySelectorAll('.grp-cnpj').forEach(el => el.classList.toggle('hidden', !mostra));
   });
+  document.getElementById('tSedeIgualResidencia').addEventListener('change', function () {
+    document.getElementById('tEnderecoSede').classList.toggle('hidden', this.checked);
+  });
+  document.getElementById('tCnpj').addEventListener('input', e => mascaraCnpj(e.target));
   document.getElementById('tFormaPgto').addEventListener('change', function () {
     document.getElementById('grpParcelas').classList.toggle('hidden', this.value !== 'Parcelado');
   });
