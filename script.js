@@ -3343,6 +3343,42 @@ function montarResumoBancario(o) {
   ].filter(Boolean).join("\n");
 }
 
+// Até o cadastro passar a pedir banco/agência/conta/Pix em campos separados,
+// tudo isso era digitado num campo único de texto livre — e é o que os
+// cadastros já existentes têm. Aqui esse texto é garimpado para preencher as
+// linhas que o modelo do contrato pede.
+//
+// A regra é precisão, não cobertura: preencher a linha errada num contrato é
+// pior do que deixá-la em branco. Por isso agência e conta só são aceitas
+// quando o valor começa por dígito, e cada campo é procurado por conta própria
+// no texto todo, sem depender de como a pessoa separou as informações. O texto
+// original volta em "original" e é impresso junto, para o DP conferir o que foi
+// interpretado e reposicionar o que estiver fora de lugar.
+function extrairDadosBancarios(texto) {
+  // A quebra de linha é o separador mais confiável — e é o que o próprio
+  // sistema grava em montarResumoBancario() — então ela é preservada.
+  const t = String(texto || "").replace(/\r\n?/g, "\n").replace(/[ \t]+/g, " ").trim();
+  if (!t) return { titular: "", banco: "", agencia: "", conta: "", pix: "", original: "" };
+
+  const ate = "([^,;|\\n]+)";                       // para no próximo separador forte
+  const pega = re => { const m = t.match(re); return m ? m[1].trim().replace(/[.,;\s]+$/, "") : ""; };
+  const BANCOS = "banco do brasil|bradesco|ita[úu]|santander|caixa econ[ôo]mica|caixa|nubank|" +
+                 "banco inter|inter|sicoob|sicredi|banrisul|safra|btg|c6 ?bank|pagbank|" +
+                 "mercado pago|will bank|neon|banestes|brb";
+
+  return {
+    titular:  pega(new RegExp("(?:titular|favorecid[oa]|nome)\\s*[:=-]\\s*" + ate, "i")),
+    banco:    pega(new RegExp("banco\\s*[:=-]\\s*" + ate, "i"))
+              || pega(new RegExp("\\b(" + BANCOS + ")(?![a-zà-ÿ])[^,;|\\n]*", "i")),
+    // Valor precisa começar por número: evita capturar "Banco do Brasil, Ag ..."
+    agencia:  pega(/\bag(?:[êe]ncia)?\.?\s*[:=-]?\s*(\d[\d.\-\/]*)/i),
+    // \S em vez de \w porque "poupança" tem cedilha e \w é só ASCII
+    conta:    pega(/(?:\bconta(?:\s*(?:corrente|poupan\S*))?|\bc\/c|\bcc)\.?\s*[:=-]?\s*(\d[\d.\-\/]*)/i),
+    pix:      pega(new RegExp("(?:chave\\s*)?pix\\s*(?:[:=-]|\\s)\\s*" + ate, "i")),
+    original: t.replace(/\n/g, " · ")
+  };
+}
+
 const SECOES_ROMANAS = ["I","II","III","IV","V","VI","VII","VIII","IX","X",
   "XI","XII","XIII","XIV","XV","XVI","XVII","XVIII","XIX","XX"];
 
@@ -3397,18 +3433,27 @@ function montarContratoPJHTML(item) {
       ? campos[chave]
       : `<span class="cg-yellow">[${esc(chave.toLowerCase())}]</span>`);
 
+  // As 5 linhas do modelo são sempre impressas, mesmo vazias: suprimir a linha
+  // esconde que falta dado. O que não vier dos campos separados é procurado no
+  // texto livre do cadastro antigo.
+  const doTextoLivre = extrairDadosBancarios(item.cDadosPagamento);
   const linhasBanco = [
-    ["Nome",  item.cTercTitularConta || item.cTercRazaoSocial || item.cTercNome],
-    ["Banco", item.cTercBanco],
-    ["Ag",    item.cTercAgencia],
-    ["CC",    item.cTercConta],
-    ["Pix",   item.cTercPix]
-  ].filter(par => par[1]);
-  const blocoBancario = linhasBanco.length
-    ? `<div class="cg-bank">${linhasBanco.map(par => esc(par[0] + ": " + par[1])).join("\n")}</div>`
-    : (item.cDadosPagamento
-        ? `<div class="cg-bank">${esc(item.cDadosPagamento)}</div>`
-        : `<div class="cg-bank cg-yellow">[titular / banco / agência / conta / chave Pix]</div>`);
+    ["Nome",  item.cTercTitularConta || doTextoLivre.titular || item.cTercRazaoSocial || item.cTercNome, "titular da conta"],
+    ["Banco", item.cTercBanco   || doTextoLivre.banco,   "banco / código"],
+    ["Ag",    item.cTercAgencia || doTextoLivre.agencia, "agência"],
+    ["CC",    item.cTercConta   || doTextoLivre.conta,   "conta"],
+    ["Pix",   item.cTercPix     || doTextoLivre.pix,     "chave Pix"]
+  ];
+  const blocoBancario = `<div class="cg-bank">${
+    linhasBanco.map(([rotulo, valor, falta]) => rotulo + ": " + cgFill(valor, falta)).join("\n")
+  }${
+    // Quando os dados vieram do texto livre do cadastro, o texto original é
+    // impresso junto: deixa o DP conferir o que foi interpretado e corrigir o
+    // que estiver fora de lugar, em vez de confiar às cegas na interpretação.
+    (doTextoLivre.original && !item.cTercBanco && !item.cTercAgencia && !item.cTercConta && !item.cTercPix)
+      ? `\nConforme informado no cadastro: <span class="cg-yellow">${esc(doTextoLivre.original)}</span>`
+      : ""
+  }</div>`;
 
   const listaEscopo = itensEscopo.length
     ? `<ol class="cg-lista">${itensEscopo.map(i => `<li>${esc(i)}</li>`).join("")}</ol>`

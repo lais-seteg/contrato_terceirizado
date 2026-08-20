@@ -89,3 +89,5 @@ No campo **Escopo do Contrato**, a primeira linha entra na cláusula do objeto c
 O texto de `contrato_pj.js` foi extraído do `.docx` programaticamente para preservar a numeração automática das cláusulas do Word — as referências cruzadas do próprio contrato ("Cláusula 29ª", "Cláusulas 15ª e 16ª", "Cláusulas 3ª a 7ª") dependem dessa ordem. Ao receber uma revisão nova do modelo em Word, é mais seguro reextrair do que editar o arquivo à mão.
 
 Campo sem dado sai destacado em amarelo no documento, para o DP completar antes de encaminhar.
+
+O bloco de dados bancários da cláusula de pagamento imprime sempre as cinco linhas do modelo (Nome, Banco, Ag, CC, Pix), mesmo vazias — suprimir a linha esconderia que falta dado. Para os cadastros feitos antes dos campos separados existirem, `extrairDadosBancarios()` garimpa o texto livre de `t_dados_bancarios` para preencher essas linhas, priorizando precisão sobre cobertura (agência e conta só são aceitas quando o valor começa por dígito). Nesses casos o texto original é impresso logo abaixo, em amarelo, para o DP conferir a interpretação e reposicionar o que estiver fora de lugar.
