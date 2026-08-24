@@ -645,6 +645,30 @@ function contratoAguardaAvaliacao(c) {
   return !DB.avaliacoes.find(a => a.contratoId === c.id);
 }
 
+// Estados em que o contrato não está mais em vigência. Para eles, alertar
+// "vence em X dias" é ruído: foi cancelado, reprovado ou já terminou.
+// Também não contam como ativos.
+//
+// NÃO confundir com STATUS_ENCERRADOS (mais abaixo, perto da regeração de
+// documento): aquele decide se o PDF deve ser regerado e propositalmente
+// NÃO inclui "Finalizado". São perguntas diferentes sobre o mesmo status.
+//
+// O alerta de avaliação pendente é outro caminho e continua valendo para
+// Encerrado e Finalizado — ver contratoAguardaAvaliacao acima.
+const STATUS_FORA_DE_VIGENCIA = ["Cancelado","Reprovado","Finalizado","Encerrado"];
+
+function contratoEncerrado(c) {
+  return STATUS_FORA_DE_VIGENCIA.includes(c?.status);
+}
+
+// Ativo = ainda em curso E ainda não venceu.
+// Sem data de fim, considera-se em curso: não há vencimento a checar.
+function contratoAtivo(c) {
+  if (contratoEncerrado(c)) return false;
+  const dias = diasAteVencer(c?.cDataFim);
+  return dias === null || dias >= 0;
+}
+
 // ══════════════════════════════════════════════════════
 //  NAVEGAÇÃO
 // ══════════════════════════════════════════════════════
@@ -673,9 +697,12 @@ function renderDashboard() {
     ? DB.contratos.filter(visivelParaLider)
     : DB.contratos;
 
-  document.getElementById("kpiAtivos").textContent      = meus.filter(c=>!["Reprovado","Finalizado","Cancelado"].includes(c.status)).length;
+  // Ativos = em curso E ainda não vencidos. Antes contava só pelo status,
+  // então um contrato com prazo já vencido seguia somando como ativo.
+  document.getElementById("kpiAtivos").textContent      = meus.filter(contratoAtivo).length;
   document.getElementById("kpiElaboracao").textContent  = meus.filter(c=>c.status==="Em Elaboração").length;
-  document.getElementById("kpiVencendo").textContent    = meus.filter(c=>{const d=diasAteVencer(c.cDataFim);return d!==null&&d>=0&&d<=30;}).length;
+  // Vencendo: mesma regra dos alertas — contrato encerrado não vence.
+  document.getElementById("kpiVencendo").textContent    = meus.filter(c=>{if(contratoEncerrado(c))return false;const d=diasAteVencer(c.cDataFim);return d!==null&&d>=0&&d<=30;}).length;
   document.getElementById("kpiCancelados").textContent  = meus.filter(c=>c.status==="Cancelado").length;
   document.getElementById("kpiTercs").textContent       = DB.terceirizados.length;
   document.getElementById("kpiAvalPendentes").textContent = meus.filter(c=>contratoAguardaAvaliacao(c)).length;
@@ -4014,6 +4041,9 @@ function gerarAlertas(){
     ? DB.contratos.filter(visivelParaLider)
     : DB.contratos;
   const alertasVencimento = base
+    // Contrato cancelado, reprovado ou já encerrado não gera alerta de
+    // vencimento — o prazo dele deixou de importar.
+    .filter(c => !contratoEncerrado(c))
     .map(c => { const dias=diasAteVencer(c.cDataFim); return {categoria:"vencimento",titulo:`Contrato ${c.id} · ${c.cTercNome||c.cRazaoSocial}`,desc:"Vencimento do contrato",dias,tipo:dias<=7?"critico":dias<=15?"atencao":"aviso"}; })
     .filter(a => a.dias!==null && a.dias<=30);
   const alertasAvaliacao = base
