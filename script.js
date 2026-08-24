@@ -951,25 +951,47 @@ function abrirFormNovoContrato() {
 // criado em julho/2026). Mesma lógica de gerarId() (conta os já existentes
 // no DB carregado) — sem contador atômico no backend, mas é o mesmo padrão
 // já usado para CTR-/TER-/AVL-/AUD- em todo o sistema.
-function gerarNumeroContrato(dataRef) {
-  const ref  = dataRef ? new Date(dataRef) : new Date();
-  const mes  = String(ref.getMonth()+1).padStart(2,"0");
-  const ano2 = String(ref.getFullYear()).slice(-2);
-  const doMes = DB.contratos.filter(c => {
-    if (!c.criadoEm) return false;
-    const d = new Date(c.criadoEm);
-    return d.getMonth()===ref.getMonth() && d.getFullYear()===ref.getFullYear();
-  }).length;
-  return `${String(doMes+1).padStart(2,"0")}/${mes}${ano2}`;
+// O número (NN/MMAA) vem do BANCO, não do array local.
+//
+// A versão anterior CONTAVA os contratos do mês presentes em DB.contratos.
+// Com a RLS por perfil, cada solicitante enxerga apenas os próprios, então
+// o número passou a depender de quem estava logado: quem não tinha
+// contrato anterior recebia 01/0826 enquanto a gestão recebia 04/0826.
+// Além disso, contar em vez de olhar o maior número fazia uma exclusão
+// liberar um número já usado.
+//
+// proximo_numero_contrato() é SECURITY DEFINER: vê todos os contratos,
+// independentemente de quem pergunta, e usa MAX em vez de COUNT.
+async function gerarNumeroContrato(dataRef) {
+  const p_data = dataRef
+    ? new Date(dataRef).toISOString().slice(0, 10)   // YYYY-MM-DD
+    : null;
+  const { data, error } = await supa.rpc('proximo_numero_contrato', { p_data });
+  if (error || !data) {
+    console.error('[contrato] proximo_numero_contrato:', error);
+    throw new Error('Não foi possível obter o número do contrato.');
+  }
+  return data;
 }
 
-function selecionarTipoContrato(tipo) {
+async function selecionarTipoContrato(tipo) {
   document.getElementById("modalSelecionarTipo").classList.remove("active");
   limparFormContrato();
   document.getElementById("formContratoTitulo").textContent = "Novo Contrato";
   document.getElementById("listaContratos").classList.add("hidden");
   document.getElementById("formContrato").classList.remove("hidden");
-  document.getElementById("cNumeroContrato").value = gerarNumeroContrato();
+
+  // O número vem do banco. Se falhar, avisa em vez de gravar um número
+  // errado num documento contratual.
+  const campoNumero = document.getElementById("cNumeroContrato");
+  campoNumero.value = "...";
+  try {
+    campoNumero.value = await gerarNumeroContrato();
+  } catch (e) {
+    campoNumero.value = "";
+    mostrarToast("Não foi possível obter o número do contrato. Tente novamente.", "err");
+  }
+
   const sel = document.getElementById("cTipoContratacao");
   sel.value = tipo;
   atualizarSecaoTerceirizado();
@@ -1423,9 +1445,12 @@ function editarContrato(id) {
   document.getElementById("cStatus").value = item.status;
   // Contratos antigos (de antes do número virar obrigatório/automático)
   // podem não ter cNumeroContrato — gera agora, usando a data de criação
-  // original do contrato como referência.
+  // original do contrato como referência. Assíncrono desde que a
+  // numeração passou para o banco; o resto do formulário não espera.
   if (!document.getElementById("cNumeroContrato").value) {
-    document.getElementById("cNumeroContrato").value = gerarNumeroContrato(item.criadoEm);
+    gerarNumeroContrato(item.criadoEm)
+      .then(n => { document.getElementById("cNumeroContrato").value = n; })
+      .catch(() => mostrarToast("Não foi possível obter o número do contrato.", "err"));
   }
   // Campos de data são texto dd/mm/aaaa na tela, mas ficam em ISO no item —
   // o loop genérico acima já colocou o ISO cru no campo; sobrescreve aqui.
