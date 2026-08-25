@@ -1631,7 +1631,13 @@ function gerarHTMLDetalhes(item) {
   let linkHTML = "";
   if (item.cLinkToken) {
     const url = new URL(`cadastro.html?ctr=${encodeURIComponent(item.id)}&tk=${encodeURIComponent(item.cLinkToken)}`, window.location.href).href;
-    const expirado = item.cLinkExpiraEm && new Date() >= new Date(item.cLinkExpiraEm);
+    const expirado = linkVencido(item);
+    // Prazo vencido e nenhuma resposta: o link está morto (as RPCs do banco
+    // exigem c_link_expira_em > now()) e a solicitação parou aqui. É nesta
+    // tela que o DP descobre isso, então é nela que fica a ação de gerar
+    // outro — e o botão de copiar sai de cena, porque copiar um link que o
+    // banco já recusa só faz o terceirizado tentar duas vezes.
+    const semResposta = !item.cLinkUsado && !!expirado;
     const situacao = item.cLinkUsado
       ? "✓ Usado pelo terceirizado"
       : expirado
@@ -1644,9 +1650,17 @@ function gerarHTMLDetalhes(item) {
       <span>Link enviado</span>
       <div style="display:flex;align-items:center;gap:.4rem">
         <strong style="word-break:break-all;flex:1">${esc(url)}</strong>
-        <button type="button" class="btn-icon" title="Copiar link" style="flex-shrink:0" onclick="copiarTexto('${url.replace(/'/g,"\\'")}')">${svgIcon("clipboardCopy")}</button>
+        ${semResposta ? "" : `<button type="button" class="btn-icon" title="Copiar link" style="flex-shrink:0" onclick="copiarTexto('${url.replace(/'/g,"\\'")}')">${svgIcon("clipboardCopy")}</button>`}
       </div>
-    </div>`;
+    </div>
+    ${semResposta && ehGestaoOuGP() ? `
+    <div class="detail-item full">
+      <span>Prazo vencido sem resposta</span>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:.6rem;flex-wrap:wrap">
+        <strong style="flex:1;min-width:14rem;white-space:normal">Gere um novo link para esta mesma solicitação. Vale por mais 24h; o link anterior continua sem valer.</strong>
+        <button type="button" class="btn btn-primary btn-sm" style="flex-shrink:0" onclick="regenerarLinkContrato('${item.id}')">${svgIcon("link",15)} Gerar novo link (24h)</button>
+      </div>
+    </div>` : ""}`;
   }
 
   return `<div class="detail-grid">
@@ -1779,8 +1793,10 @@ function renderContratos() {
             ? `<button class="btn-icon btn-icon-green" title="Ver / Baixar Contrato Gerado" onclick="abrirGerarContrato('${c.id}')">${svgIcon("fileText")}</button>`
             : `<button class="btn-icon btn-icon-teal" title="Gerar Contrato" onclick="abrirGerarContrato('${c.id}')">${svgIcon("fileText")}</button>`)
           : ""}
-        ${(!c.cTerceirizadoId && ["Pendente","Em Elaboração"].includes(c.status))
-          ? `<button class="btn-icon" title="Copiar/gerar link para o terceirizado preencher" onclick="regenerarLinkContrato('${c.id}')">${svgIcon("link")}</button>`
+        ${(c.cLinkToken && !c.cLinkUsado && ehGestaoOuGP() && ["Pendente","Em Elaboração"].includes(c.status))
+          ? `<button class="btn-icon${linkVencido(c)?" btn-icon-orange":""}" title="${linkVencido(c)
+              ? `Link expirou em ${formatarDataHora(c.cLinkExpiraEm)} sem resposta — gerar um novo, válido por 24h`
+              : `Gerar um novo link — invalida o atual, que vale até ${formatarDataHora(c.cLinkExpiraEm)}`}" onclick="regenerarLinkContrato('${c.id}')">${svgIcon("link")}</button>`
           : ""}
         ${podeEditar(c)?`<button class="btn-icon btn-icon-orange" title="Editar" onclick="editarContrato('${c.id}')">${svgIcon("edit")}</button>`:""}
         ${podeAnalisar()?`<button class="btn-icon btn-icon-green" title="Atualizar Status" onclick="abrirAnalise('${c.id}')">${svgIcon("settings")}</button>`:""}
@@ -3824,6 +3840,13 @@ function gerarLinkParaContrato(item) {
   item.cLinkUsado = false;
 }
 
+// Só para a tela: o prazo que vale é o do banco (c_link_expira_em > now() nas
+// RPCs). Aqui é o relógio do navegador, usado apenas para escolher o rótulo e
+// mostrar o botão de gerar outro link.
+function linkVencido(item) {
+  return !!(item.cLinkExpiraEm && new Date() >= new Date(item.cLinkExpiraEm));
+}
+
 function mostrarModalLinkContrato(item) {
   const url = new URL(`cadastro.html?ctr=${encodeURIComponent(item.id)}&tk=${encodeURIComponent(item.cLinkToken)}`, window.location.href).href;
   document.getElementById("linkContratoGerado").value = url;
@@ -3843,13 +3866,46 @@ function copiarTexto(texto) {
     .catch(() => mostrarToast("Copie o link manualmente: " + texto, "err"));
 }
 
+// Gera outro link de 24h para a MESMA solicitação: o token novo é gravado na
+// própria linha do contrato, e as RPCs validar_link_contrato/
+// enviar_cadastro_terceirizado casam por (id do contrato + token da linha) —
+// então o vínculo com o contrato é automático e o token antigo passa a ser
+// recusado pelo banco, sem precisar de nada aqui.
+//
+// A trava é cLinkUsado, não cTerceirizadoId: o registro-base do terceirizado
+// (Nome/CPF/Telefone) é criado pelo líder junto com a solicitação, então
+// cTerceirizadoId JÁ existe antes de o terceirizado responder — checar esse
+// campo recusava todo contrato e deixava a função inalcançável. cLinkUsado só
+// vira true quando o cadastro é efetivamente enviado pelo link.
 function regenerarLinkContrato(id) {
   const item = DB.contratos.find(c => c.id === id);
   if (!item) return;
-  if (item.cTerceirizadoId) { mostrarToast("Este contrato já tem um terceirizado vinculado.", "err"); return; }
-  if (!confirm("Isso invalida o link anterior (se ainda não usado) e gera um novo. Continuar?")) return;
+  if (!ehGestaoOuGP()) { mostrarToast("Apenas DP/RH e Gestão podem gerar um novo link.", "err"); return; }
+  if (item.cLinkUsado) { mostrarToast("O terceirizado já preencheu o cadastro por este link.", "err"); return; }
+
+  const aviso = linkVencido(item)
+    ? `O link anterior expirou em ${formatarDataHora(item.cLinkExpiraEm)} sem resposta.\n\nGerar um novo link para esta mesma solicitação, válido por 24h?`
+    : `O link atual ainda vale até ${formatarDataHora(item.cLinkExpiraEm)}.\n\nGerar um novo agora invalida esse link — se o terceirizado já tiver o antigo em mãos, ele deixa de funcionar. Continuar?`;
+  if (!confirm(aviso)) return;
+
   gerarLinkParaContrato(item);
+  const agora = new Date().toISOString();
+  const obs = `Novo link de preenchimento gerado (válido até ${formatarDataHora(item.cLinkExpiraEm)}); o link anterior deixou de valer.`;
+  item.historico = [...(item.historico || []), {
+    data: agora, usuario: STATE.nomeUsuario, perfil: STATE.perfil, status: item.status, obs
+  }];
+  item.atualizadoEm = agora;
+  item.atualizadoPor = STATE.nomeUsuario;
+  registrarAuditoria("Novo link de preenchimento", "Contratos", item.id, item.status, item.status, obs);
   syncContrato(item);
+
+  // O modal de detalhes é justamente de onde o botão é clicado: sem redesenhar,
+  // ele continuaria mostrando o link morto e a situação "Expirado" por trás.
+  const modalDet = document.getElementById("modalDetalhes");
+  if (modalDet && modalDet.classList.contains("active") && modalDet.dataset.currentId === item.id) {
+    document.getElementById("modalDetalhesBody").innerHTML = gerarHTMLDetalhes(item);
+  }
+  renderContratos();
   mostrarModalLinkContrato(item);
 }
 

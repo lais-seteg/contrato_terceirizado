@@ -61,6 +61,12 @@ Ramos: Reprovado · Pendente de Ajuste · Cancelado
 
 O financeiro não participa do fluxo do sistema — a assinatura já finaliza o contrato.
 
+### Link de preenchimento expirado
+
+O link enviado ao terceirizado vale 24h e só pode ser respondido uma vez. Quando ele vence sem resposta, a solicitação fica parada — o banco recusa o token antigo (`c_link_expira_em > now()` nas duas RPCs). Nesse caso, DP/RH e Gestão geram outro link **para a mesma solicitação** pelo botão **Gerar novo link (24h)**, no bloco *Link de Preenchimento Enviado* do modal de detalhes do contrato (também disponível pelo ícone de corrente na lista, que fica laranja quando o link está vencido).
+
+O token novo é gravado na própria linha do contrato, então o vínculo com a solicitação é automático e o link anterior deixa de funcionar. A geração fica registrada no histórico do contrato e na auditoria. Se o terceirizado já respondeu (`c_link_usado = true`), o botão não aparece e a ação é recusada — não há como reabrir um cadastro já entregue.
+
 ## Contrato gerado: dois modelos
 
 O documento é montado a partir dos dados da solicitação e do cadastro do terceirizado, e existe em duas versões:
