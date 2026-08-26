@@ -61,6 +61,22 @@ Ramos: Reprovado · Pendente de Ajuste · Cancelado
 
 O financeiro não participa do fluxo do sistema — a assinatura já finaliza o contrato.
 
+### CPF: quando a solicitação pula o link
+
+Ao digitar o CPF, a tela consulta `terceirizados` **no banco** (não a lista carregada no login) e o vínculo definitivo é resolvido de novo no salvamento. O que decide o caminho é se o cadastro está **completo** — tem e-mail, ou foi preenchido pelo link (`atualizado_em`):
+
+| Situação do CPF | O que acontece |
+|---|---|
+| Cadastro completo | Nome/Telefone vêm travados do cadastro, nenhum link é gerado e a solicitação vai direto para **Em Elaboração** |
+| Registro-base de uma solicitação anterior que ninguém preencheu | Reaproveita a mesma linha (não duplica a pessoa), mas a solicitação segue **Pendente** e um link novo de 24h é gerado |
+| CPF novo | Cria o registro-base (Nome/CPF/Telefone) e gera o link de 24h |
+
+Tratar o registro-base como "já cadastrado" era o que fazia o sistema acusar CPF cadastrado sem haver cadastro: o link não era gerado e a pessoa nunca recebia o formulário.
+
+### Numeração dos registros
+
+`CTR-000X`, `TER-000X`, `AVL-000X` e `AUD-000X` são alocados pelo banco (`proximo_id()` sobre as sequences — ver `migracao_2026-08-26_ids_atomicos.sql`), e a criação grava com `INSERT`, não `upsert`. Antes o id era contado no navegador a partir da lista carregada no login: uma aba aberta há horas gerava um id já usado e o `upsert(onConflict:'id')` gravava por cima do registro de outra pessoa em silêncio — solicitações sumiam. Como em `proximo_numero_contrato()`, número usado não volta: podem existir buracos na sequência.
+
 ### Link de preenchimento expirado
 
 O link enviado ao terceirizado vale 24h e só pode ser respondido uma vez. Quando ele vence sem resposta, a solicitação fica parada — o banco recusa o token antigo (`c_link_expira_em > now()` nas duas RPCs). Nesse caso, DP/RH e Gestão geram outro link **para a mesma solicitação** pelo botão **Gerar novo link (24h)**, no bloco *Link de Preenchimento Enviado* do modal de detalhes do contrato (também disponível pelo ícone de corrente na lista, que fica laranja quando o link está vencido).

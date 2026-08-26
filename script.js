@@ -317,6 +317,33 @@ async function carregarDBSupabase() {
   }
 }
 
+// Próximo id (CTR/TER/AVL) alocado pelo BANCO, sob lock de linha — ver
+// migracao_2026-08-26_ids_atomicos.sql (nextval das sequences). O gerarId() antigo contava a lista
+// carregada no login: aba aberta há horas gerava um id já usado e, com
+// upsert(onConflict:'id'), gravava por cima do registro de outra pessoa
+// sem nenhum aviso — foi o que fez solicitações "sumirem".
+async function proximoId(prefixo) {
+  const { data, error } = await supa.rpc('proximo_id', { p_prefixo: prefixo });
+  if (error || !data) {
+    console.error('[contrato] proximo_id:', error);
+    throw new Error('Não foi possível obter o número do registro.');
+  }
+  return data;
+}
+
+// Criação usa INSERT: se o id já existir, o banco recusa e a pessoa vê o
+// erro, em vez de sobrescrever o registro de outro em silêncio.
+// upsert continua valendo para edição, onde gravar por cima é o esperado.
+function inserirContrato(contrato) {
+  return supa.from('contratos').insert(_ctrToRow(contrato));
+}
+function inserirTerceirizado(terc) {
+  return supa.from('terceirizados').insert(_tercToRow(terc));
+}
+function inserirAvaliacao(aval) {
+  return supa.from('avaliacoes').insert(_avalToRow(aval));
+}
+
 function syncContrato(contrato) {
   supa.from('contratos').upsert(_ctrToRow(contrato), { onConflict: 'id' })
     .then(({ error }) => { if (error) mostrarToast("Aviso: falha ao sincronizar contrato.", "err"); });
@@ -327,13 +354,13 @@ function syncTerceirizado(terc) {
     .then(({ error }) => { if (error) mostrarToast("Aviso: falha ao sincronizar terceirizado.", "err"); });
 }
 
-function syncAvaliacao(aval) {
-  supa.from('avaliacoes').upsert(_avalToRow(aval), { onConflict: 'id' })
-    .then(({ error }) => { if (error) mostrarToast("Aviso: falha ao sincronizar avaliação.", "err"); });
-}
-
 function syncAuditoria(entry) {
-  supa.from('auditoria').insert(_audToRow(entry))
+  // O id sai do DEFAULT da tabela (proximo_id_seq('AUD')); mandar o id
+  // gerado no navegador fazia o insert colidir e a entrada se perder —
+  // é por isso que CTR-0004 ficou sem registro de "Criação".
+  const row = _audToRow(entry);
+  delete row.id;
+  supa.from('auditoria').insert(row)
     .then(({ error }) => { if (error) console.warn("syncAuditoria error:", error); });
 }
 
@@ -1040,37 +1067,101 @@ function limparFormContrato() {
 // de formas diferentes ("123.456.789-00" vs dígitos só) como iguais.
 function somenteDigitos(v) { return String(v || "").replace(/\D/g, ""); }
 
+// Um registro em `terceirizados` pode ser duas coisas bem diferentes:
+//
+//   • cadastro de verdade — a pessoa preencheu o formulário pelo link
+//     (a RPC enviar_cadastro_terceirizado carimba atualizado_em), ou o
+//     DP cadastrou pela tela (que exige e-mail);
+//   • registro-base ("stub") — as três linhas que a própria solicitação
+//     cria na hora (nome/CPF/telefone) só para o link ter onde gravar.
+//
+// Tratar stub como "já cadastrado" era o que fazia o sistema dizer que o
+// CPF estava em Terceirizados quando na prática não havia cadastro nenhum:
+// o link de 24h deixava de ser gerado e a solicitação pulava direto para
+// "Em Elaboração", então a pessoa nunca recebia o formulário.
+function cadastroTerceirizadoCompleto(t) {
+  if (!t) return false;
+  return !!(String(t.tEmail || "").trim() || t.atualizadoEm);
+}
+
 function buscarTerceirizadoPorCpfDigitos(cpfDigitos) {
   if (cpfDigitos.length !== 11) return null;
   return DB.terceirizados.find(t => somenteDigitos(t.tCpf) === cpfDigitos) || null;
 }
 
+// Consulta o BANCO, não a lista carregada no login: um cadastro criado por
+// outra pessoa hoje de manhã não aparece na lista em memória, e um registro
+// já excluído continua nela. O CPF fica guardado mascarado, então a
+// comparação por dígitos é feita aqui.
+async function buscarTerceirizadoPorCpfNoBanco(cpfDigitos) {
+  if (cpfDigitos.length !== 11) return null;
+  const { data, error } = await supa
+    .from('terceirizados')
+    .select('id, t_nome, t_cpf, t_telefone, t_email, atualizado_em');
+  if (error) { console.error('[contrato] busca de terceirizado por CPF:', error); throw error; }
+  const row = (data || []).find(r => somenteDigitos(r.t_cpf) === cpfDigitos);
+  return row ? _rowToTerc(row) : null;
+}
+
+// Sequência da última busca disparada — respostas que chegam fora de ordem
+// (o líder continua digitando) são descartadas.
+let _seqBuscaCpf = 0;
+
 // Disparado a cada digitação no CPF do bloco "Identificação do Terceirizado".
-// Se o CPF já existir em Terceirizados, trava Nome/Telefone com os dados já
-// cadastrados (o líder não redigita e não vê mais nada do cadastro) e guarda
-// o id encontrado em #cTerceirizadoIdEncontrado — nenhum link será gerado ao
-// salvar, pois a pessoa já está cadastrada.
-function buscarTerceirizadoPorCpf() {
+// Só um cadastro COMPLETO trava Nome/Telefone e vai para
+// #cTerceirizadoIdEncontrado — aí sim a pessoa já está cadastrada, nenhum
+// link é gerado e a solicitação segue direto para elaboração. Stub apenas
+// avisa que existe solicitação anterior em aberto; o vínculo definitivo é
+// resolvido no salvamento, contra o banco.
+async function buscarTerceirizadoPorCpf() {
   mascaraCpfId("cTercCpf");
   const cpfDigitos = somenteDigitos(document.getElementById("cTercCpf").value);
   const nomeEl = document.getElementById("cTercNome");
   const telEl  = document.getElementById("cTercTelefone");
   const badge  = document.getElementById("cTercCpfMatchBadge");
   const idEl   = document.getElementById("cTerceirizadoIdEncontrado");
+  const seq = ++_seqBuscaCpf;
 
-  const t = buscarTerceirizadoPorCpfDigitos(cpfDigitos);
-  if (t) {
+  const soltar = () => { nomeEl.readOnly = false; telEl.readOnly = false; idEl.value = ""; };
+
+  if (cpfDigitos.length !== 11) { soltar(); if (badge) badge.classList.add("hidden"); return; }
+
+  let t;
+  try {
+    t = await buscarTerceirizadoPorCpfNoBanco(cpfDigitos);
+  } catch {
+    // Sem rede/sessão: cai na lista em memória só para não travar a tela.
+    t = buscarTerceirizadoPorCpfDigitos(cpfDigitos);
+  }
+  if (seq !== _seqBuscaCpf) return;   // o CPF já mudou desde esta busca
+
+  if (t && cadastroTerceirizadoCompleto(t)) {
     nomeEl.value = t.tNome || "";
     telEl.value  = t.tTelefone || "";
     nomeEl.readOnly = true;
     telEl.readOnly  = true;
     idEl.value = t.tId;
-    if (badge) { badge.innerHTML = `${svgIcon("check",13)} Terceirizado já cadastrado — dados preenchidos automaticamente.`; badge.classList.remove("hidden"); }
-  } else {
-    nomeEl.readOnly = false;
-    telEl.readOnly  = false;
-    idEl.value = "";
-    if (badge) badge.classList.add("hidden");
+    if (badge) {
+      badge.innerHTML = `${svgIcon("check",13)} Terceirizado já cadastrado — dados preenchidos automaticamente.`;
+      badge.style.color = "var(--green)";
+      badge.classList.remove("hidden");
+    }
+    return;
+  }
+
+  soltar();
+  const editando = !!document.getElementById("cId")?.value;
+  if (t && !editando) {
+    // Stub: reaproveita o mesmo registro no salvamento (sem duplicar a
+    // pessoa), mas o cadastro continua pendente e um link novo será gerado.
+    // Em edição não vale o aviso — editar não gera link nenhum.
+    if (badge) {
+      badge.innerHTML = `${svgIcon("alertTriangle",13)} Já existe uma solicitação para este CPF com o cadastro ainda não preenchido — um novo link de 24h será gerado ao salvar.`;
+      badge.style.color = "var(--orange)";
+      badge.classList.remove("hidden");
+    }
+  } else if (badge) {
+    badge.classList.add("hidden");
   }
 }
 
@@ -1079,10 +1170,13 @@ function limparMatchTerceirizadoCpf() {
   const telEl  = document.getElementById("cTercTelefone");
   const badge  = document.getElementById("cTercCpfMatchBadge");
   const idEl   = document.getElementById("cTerceirizadoIdEncontrado");
+  // Invalida qualquer busca por CPF ainda em voo, senão a resposta dela
+  // chegaria depois da limpeza e travaria os campos do formulário novo.
+  _seqBuscaCpf++;
   if (nomeEl) nomeEl.readOnly = false;
   if (telEl)  telEl.readOnly  = false;
   if (idEl)   idEl.value = "";
-  if (badge)  badge.classList.add("hidden");
+  if (badge)  { badge.classList.add("hidden"); badge.style.color = ""; }
 }
 
 // Botão "🔄 Sincronizar dados do terceirizado cadastrado" — só DP
@@ -1313,18 +1407,34 @@ function preencherCamposAuxiliar(item) {
   }
 }
 
-function salvarContrato() {
+// Salvar virou assíncrono (id e vínculo do terceirizado vêm do banco), então
+// o botão fica travado durante a gravação — dois cliques seguidos criariam
+// duas solicitações.
+async function salvarContrato() {
+  const btn = document.getElementById("btnSalvarContrato");
+  if (btn?.dataset.salvando === "1") return;
+  const rotulo = btn?.textContent;
+  if (btn) { btn.dataset.salvando = "1"; btn.disabled = true; btn.textContent = "Salvando…"; }
+  try {
+    await _salvarContrato();
+  } finally {
+    if (btn) { delete btn.dataset.salvando; btn.disabled = false; btn.textContent = rotulo; }
+  }
+}
+
+async function _salvarContrato() {
   const item = coletarCampos(CAMPOS_CONTRATO);
   lerCamposContrato(item);
   if      (item.cTipoContratacao === "Despachante")     lerCamposDespachante(item);
   else if (item.cTipoContratacao === "Prestador de serviço") lerCamposAuxiliar(item);
   item.entregas = entregas.filter(e => e.entrega && e.entrega.trim()).map(({entrega,marco,data,valor,formaPagamento}) => ({entrega,marco,data,valor,formaPagamento}));
-  item.id = item.cId || gerarId("CTR");
+  item.id = item.cId;
   // Solicitante sempre submete como "Pendente" (aguarda elaboração pelo DP/RH)
   item.status = STATE.perfil === "solicitante" ? "Pendente" : (item.cStatus || "Pendente");
 
-  const idx = DB.contratos.findIndex(c=>c.id===item.id);
-  const criandoNovo = idx < 0;
+  const criandoNovo = !item.cId;
+  const idx = criandoNovo ? -1 : DB.contratos.findIndex(c=>c.id===item.id);
+  if (!criandoNovo && idx < 0) { mostrarToast("Contrato não encontrado — recarregue a página.","err"); return; }
   // Data da solicitação: a do próprio contrato se já existir, ou agora (está
   // sendo criado agora) — usada para barrar Início da Vigência anterior a ela.
   const dataSolicitacao = criandoNovo ? new Date().toISOString() : DB.contratos[idx].criadoEm;
@@ -1335,27 +1445,40 @@ function salvarContrato() {
 
   const err = validarContrato(item, dataSolicitacao);
   if (err) { mostrarToast(err,"err"); return; }
-  // Só na criação: resolve quem é o terceirizado — reaproveita o cadastro já
-  // existente (encontrado por CPF) ou cria um registro-base agora, que o próprio
-  // terceirizado completa depois pelo link (Fluxo 1 → 2).
-  let criouCadastroNovo = false;
+
+  // Só na criação: resolve quem é o terceirizado. O vínculo é decidido AQUI,
+  // contra o banco, e não pelo que a tela achou enquanto o CPF era digitado —
+  // a tela pode estar com uma lista velha do login.
+  let stubCriado = null;   // registro-base novo, ainda não gravado
+  let precisaLink = false; // cadastro incompleto → link de 24h
   if (criandoNovo) {
-    const idEncontrado = document.getElementById("cTerceirizadoIdEncontrado")?.value || "";
-    if (idEncontrado) {
-      item.cTerceirizadoId = idEncontrado;
-      // CPF já cadastrado: os dados pessoais já existem (vieram de uma
-      // solicitação anterior), não precisa esperar o terceirizado preencher
-      // nada de novo — pula direto pra "Em Elaboração".
-      if (STATE.perfil === "solicitante") item.status = "Em Elaboração";
-    } else {
-      const stub = {
-        tId: gerarId("TER"), tNome: item.cTercNome, tCpf: item.cTercCpf, tTelefone: item.cTercTelefone,
-        tTipo: item.cTipoContratacao, criadoEm: new Date().toISOString(), criadoPor: STATE.nomeUsuario
-      };
-      DB.terceirizados.unshift(stub);
-      syncTerceirizado(stub);
-      item.cTerceirizadoId = stub.tId;
-      criouCadastroNovo = true;
+    try {
+      item.id = await proximoId("CTR");
+
+      const existente = await buscarTerceirizadoPorCpfNoBanco(somenteDigitos(item.cTercCpf));
+      if (existente && cadastroTerceirizadoCompleto(existente)) {
+        // Cadastro de verdade: os dados pessoais já existem, não há o que
+        // esperar do terceirizado — pula direto pra "Em Elaboração".
+        item.cTerceirizadoId = existente.tId;
+        if (STATE.perfil === "solicitante") item.status = "Em Elaboração";
+      } else if (existente) {
+        // Registro-base de uma solicitação anterior que ninguém preencheu:
+        // reaproveita a mesma linha (não duplica a pessoa), mas o cadastro
+        // segue pendente e um link novo é gerado.
+        item.cTerceirizadoId = existente.tId;
+        precisaLink = true;
+      } else {
+        stubCriado = {
+          tId: await proximoId("TER"), tNome: item.cTercNome, tCpf: item.cTercCpf, tTelefone: item.cTercTelefone,
+          tTipo: item.cTipoContratacao, criadoEm: new Date().toISOString(), criadoPor: STATE.nomeUsuario
+        };
+        item.cTerceirizadoId = stubCriado.tId;
+        precisaLink = true;
+      }
+    } catch (e) {
+      console.error('[contrato] salvarContrato:', e);
+      mostrarToast("Não foi possível salvar a solicitação. Tente novamente.","err");
+      return;
     }
   }
 
@@ -1385,18 +1508,38 @@ function salvarContrato() {
   } else {
     item.criadoEm  = new Date().toISOString();
     item.criadoPor = STATE.nomeUsuario;
-    const obsCriacao = criouCadastroNovo
+    const obsCriacao = precisaLink
       ? "Contrato criado e enviado para análise."
       : "Contrato criado com terceirizado já cadastrado (CPF já existente) — encaminhado direto para elaboração.";
     item.historico = [{ data:new Date().toISOString(), usuario:STATE.nomeUsuario, perfil:STATE.perfil, status:item.status, obs:obsCriacao }];
-    // CPF não encontrado: gera o link único de preenchimento (24h, uso único).
-    // Se o CPF já existia, o cadastro é reaproveitado e nenhum link é gerado.
-    if (criouCadastroNovo) gerarLinkParaContrato(item);
+    // Cadastro ainda não preenchido (CPF novo ou registro-base em aberto):
+    // gera o link único de 24h, uso único. Cadastro completo dispensa o link.
+    if (precisaLink) gerarLinkParaContrato(item);
+
+    // Grava PRIMEIRO e só confirma na tela depois: antes o contrato entrava na
+    // lista em memória e o erro do servidor virava um toast solto, então a
+    // solicitação parecia salva e sumia no recarregamento.
+    if (stubCriado) {
+      const { error: errTerc } = await inserirTerceirizado(stubCriado);
+      if (errTerc) {
+        console.error('[contrato] insert terceirizado:', errTerc);
+        mostrarToast("Não foi possível criar o cadastro do terceirizado. Nada foi salvo.","err");
+        return;
+      }
+    }
+    const { error: errCtr } = await inserirContrato(item);
+    if (errCtr) {
+      console.error('[contrato] insert contrato:', errCtr);
+      if (stubCriado) deleteSupabase('terceirizados', stubCriado.tId);
+      mostrarToast("Não foi possível salvar a solicitação. Nada foi salvo — tente novamente.","err");
+      return;
+    }
+
+    if (stubCriado) DB.terceirizados.unshift(stubCriado);
     DB.contratos.unshift(item);
     registrarAuditoria("Criação","Contratos",item.id,"",item.status,`Contrato de ${item.cTercNome||"-"}`);
-    syncContrato(item);
     mostrarToast("Contrato enviado para análise.","ok");
-    if (criouCadastroNovo) mostrarModalLinkContrato(item);
+    if (precisaLink) mostrarModalLinkContrato(item);
   }
   fecharFormContrato();
 }
@@ -3736,8 +3879,8 @@ function calcularTotalEntregas(){
 function abrirFormNovoTerc(){limparFormTerc();document.getElementById("formTercTitulo").textContent="Cadastrar Terceirizado";document.getElementById("listaTerceirizados").classList.add("hidden");document.getElementById("formTerc").classList.remove("hidden");}
 function fecharFormTerc(){document.getElementById("formTerc").classList.add("hidden");document.getElementById("listaTerceirizados").classList.remove("hidden");renderTerceirizados();}
 function limparFormTerc(){document.getElementById("tercForm").reset();document.getElementById("tId").value="";toggleCamposCnpjTerc();document.getElementById("grpParcelasTerc").classList.add("hidden");}
-function salvarTerceirizado(){
-  const item=coletarCampos(CAMPOS_TERC);item.tId=item.tId||gerarId("TER");
+async function salvarTerceirizado(){
+  const item=coletarCampos(CAMPOS_TERC);
   // Os campos separados (titular/banco/agência/conta/Pix) são a fonte da
   // verdade; o resumo em texto existe para as telas e relatórios antigos e
   // para os cadastros que só têm ele. Só sobrescreve quando há o que compor.
@@ -3751,7 +3894,7 @@ function salvarTerceirizado(){
   if(!item.tCpf){mostrarToast("Informe o CPF.","err");return;}
   if(!item.tTelefone){mostrarToast("Informe o telefone.","err");return;}
   if(item.tFormaPgto==="Parcelado"&&!item.tParcelas){mostrarToast("Informe o número de parcelas.","err");return;}
-  const idx=DB.terceirizados.findIndex(t=>t.tId===item.tId);
+  const idx=item.tId?DB.terceirizados.findIndex(t=>t.tId===item.tId):-1;
   if(idx>=0){
     const antigo=DB.terceirizados[idx];
     const diffs=Object.entries(TERC_LABELS).filter(([k])=>String(antigo[k]||"")!==String(item[k]||"")).map(([k,l])=>`${l}: "${antigo[k]||"-"}" → "${item[k]||"-"}"`);
@@ -3760,7 +3903,16 @@ function salvarTerceirizado(){
     registrarAuditoria("Edição","Terceirizados",item.tId,"","",detalheEdit);
     syncTerceirizado(DB.terceirizados[idx]);mostrarToast("Atualizado.","ok");
   }
-  else{item.criadoEm=new Date().toISOString();item.criadoPor=STATE.nomeUsuario;DB.terceirizados.unshift(item);registrarAuditoria("Criação","Terceirizados",item.tId,"","",item.tNome);syncTerceirizado(item);mostrarToast("Cadastrado.","ok");}
+  else{
+    // Id do banco e INSERT: com o id contado na tela, dois cadastros feitos em
+    // abas diferentes recebiam o mesmo TER-000X e um gravava por cima do outro.
+    try{ item.tId=await proximoId("TER"); }
+    catch(e){ console.error('[terceirizado] proximo_id:',e); mostrarToast("Não foi possível cadastrar. Tente novamente.","err"); return; }
+    item.criadoEm=new Date().toISOString();item.criadoPor=STATE.nomeUsuario;
+    const {error}=await inserirTerceirizado(item);
+    if(error){ console.error('[terceirizado] insert:',error); mostrarToast("Não foi possível cadastrar. Nada foi salvo.","err"); return; }
+    DB.terceirizados.unshift(item);registrarAuditoria("Criação","Terceirizados",item.tId,"","",item.tNome);mostrarToast("Cadastrado.","ok");
+  }
   fecharFormTerc();
 }
 function editarTerceirizado(id){
@@ -3994,7 +4146,7 @@ function popularSelectAvaliados(){
   sel.innerHTML += DB.terceirizados.map(t=>`<option value="${t.tId}">${esc(t.tNome)}</option>`).join("");
 }
 
-function salvarAvaliacao(){
+async function salvarAvaliacao(){
   const avaliadoSel  = document.getElementById("aAvaliado");
   const contratoId   = document.getElementById("aContrato").value.trim() || null;
   const nivelCampo   = document.querySelector('input[name="aNivelCampo"]:checked')?.value   || "";
@@ -4003,7 +4155,7 @@ function salvarAvaliacao(){
   const relacionam   = document.querySelector('input[name="aRelacionamento"]:checked')?.value || "";
 
   const aval = {
-    id:             gerarId("AVL"),
+    id:             "",   // alocado pelo banco logo abaixo, após as validações
     contratoId,
     avaliador:      document.getElementById("aAvaliador").value.trim(),
     avaliadoId:     avaliadoSel.value,
@@ -4029,8 +4181,14 @@ function salvarAvaliacao(){
   if(!aval.cliente)        {mostrarToast("Informe o nome do cliente (Q8).","err");return;}
   if(!aval.projeto)        {mostrarToast("Informe o nome do projeto (Q9).","err");return;}
 
+  // Id do banco e INSERT, pelo mesmo motivo dos contratos: id contado na tela
+  // colide entre sessões e o upsert gravava por cima da avaliação de outro.
+  try{ aval.id = await proximoId("AVL"); }
+  catch(e){ console.error('[avaliacao] proximo_id:',e); mostrarToast("Não foi possível enviar a avaliação. Tente novamente.","err"); return; }
+  const { error: errAval } = await inserirAvaliacao(aval);
+  if(errAval){ console.error('[avaliacao] insert:',errAval); mostrarToast("Não foi possível enviar a avaliação. Nada foi salvo.","err"); return; }
+
   DB.avaliacoes.unshift(aval);
-  syncAvaliacao(aval);
   registrarAuditoria("Criação","Avaliações",aval.id,"","",`Avaliação de ${aval.avaliado} por ${aval.avaliador}`);
   mostrarToast("Avaliação enviada com sucesso.","ok");
   fecharFormAval();
@@ -4149,8 +4307,11 @@ function renderAlertas(){
 // ══════════════════════════════════════════════════════
 //  AUDITORIA
 // ══════════════════════════════════════════════════════
+// O id daqui é só um rótulo local para a lista em memória até o próximo
+// recarregamento — quem numera de verdade é o DEFAULT da tabela (syncAuditoria
+// não manda o id). Ninguém procura auditoria por id, só por registroId.
 function registrarAuditoria(acao,modulo,registroId,statusAnt,statusNovo,detalhe){
-  const entry={id:gerarId("AUD"),data:new Date().toISOString(),usuario:STATE.nomeUsuario,perfil:STATE.perfil,acao,modulo,registroId:String(registroId),statusAnt:String(statusAnt),statusNovo:String(statusNovo),detalhe:String(detalhe).substring(0,200)};
+  const entry={id:gerarIdLocal("AUD"),data:new Date().toISOString(),usuario:STATE.nomeUsuario,perfil:STATE.perfil,acao,modulo,registroId:String(registroId),statusAnt:String(statusAnt),statusNovo:String(statusNovo),detalhe:String(detalhe).substring(0,200)};
   DB.auditoria.unshift(entry);
   if(DB.auditoria.length>500)DB.auditoria=DB.auditoria.slice(0,500);
   syncAuditoria(entry);
@@ -4159,7 +4320,10 @@ function registrarAuditoria(acao,modulo,registroId,statusAnt,statusNovo,detalhe)
 // ══════════════════════════════════════════════════════
 //  UTILITÁRIOS
 // ══════════════════════════════════════════════════════
-function gerarId(prefixo){
+// Numeração só para uso na tela. NÃO serve para gravar: conta a lista
+// carregada no login, então duas sessões chegam ao mesmo número. Quem grava
+// usa proximoId(), que aloca no banco. Ver migracao_2026-08-26_ids_atomicos.sql.
+function gerarIdLocal(prefixo){
   const mapa={CTR:"contratos",TER:"terceirizados",AVL:"avaliacoes",AUD:"auditoria"};
   const arr=DB[mapa[prefixo]]||[];
   const max=arr.length?Math.max(...arr.map(x=>parseInt(String(x.id||x.tId||"0").replace(/\D/g,""))||0)):0;
