@@ -3368,7 +3368,7 @@ function garantirContratoPJ() {
   if (!_contratoPJPromise) {
     _contratoPJPromise = new Promise(resolve => {
       const s = document.createElement("script");
-      s.src = "contrato_pj.js";
+      s.src = "contrato_pj.js?v=20260826b";
       s.onload  = () => resolve(!!window.CONTRATO_PJ);
       s.onerror = () => { _contratoPJPromise = null; resolve(false); };  // deixa tentar de novo
       document.head.appendChild(s);
