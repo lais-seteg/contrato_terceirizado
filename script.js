@@ -334,9 +334,6 @@ async function proximoId(prefixo) {
 // Criação usa INSERT: se o id já existir, o banco recusa e a pessoa vê o
 // erro, em vez de sobrescrever o registro de outro em silêncio.
 // upsert continua valendo para edição, onde gravar por cima é o esperado.
-function inserirContrato(contrato) {
-  return supa.from('contratos').insert(_ctrToRow(contrato));
-}
 function inserirTerceirizado(terc) {
   return supa.from('terceirizados').insert(_tercToRow(terc));
 }
@@ -1078,29 +1075,23 @@ function somenteDigitos(v) { return String(v || "").replace(/\D/g, ""); }
 // Tratar stub como "já cadastrado" era o que fazia o sistema dizer que o
 // CPF estava em Terceirizados quando na prática não havia cadastro nenhum:
 // o link de 24h deixava de ser gerado e a solicitação pulava direto para
-// "Em Elaboração", então a pessoa nunca recebia o formulário.
-function cadastroTerceirizadoCompleto(t) {
-  if (!t) return false;
-  return !!(String(t.tEmail || "").trim() || t.atualizadoEm);
-}
+// "Em Elaboração", então a pessoa nunca recebia o formulário. Quem aplica
+// essa distinção é o banco, em consultar_cpf_terceirizado() e
+// criar_solicitacao_contrato() — ver migracao_2026-08-26_solicitacao_rpc.sql.
 
-function buscarTerceirizadoPorCpfDigitos(cpfDigitos) {
+// Consulta pela RPC, não por select direto na tabela: pelo RLS, um líder
+// (`solicitante`) só enxerga os terceirizados vinculados aos contratos dele —
+// na prática nenhum — então uma busca pelo cliente nunca acharia cadastro
+// algum e todo CPF pareceria novo. A RPC roda como SECURITY DEFINER e devolve
+// só nome/telefone e o aviso de cadastro completo, sem expor RG, endereço ou
+// dados bancários de quem quer que seja.
+// Retorna { tId, tNome, tTelefone, completo } ou null.
+async function consultarCpfTerceirizado(cpfDigitos) {
   if (cpfDigitos.length !== 11) return null;
-  return DB.terceirizados.find(t => somenteDigitos(t.tCpf) === cpfDigitos) || null;
-}
-
-// Consulta o BANCO, não a lista carregada no login: um cadastro criado por
-// outra pessoa hoje de manhã não aparece na lista em memória, e um registro
-// já excluído continua nela. O CPF fica guardado mascarado, então a
-// comparação por dígitos é feita aqui.
-async function buscarTerceirizadoPorCpfNoBanco(cpfDigitos) {
-  if (cpfDigitos.length !== 11) return null;
-  const { data, error } = await supa
-    .from('terceirizados')
-    .select('id, t_nome, t_cpf, t_telefone, t_email, atualizado_em');
-  if (error) { console.error('[contrato] busca de terceirizado por CPF:', error); throw error; }
-  const row = (data || []).find(r => somenteDigitos(r.t_cpf) === cpfDigitos);
-  return row ? _rowToTerc(row) : null;
+  const { data, error } = await supa.rpc('consultar_cpf_terceirizado', { p_cpf: cpfDigitos });
+  if (error) { console.error('[contrato] consulta de CPF:', error); throw error; }
+  if (!data || !data.encontrado) return null;
+  return { tId: data.id, tNome: data.nome || "", tTelefone: data.telefone || "", completo: !!data.completo };
 }
 
 // Sequência da última busca disparada — respostas que chegam fora de ordem
@@ -1108,11 +1099,11 @@ async function buscarTerceirizadoPorCpfNoBanco(cpfDigitos) {
 let _seqBuscaCpf = 0;
 
 // Disparado a cada digitação no CPF do bloco "Identificação do Terceirizado".
-// Só um cadastro COMPLETO trava Nome/Telefone e vai para
-// #cTerceirizadoIdEncontrado — aí sim a pessoa já está cadastrada, nenhum
-// link é gerado e a solicitação segue direto para elaboração. Stub apenas
-// avisa que existe solicitação anterior em aberto; o vínculo definitivo é
-// resolvido no salvamento, contra o banco.
+// Só um cadastro COMPLETO trava Nome/Telefone — aí sim a pessoa já está
+// cadastrada, nenhum link é gerado e a solicitação segue direto para
+// elaboração. Registro-base apenas avisa que existe solicitação anterior em
+// aberto. Isto aqui é só a prévia na tela: quem decide o vínculo de verdade é
+// criar_solicitacao_contrato(), no servidor, na hora de salvar.
 async function buscarTerceirizadoPorCpf() {
   mascaraCpfId("cTercCpf");
   const cpfDigitos = somenteDigitos(document.getElementById("cTercCpf").value);
@@ -1128,14 +1119,16 @@ async function buscarTerceirizadoPorCpf() {
 
   let t;
   try {
-    t = await buscarTerceirizadoPorCpfNoBanco(cpfDigitos);
+    t = await consultarCpfTerceirizado(cpfDigitos);
   } catch {
-    // Sem rede/sessão: cai na lista em memória só para não travar a tela.
-    t = buscarTerceirizadoPorCpfDigitos(cpfDigitos);
+    // Sem rede/sessão: não inventa resposta. O salvamento resolve o vínculo
+    // no servidor de qualquer forma, então a tela só fica sem a prévia.
+    if (badge) badge.classList.add("hidden");
+    return;
   }
   if (seq !== _seqBuscaCpf) return;   // o CPF já mudou desde esta busca
 
-  if (t && cadastroTerceirizadoCompleto(t)) {
+  if (t && t.completo) {
     nomeEl.value = t.tNome || "";
     telEl.value  = t.tTelefone || "";
     nomeEl.readOnly = true;
@@ -1446,42 +1439,6 @@ async function _salvarContrato() {
   const err = validarContrato(item, dataSolicitacao);
   if (err) { mostrarToast(err,"err"); return; }
 
-  // Só na criação: resolve quem é o terceirizado. O vínculo é decidido AQUI,
-  // contra o banco, e não pelo que a tela achou enquanto o CPF era digitado —
-  // a tela pode estar com uma lista velha do login.
-  let stubCriado = null;   // registro-base novo, ainda não gravado
-  let precisaLink = false; // cadastro incompleto → link de 24h
-  if (criandoNovo) {
-    try {
-      item.id = await proximoId("CTR");
-
-      const existente = await buscarTerceirizadoPorCpfNoBanco(somenteDigitos(item.cTercCpf));
-      if (existente && cadastroTerceirizadoCompleto(existente)) {
-        // Cadastro de verdade: os dados pessoais já existem, não há o que
-        // esperar do terceirizado — pula direto pra "Em Elaboração".
-        item.cTerceirizadoId = existente.tId;
-        if (STATE.perfil === "solicitante") item.status = "Em Elaboração";
-      } else if (existente) {
-        // Registro-base de uma solicitação anterior que ninguém preencheu:
-        // reaproveita a mesma linha (não duplica a pessoa), mas o cadastro
-        // segue pendente e um link novo é gerado.
-        item.cTerceirizadoId = existente.tId;
-        precisaLink = true;
-      } else {
-        stubCriado = {
-          tId: await proximoId("TER"), tNome: item.cTercNome, tCpf: item.cTercCpf, tTelefone: item.cTercTelefone,
-          tTipo: item.cTipoContratacao, criadoEm: new Date().toISOString(), criadoPor: STATE.nomeUsuario
-        };
-        item.cTerceirizadoId = stubCriado.tId;
-        precisaLink = true;
-      }
-    } catch (e) {
-      console.error('[contrato] salvarContrato:', e);
-      mostrarToast("Não foi possível salvar a solicitação. Tente novamente.","err");
-      return;
-    }
-  }
-
   if (!criandoNovo) {
     const ant = DB.contratos[idx].status;
     const eraPendenteAjuste = ant === "Pendente de Ajuste" && STATE.perfil === "solicitante";
@@ -1506,36 +1463,37 @@ async function _salvarContrato() {
     }
     syncContrato(DB.contratos[idx]);
   } else {
-    item.criadoEm  = new Date().toISOString();
-    item.criadoPor = STATE.nomeUsuario;
-    const obsCriacao = precisaLink
-      ? "Contrato criado e enviado para análise."
-      : "Contrato criado com terceirizado já cadastrado (CPF já existente) — encaminhado direto para elaboração.";
-    item.historico = [{ data:new Date().toISOString(), usuario:STATE.nomeUsuario, perfil:STATE.perfil, status:item.status, obs:obsCriacao }];
-    // Cadastro ainda não preenchido (CPF novo ou registro-base em aberto):
-    // gera o link único de 24h, uso único. Cadastro completo dispensa o link.
-    if (precisaLink) gerarLinkParaContrato(item);
-
-    // Grava PRIMEIRO e só confirma na tela depois: antes o contrato entrava na
-    // lista em memória e o erro do servidor virava um toast solto, então a
-    // solicitação parecia salva e sumia no recarregamento.
-    if (stubCriado) {
-      const { error: errTerc } = await inserirTerceirizado(stubCriado);
-      if (errTerc) {
-        console.error('[contrato] insert terceirizado:', errTerc);
-        mostrarToast("Não foi possível criar o cadastro do terceirizado. Nada foi salvo.","err");
-        return;
-      }
-    }
-    const { error: errCtr } = await inserirContrato(item);
-    if (errCtr) {
-      console.error('[contrato] insert contrato:', errCtr);
-      if (stubCriado) deleteSupabase('terceirizados', stubCriado.tId);
-      mostrarToast("Não foi possível salvar a solicitação. Nada foi salvo — tente novamente.","err");
+    // Uma chamada só, atômica, no servidor: criar_solicitacao_contrato()
+    // confere o CPF, reaproveita ou cria o registro-base do terceirizado,
+    // aloca os ids e grava o contrato — tudo na mesma transação.
+    //
+    // Não dá para fazer isso pelo cliente: pelo RLS, um `solicitante` não
+    // pode inserir em terceirizados (403 "falha ao sincronizar terceirizado")
+    // e só enxerga os terceirizados vinculados aos contratos dele, então
+    // nenhum CPF seria encontrado. A RPC roda como SECURITY DEFINER e decide
+    // status, vínculo, autoria e link — o cliente não escolhe nada disso.
+    const { data: criado, error: errCriar } =
+      await supa.rpc('criar_solicitacao_contrato', { p_dados: _ctrToRow(item) });
+    if (errCriar || !criado) {
+      console.error('[contrato] criar_solicitacao_contrato:', errCriar);
+      mostrarToast("Não foi possível salvar a solicitação. Nada foi gravado — tente novamente.","err");
       return;
     }
 
-    if (stubCriado) DB.terceirizados.unshift(stubCriado);
+    // Espelha na tela exatamente o que o servidor gravou.
+    item.id               = criado.id;
+    item.cTerceirizadoId  = criado.terceirizado_id;
+    item.status           = criado.status;
+    item.criadoEm         = criado.criado_em;
+    item.criadoPor        = criado.criado_por;
+    item.historico        = criado.historico || [];
+    const precisaLink     = !!criado.precisa_link;
+    if (precisaLink) {
+      item.cLinkToken    = criado.link_token;
+      item.cLinkExpiraEm = criado.link_expira_em;
+      item.cLinkUsado    = false;
+    }
+
     DB.contratos.unshift(item);
     registrarAuditoria("Criação","Contratos",item.id,"",item.status,`Contrato de ${item.cTercNome||"-"}`);
     mostrarToast("Contrato enviado para análise.","ok");

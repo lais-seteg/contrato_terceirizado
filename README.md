@@ -73,6 +73,10 @@ Ao digitar o CPF, a tela consulta `terceirizados` **no banco** (não a lista car
 
 Tratar o registro-base como "já cadastrado" era o que fazia o sistema acusar CPF cadastrado sem haver cadastro: o link não era gerado e a pessoa nunca recebia o formulário.
 
+Quem aplica essa regra é o **banco**, não a tela: `criar_solicitacao_contrato()` (ver `migracao_2026-08-26_solicitacao_rpc.sql`) confere o CPF, reaproveita ou cria o registro-base, aloca os ids e grava o contrato **numa transação só** — ou os dois gravam, ou nenhum. A tela só mostra a prévia, via `consultar_cpf_terceirizado()`.
+
+Isso não é preferência de arquitetura, é exigência do RLS: um `solicitante` **não pode** inserir em `terceirizados` (`terceirizados_insert` exige gestão/DP) e **só enxerga** os terceirizados vinculados aos contratos dele — na prática, nenhum. Feito pelo cliente, o líder levava 403 ao salvar e nenhuma busca de CPF encontrava cadastro algum. A RPC roda como `SECURITY DEFINER`, então o líder não precisa de permissão direta na tabela e continua sem enxergar RG ou dados bancários de ninguém — `consultar_cpf_terceirizado()` devolve só nome, telefone e o indicador de cadastro completo.
+
 ### Numeração dos registros
 
 `CTR-000X`, `TER-000X`, `AVL-000X` e `AUD-000X` são alocados pelo banco (`proximo_id()` sobre as sequences — ver `migracao_2026-08-26_ids_atomicos.sql`), e a criação grava com `INSERT`, não `upsert`. Antes o id era contado no navegador a partir da lista carregada no login: uma aba aberta há horas gerava um id já usado e o `upsert(onConflict:'id')` gravava por cima do registro de outra pessoa em silêncio — solicitações sumiam. Como em `proximo_numero_contrato()`, número usado não volta: podem existir buracos na sequência.
