@@ -8,7 +8,7 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://hqyoszdilauarrhxpgjg.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self';" />
   <title>Cadastro de Prestador de Serviço · Seteg</title>
   <link rel="icon" type="image/png" href="images/favicon.png" />
-  <link rel="stylesheet" href="style.css?v=20260826b" />
+  <link rel="stylesheet" href="style.css?v=20260924b" />
   <style>
     /* ─── Correção de scroll e fundo ─── */
     html, body {
@@ -488,6 +488,10 @@
           <input id="tNascimento" type="text" maxlength="10" placeholder="00/00/0000" class="form-control" />
         </div>
         <div class="form-group">
+          <label class="form-label">Nacionalidade</label>
+          <input id="tNacionalidade" class="form-control" placeholder="Ex: brasileiro(a)" />
+        </div>
+        <div class="form-group">
           <label class="form-label">Estado Civil</label>
           <input id="tEstadoCivil" class="form-control" placeholder="Ex: solteiro(a), casado(a) sob regime de..." />
         </div>
@@ -821,7 +825,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.0"
         integrity="sha384-De+l/Df7qym5QBDVocD3+gW1S7IjR3epf+6KbRDjB3FCCzM/LqVTwqckT6FhFar8"
         crossorigin="anonymous"></script>
-<script src="config.js?v=20260826b"></script>
+<script src="config.js?v=20260924b"></script>
 <script>
   if (!window.SUPABASE_URL || !window.SUPABASE_KEY) {
     throw new Error("config.js não encontrado ou incompleto — defina window.SUPABASE_URL e window.SUPABASE_KEY.");
@@ -1033,6 +1037,7 @@
         t_cpf:             cpf,
         t_rg:              v('tRg')              || null,
         t_nascimento:      nascimentoISO || null,
+        t_nacionalidade:   v('tNacionalidade')     || null,
         t_estado_civil:    v('tEstadoCivil')      || null,
         t_telefone:        telefone,
         t_estado:          v('tEstado') || null,

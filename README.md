@@ -104,15 +104,32 @@ O modelo escolhido aparece no título do modal ("Contrato de Prestação de Serv
 
 Um documento já gerado é reaberto exatamente como foi salvo, para preservar as edições manuais do DP — inclusive quando o modelo mudou depois. Nesse caso aparece um aviso no topo do modal dizendo em que modelo ele foi gerado e qual os dados indicam agora, com a instrução de usar **Regerar**. O modelo do documento salvo é reconhecido pela quebra de página dos anexos, que só existe no modelo CNPJ.
 
+O aviso também aparece quando o documento foi gerado numa **revisão anterior do texto** do modelo, ainda que o modelo (CNPJ x pessoa física) seja o mesmo. Quem responde isso é o marcador `<!--contrato-rev:AAAA-MM-->` gravado no início do HTML salvo, comparado com `MODELO_CONTRATO_REV` no `script.js`. **Ao revisar o texto de um modelo, bumpar essa constante** — sem isso os documentos em elaboração continuam com o texto antigo e nada avisa.
+
 Para os documentos que já existiam no modelo antigo, o botão **Atualizar p/ modelo atual** (cabeçalho da seção Contratos, só DP/RH e Gestão) descarta em lote o documento salvo desses contratos, para que sejam gerados no modelo atual na próxima vez que forem abertos. Ele age **apenas nos contratos cujo documento ainda está em elaboração** — Pendente, Em Elaboração, Aguardando Aprovação do Líder e Pendente de Ajuste. Contrato já aprovado ou assinado (Aguardando Assinaturas, Aguardando Pagamento, Aprovado, Finalizado) fica intocado de propósito: o documento salvo é o texto que as Partes acertaram, e reescrevê-lo apagaria essa prova. Reprovados e cancelados também ficam de fora, por não haver o que atualizar.
 
-Os termos de pagamento saem da solicitação do líder: **Valor Total** + **Nº de Parcelas**. O valor de cada parcela é calculado (total ÷ parcelas) e o campo é somente leitura — assim os três números na tela nunca deixam de fechar entre si. No modelo de pessoa física, 1 parcela gera a cláusula de parcela única e 2 ou mais geram "em N (extenso) parcelas mensais de R$ X"; no modelo CNPJ o valor da parcela é o valor mensal, pago no dia 5 contra nota fiscal.
+Os termos de pagamento saem da solicitação do líder e começam pela **Modalidade de pagamento**, que decide a redação da Cláusula 3ª do modelo CNPJ e quais campos de valor ficam na tela:
+
+| Modalidade | O líder informa | O sistema calcula | Cláusula 3ª |
+|---|---|---|---|
+| **Mensal** | Valor Total + Nº de Parcelas | Valor da parcela (total ÷ parcelas) | "R$ X (extenso) por mês de prestação ... quantidade de N (extenso) meses efetivamente prestados" |
+| **Diária** | Valor da Diária + Nº de Diárias | Valor Total (diária × nº de diárias) | "R$ X (extenso) por diária realizada ... quantidade de N (extenso) diárias efetivamente prestadas" |
+
+Em ambos os casos o campo derivado é somente leitura — assim os números na tela nunca deixam de fechar entre si — e **Valor Total** continua sendo o total do contrato lido por listagens, relatórios e entregas. Contrato salvo antes da revisão set/2026 não tem modalidade gravada e é tratado como Mensal.
+
+A **Cláusula 17ª** (vigência) e a contagem de meses da Cláusula 3ª na modalidade mensal são **calculadas das datas de início e término**, não fixas: o `.docx` da revisão set/2026 crava "12 (doze) meses", mas um contrato de 6 meses sairia se contradizendo com a data de término logo em seguida.
+
+A Cláusula 17ª descreve a vigência **em meses e dias** — 01/10 a 02/11 sai como "1 (um) mês e 2 (dois) dias", 01/10 a 15/10 como "15 (quinze) dias". Ela usa `calcularPrazoVigencia()`, que devolve o resto em dias; a Cláusula 3ª continua em `calcularPrazoMeses()`, que arredonda para baixo e tem piso de 1 mês porque ali o que se conta são meses de prestação. As duas pontas da vigência são inclusivas (01/10 a 31/10 é um mês cheio).
+
+No modelo de pessoa física, 1 parcela gera a cláusula de parcela única e 2 ou mais geram "em N (extenso) parcelas mensais de R$ X".
 
 A forma de pagamento do cadastro do terceirizado (Pix / boleto / transferência) define só **como** se paga; **quantas vezes** é o campo de parcelas do contrato. Antes as duas coisas estavam no mesmo campo do cadastro, e um contrato com valor mensal saía como parcela única.
 
 No campo **Escopo do Contrato**, a primeira linha entra na cláusula do objeto como a finalidade da atuação; cada linha seguinte vira uma alínea (a, b, c...) da lista de escopo.
 
-O texto de `contrato_pj.js` foi extraído do `.docx` programaticamente para preservar a numeração automática das cláusulas do Word — as referências cruzadas do próprio contrato ("Cláusula 29ª", "Cláusulas 15ª e 16ª", "Cláusulas 3ª a 7ª") dependem dessa ordem. Ao receber uma revisão nova do modelo em Word, é mais seguro reextrair do que editar o arquivo à mão.
+A **nacionalidade** da qualificação da CONTRATADA vem do cadastro do terceirizado (campo Nacionalidade, preenchido pela própria pessoa no formulário público ou pelo DP). Até a revisão set/2026 era escrito fixo como "brasileiro(a)" no código, o que impedia emitir contrato para estrangeiro.
+
+O texto de `contrato_pj.js` foi extraído do `.docx` programaticamente para preservar a numeração automática das cláusulas do Word — as referências cruzadas do próprio contrato ("Cláusula 29ª", "Cláusulas 15ª e 16ª", "Cláusulas 3ª a 7ª") dependem dessa ordem. Ao receber uma revisão nova do modelo em Word, é mais seguro reextrair do que editar o arquivo à mão. Os pontos em que o texto do arquivo **não** é cópia literal do `.docx` estão listados no cabeçalho do próprio `contrato_pj.js`.
 
 Campo sem dado sai destacado em amarelo no documento, para o DP completar antes de encaminhar.
 

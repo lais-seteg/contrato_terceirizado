@@ -15,7 +15,7 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://hqyoszdilauarrhxpgjg.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self';" />
   <title>Contratação de Terceirizados · Seteg</title>
   <link rel="icon" type="image/png" href="images/favicon.png" />
-  <link rel="stylesheet" href="style.css?v=20260826b" />
+  <link rel="stylesheet" href="style.css?v=20260924b" />
 </head>
 <body>
 
@@ -325,6 +325,7 @@
             <button type="button" class="btn btn-ghost" style="margin-bottom:.75rem" onclick="sincronizarDadosTerceirizado()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;vertical-align:-3px"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg> Sincronizar dados do terceirizado cadastrado</button>
             <div class="form-grid" style="margin-bottom:.75rem">
               <div class="form-group"><label class="form-label">RG / Órgão expedidor</label><input id="cTercRg" class="form-control" placeholder="Ex: 2001234567 SSP/CE" /></div>
+              <div class="form-group"><label class="form-label">Nacionalidade</label><input id="cTercNacionalidade" class="form-control" placeholder="Ex: brasileiro(a)" /></div>
               <div class="form-group"><label class="form-label">Estado Civil</label><input id="cTercEstadoCivil" class="form-control" placeholder="Ex: solteiro(a), casado(a) sob regime de..." /></div>
               <div class="form-group full-width"><label class="form-label">Endereço Completo</label><input id="cTercEndereco" class="form-control" placeholder="Rua, número, bairro, cidade/UF" /></div>
             </div>
@@ -657,11 +658,30 @@
             <div class="form-grid">
               <div class="form-group"><label class="form-label required">Número do Contrato</label><input id="cNumeroContrato" class="form-control" placeholder="Gerado automaticamente" readonly /></div>
               <div class="form-group"><label class="form-label required">Projeto / Local</label><input id="cProjeto" class="form-control" placeholder="Ex: IBITU – CG1/CG2" /></div>
-              <div class="form-group"><label class="form-label required">Valor Total (R$)</label><input id="cValorTotal" class="form-control" placeholder="0,00" oninput="mascaraMoedaId('cValorTotal');recalcularValorParcela()" /></div>
-              <div class="form-group"><label class="form-label required">Nº de Parcelas</label><input id="cParcelas" type="number" min="1" step="1" class="form-control" placeholder="1" oninput="recalcularValorParcela()" />
+              <!-- Modalidade de pagamento: decide a redação da Cláusula 3ª do
+                   contrato (valor por diária realizada x por mês de prestação)
+                   e qual par de campos de valor fica visível abaixo. -->
+              <div class="form-group full-width">
+                <label class="form-label required">Modalidade de pagamento</label>
+                <div class="radio-group">
+                  <label class="radio-pill"><input type="radio" name="cModalidadePgto" value="Mensal" onchange="toggleModalidadePgto()"><span class="radio-pill-label">Mensal</span></label>
+                  <label class="radio-pill"><input type="radio" name="cModalidadePgto" value="Diária" onchange="toggleModalidadePgto()"><span class="radio-pill-label">Diária</span></label>
+                </div>
+                <span class="modal-hint">Mensal: valor fechado dividido em parcelas. Diária: valor por diária realizada, com o total variando conforme a demanda.</span>
+              </div>
+
+              <div class="form-group grp-pgto-diaria hidden"><label class="form-label required">Valor da Diária (R$)</label><input id="cValorDiaria" class="form-control" placeholder="0,00" oninput="mascaraMoedaId('cValorDiaria');recalcularValorParcela()" /></div>
+              <div class="form-group grp-pgto-diaria hidden"><label class="form-label required">Nº de Diárias</label><input id="cQtdDiarias" type="number" min="1" step="1" class="form-control" placeholder="Ex: 20" oninput="recalcularValorParcela()" />
+                <span class="modal-hint">Diárias previstas no período. Entra na Cláusula 3ª por extenso.</span>
+              </div>
+
+              <div class="form-group"><label class="form-label required">Valor Total (R$)</label><input id="cValorTotal" class="form-control" placeholder="0,00" oninput="mascaraMoedaId('cValorTotal');recalcularValorParcela()" />
+                <span class="modal-hint hidden" id="hintValorTotal">Calculado automaticamente: valor da diária × nº de diárias.</span>
+              </div>
+              <div class="form-group grp-pgto-mensal"><label class="form-label required">Nº de Parcelas</label><input id="cParcelas" type="number" min="1" step="1" class="form-control" placeholder="1" oninput="recalcularValorParcela()" />
                 <span class="modal-hint">Parcelas mensais. Use 1 para pagamento único.</span>
               </div>
-              <div class="form-group"><label class="form-label">Valor da Parcela / Mensal (R$)</label><input id="cValorMensal" class="form-control" placeholder="calculado" readonly />
+              <div class="form-group grp-pgto-mensal"><label class="form-label">Valor da Parcela / Mensal (R$)</label><input id="cValorMensal" class="form-control" placeholder="calculado" readonly />
                 <span class="modal-hint" id="hintValorParcela">Calculado automaticamente: valor total ÷ nº de parcelas.</span>
               </div>
               <div class="form-group">
@@ -919,6 +939,7 @@
               <div class="form-group"><label class="form-label required">CPF</label><input id="tCpf" class="form-control" placeholder="000.000.000-00" maxlength="14" /></div>
               <div class="form-group"><label class="form-label">RG / Órgão expedidor</label><input id="tRg" class="form-control" placeholder="Ex: 2001234567 SSP/CE" /></div>
               <div class="form-group"><label class="form-label">Data de nascimento</label><input id="tNascimento" type="text" maxlength="10" placeholder="00/00/0000" class="form-control" oninput="mascaraDataId('tNascimento')" /></div>
+              <div class="form-group"><label class="form-label">Nacionalidade</label><input id="tNacionalidade" class="form-control" placeholder="Ex: brasileiro(a)" /></div>
               <div class="form-group"><label class="form-label">Estado Civil</label><input id="tEstadoCivil" class="form-control" placeholder="Ex: solteiro(a), casado(a) sob regime de..." /></div>
               <div class="form-group"><label class="form-label required">Telefone</label><input id="tTelefone" class="form-control" placeholder="(00) 00000-0000" maxlength="15" /></div>
               <div class="form-group"><label class="form-label">Estado</label><input id="tEstado" class="form-control" /></div>
@@ -1434,7 +1455,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.0"
         integrity="sha384-De+l/Df7qym5QBDVocD3+gW1S7IjR3epf+6KbRDjB3FCCzM/LqVTwqckT6FhFar8"
         crossorigin="anonymous"></script>
-<script src="config.js?v=20260826b"></script>
-<script src="script.js?v=20260826b"></script>
+<script src="config.js?v=20260924b"></script>
+<script src="script.js?v=20260924b"></script>
 </body>
 </html>
