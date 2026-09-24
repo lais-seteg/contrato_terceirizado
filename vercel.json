@@ -14,7 +14,6 @@
       ]
     },
     {
-      "//": "Sem etapa de build, o navegador pode segurar script.js/style.css antigos e continuar rodando uma versao ja corrigida no servidor — aconteceu duas vezes em 26/08/2026, com o console acusando erro de codigo que ja nao existia. max-age=0 + must-revalidate faz o navegador conferir com o servidor a cada carga: responde 304 quando nada mudou (nao pesa) e baixa na hora quando muda. As tags ainda levam ?v=AAAAMMDD como reforco.",
       "source": "/(.*)\\.(js|css|html)",
       "headers": [
         { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }

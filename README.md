@@ -28,6 +28,10 @@ O schema do banco (tabelas, RLS, função de login) já está aplicado no projet
 
 Publicado via [Vercel](https://vercel.com), conectado diretamente a este repositório no GitHub — cada push na branch principal é publicado automaticamente, sem etapa de build. Por isso `config.js` fica versionado no repositório (é a chave *publishable* do Supabase, feita para ser pública — ver seção "Segurança"). Os headers de segurança HTTP (`vercel.json`) também são aplicados automaticamente pelo Vercel nesse fluxo.
 
+**Cache.** Sem etapa de build, o navegador pode segurar `script.js`/`style.css` antigos e continuar rodando uma versão já corrigida no servidor — aconteceu duas vezes em 26/08/2026, com o console acusando erro de código que já não existia. O `vercel.json` responde com `Cache-Control: public, max-age=0, must-revalidate` nos `.js`/`.css`/`.html`: o navegador confere com o servidor a cada carga, recebe 304 quando nada mudou (não pesa) e baixa na hora quando muda. As tags ainda levam `?v=AAAAMMDD` como reforço — **bumpar essa versão em todo deploy que mexe em `script.js`, `contrato_pj.js` ou `style.css`** (ela aparece em `index.html`, `cadastro.html` e no `garantirContratoPJ()` do `script.js`).
+
+**`vercel.json` não aceita comentários.** O schema do Vercel rejeita propriedade extra em regra de header — uma chave `"//"` com explicação dentro de `headers[N]` derruba o deploy inteiro com *"should NOT have additional property"*, e o deploy anterior continua no ar como se nada tivesse acontecido. Foi o que segurou a correção de cache de 26/08/2026 sem ninguém notar. Comentário sobre essa configuração vem para cá, não para o JSON.
+
 ## Perfis de acesso
 
 | Perfil | Quem | O que faz |
